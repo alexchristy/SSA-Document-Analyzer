@@ -24,8 +24,8 @@ def lambda_handler(event, context):
         # Get SNS topic and role ARNs from ENV variables
         sns_topic_arn = os.environ['SNS_TOPIC_ARN']
         sns_role_arn = os.environ['SNS_ROLE_ARN']
-        logging.info(f'SNS topic ARN: {sns_topic_arn}')
-        logging.info(f'SNS role ARN: {sns_role_arn}')
+        logging.info(f'SNS topic ARN for Textract: {sns_topic_arn}')
+        logging.info(f'SNS role ARN for Textract: {sns_role_arn}')
 
         # Start Textract job
         client = boto3.client('textract')
@@ -41,8 +41,14 @@ def lambda_handler(event, context):
         logging.info(f'Textract job started with ID: {job_id}')
 
         # Store document with job ID and log contents
-        fs.add_textract_job(job_id, s3_object)
-        logging.info(f'Textract job ID {job_id} and logs stored in Firestore')
+        pdf_hash = fs.get_pdf_hash_with_s3_path(s3_object)
+
+        # Check if hash was successfully retrieved
+        if pdf_hash:
+            fs.add_textract_job(job_id, pdf_hash)
+            logging.info(f'Textract job ID {job_id} and logs stored in Firestore')
+        else:
+            raise Exception(f"Could not find PDF hash for S3 object: {s3_object}")
 
     except Exception as e:
         logging.error(f"Error processing the Textract job: {e}")
