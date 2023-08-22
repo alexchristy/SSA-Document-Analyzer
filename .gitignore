@@ -26,6 +26,14 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# Lambda packaging
+start_job.zip
+recieve_job.zip
+package/
+
+# Virtual envs
+LAMBDA-ENV
+
 # PyInstaller
 #  Usually these files are written by a python script from a template
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
