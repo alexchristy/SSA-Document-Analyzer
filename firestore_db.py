@@ -28,6 +28,17 @@ class FirestoreClient:
             'pdf_hash': pdf_hash
         })
 
+    def get_textract_job(self, job_id):
+        # Get the Textract job from Firestore
+        job = self.db.collection('Textract_Jobs').document(job_id).get()
+        
+        # Check if the job exists
+        if job.exists:
+            return job.to_dict()
+        else:
+            logging.error(f"Job {job_id} does not exist.")
+            return None
+
     def get_pdf_hash_with_s3_path(self, s3_object_path):
         try:
             pdf_archive = os.getenv('PDF_ARCHIVE_COLLECTION')
@@ -125,3 +136,56 @@ class FirestoreClient:
             logging.info(f"Successfully updated job {job_id} with status {status}")
         except Exception as e:
             logging.error(f"An error occurred while updating the job status: {e}")
+    
+    def get_flight_origin_by_pdf_hash(self, hash: str) -> str:
+        """
+        This function returns the location of the terminal that owns the PDF that is
+        identified by the supplied hash.
+        
+        :param hash: The SHA-256 hash of the PDF file
+        :return: Terminal name or None if the hash is invalid or the PDF does not exist
+        """
+
+        logging.info('Entering get_pdf_by_hash().')
+ 
+        # Get the name of the collections from environment variables
+        pdf_archive_coll = os.getenv('PDF_ARCHIVE_COLLECTION')
+        terminal_coll = os.getenv('TERMINAL_COLLECTION')
+        
+        # Create a reference to the document using the SHA-256 hash as the document ID
+        doc_ref = self.db.collection(pdf_archive_coll).document(hash)
+        
+        # Try to retrieve the document
+        doc = doc_ref.get()
+        
+        # Check if the document exists
+        if doc.exists:
+            # The document exists, so we retrieve its data and create a Pdf object
+            logging.info(f'PDF with hash {hash} found in the database.')
+            
+            # Get the document's data
+            pdf_data = doc.to_dict()
+            
+            # Return the terminal name
+            terminalName = pdf_data['terminal']
+            logging.info(f'Terminal name: {terminalName}')
+
+            # Create a reference to the terminal document
+            terminal_ref = self.db.collection(terminal_coll).document(terminalName)
+
+            # Try to retrieve the terminal document
+            if not terminal_ref:
+                logging.error(f'Terminal {terminalName} does not exist in the database.')
+                return None
+            
+            # Get the terminal document's data
+            terminal_data = terminal_ref.get().to_dict()
+            terminal_location = terminal_data['location']
+            return terminal_location
+        
+        else:
+            # The document does not exist
+            logging.warning(f'PDF with hash {hash} does not exist in the database.')
+            
+            # Return None to indicate that no PDF was found
+            return None
