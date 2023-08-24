@@ -6,9 +6,13 @@ from firestore_db import FirestoreClient
 from flight import Flight
 import logging
 from dotenv import load_dotenv
-import doc_analysis_responses
-import sns_event_message
+import tests.doc_analysis_responses as doc_analysis_responses
+import tests.sns_event_message as sns_event_message
 from datetime import datetime as dt  # Importing datetime class as dt to avoid naming conflicts
+
+# REMOVE WHEN FINISHED TESTING
+from tests import sns_event_message
+
 
 def initialize_clients():
     # Set environment variables
@@ -233,13 +237,28 @@ def parse_textract_response_to_flights(response, min_confidence=90):
     logging.info("Parsing complete.")
     return flights
 
-def lambda_handler(event, context):
+# Function to parse SNS event from Textract
+def parse_sns_event(event):
+    """Parses the SNS event from Textract.
+    
+    Args:
+        message (str): The SNS event.
+        
+    Returns:
+        dict: Dictionary containing JobId and Status.
+    """
     message_json_str = event['Records'][0]['Sns']['Message']
     message_dict = json.loads(message_json_str)
     
     job_id = message_dict.get('JobId', '')
     status = message_dict.get('Status', '')
+    return job_id, status
     
+def lambda_handler(event, context):
+
+    # Parse the SNS message
+    job_id, status = parse_sns_event(event)
+
     if not job_id or not status:
         logging.error("JobId or Status missing in SNS message.")
         return
@@ -264,7 +283,7 @@ def lambda_handler(event, context):
 
     # If the job succeeded, parse the Textract response
     if status == 'SUCCEEDED':
-        response = doc_analysis_responses.bwi_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
+        response = doc_analysis_responses.norfolk_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
         flights = parse_textract_response_to_flights(response)
 
         # Insert each flight into Firestore
@@ -273,7 +292,8 @@ def lambda_handler(event, context):
             if flight_origin != "N/A":
                 flight.origin = flight_origin
             
-            firestore_client.insert_flight(flight)
+            # firestore_client.insert_flight(flight)
+            flight.print_flight()
 
     return {
         'statusCode': 200,
@@ -281,4 +301,4 @@ def lambda_handler(event, context):
     }
 
 if __name__ == "__main__":
-    lambda_handler(sns_event_message.sns_event_message, None)
+    lambda_handler(sns_event_message.sns_event_message_textract_successful_job, None)
