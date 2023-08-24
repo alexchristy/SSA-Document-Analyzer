@@ -7,6 +7,7 @@ from flight import Flight
 import logging
 from dotenv import load_dotenv
 import doc_analysis_responses
+import sns_event_message
 from datetime import datetime as dt  # Importing datetime class as dt to avoid naming conflicts
 
 def initialize_clients():
@@ -16,6 +17,9 @@ def initialize_clients():
     # Check if running in a local environment
     if os.getenv('RUN_LOCAL'):
         logging.info("Running in a local environment.")
+
+        # Set environment variables
+        load_dotenv()
         
         # Setup AWS session
         boto3.setup_default_session(
@@ -35,9 +39,6 @@ def initialize_clients():
 
     return textract_client
 
-# Set environment variables
-load_dotenv()
-
 # Initialize Textract client
 textract_client = initialize_clients()
 
@@ -47,53 +48,6 @@ firestore_client = FirestoreClient()
 # Initialize logger and set log level
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
-
-def lambda_handler(event, context):
-    message_json_str = event['Records'][0]['Sns']['Message']
-    message_dict = json.loads(message_json_str)
-    
-    job_id = message_dict.get('JobId', '')
-    status = message_dict.get('Status', '')
-    
-    if not job_id or not status:
-        logging.error("JobId or Status missing in SNS message.")
-        return
-
-    # Update the job status in Firestore
-    firestore_client.update_job_status(job_id, status)
-
-    # Get flight origin from Firestore
-    pdf_hash = firestore_client.get_textract_job(job_id).get('pdf_hash', None)
-
-    # If pdf_hash is not None we can retrieve
-    # origin information from Firestore
-    if pdf_hash:
-        flight_origin = firestore_client.get_flight_origin_by_pdf_hash(pdf_hash)
-
-        if not flight_origin:
-            logging.error(f"Flight origin not found for PDF hash: {pdf_hash}")
-            flight_origin = "N/A"
-    else:
-        logging.error(f"PDF hash not found for job ID: {job_id}")
-        flight_origin = "N/A"
-
-    # If the job succeeded, parse the Textract response
-    if status == 'SUCCEEDED':
-        response = doc_analysis_responses.bwi_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
-        flights = parse_textract_response_to_flights(response)
-
-        # Set the origin for each flight
-        if flight_origin != "N/A":
-            for flight in flights:
-                flight.origin = flight_origin
-        
-        # Insert each flight into Firestore
-        firestore_client.insert_flight(flight)
-
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Lambda function executed successfully!')
-    }
 
 # Function to get text from related blocks
 def get_text_from_related_blocks(related_ids, blocks_map):
@@ -278,3 +232,53 @@ def parse_textract_response_to_flights(response, min_confidence=90):
         
     logging.info("Parsing complete.")
     return flights
+
+def lambda_handler(event, context):
+    message_json_str = event['Records'][0]['Sns']['Message']
+    message_dict = json.loads(message_json_str)
+    
+    job_id = message_dict.get('JobId', '')
+    status = message_dict.get('Status', '')
+    
+    if not job_id or not status:
+        logging.error("JobId or Status missing in SNS message.")
+        return
+
+    # Update the job status in Firestore
+    firestore_client.update_job_status(job_id, status)
+
+    # Get flight origin from Firestore
+    pdf_hash = firestore_client.get_textract_job(job_id).get('pdf_hash', None)
+
+    # If pdf_hash is not None we can retrieve
+    # origin information from Firestore
+    if pdf_hash:
+        flight_origin = firestore_client.get_flight_origin_by_pdf_hash(pdf_hash)
+
+        if not flight_origin:
+            logging.error(f"Flight origin not found for PDF hash: {pdf_hash}")
+            flight_origin = "N/A"
+    else:
+        logging.error(f"PDF hash not found for job ID: {job_id}")
+        flight_origin = "N/A"
+
+    # If the job succeeded, parse the Textract response
+    if status == 'SUCCEEDED':
+        response = doc_analysis_responses.bwi_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
+        flights = parse_textract_response_to_flights(response)
+
+        # Insert each flight into Firestore
+        for flight in flights:
+            # Set the origin for each flight
+            if flight.origin == "N/A":
+                flight.origin = flight_origin
+            
+            firestore_client.insert_flight(flight)
+
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Lambda function executed successfully!')
+    }
+
+if __name__ == "__main__":
+    lambda_handler(sns_event_message.sns_event_message, None)
