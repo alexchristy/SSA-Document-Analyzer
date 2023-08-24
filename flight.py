@@ -45,3 +45,17 @@ class Flight:
         print(f"Date: {self.date if self.date else 'N/A'}")
         print(f"Table Footer: {self.table_footer if self.table_footer else 'N/A'}")
         print(f"{'-' * 40}")
+
+    def __eq__(self, other):
+        if not isinstance(other, Flight):
+            return False
+        return (
+            self.origin == other.origin and
+            self.destination == other.destination and
+            self.rollcall_time == other.rollcall_time and
+            self.num_of_seats == other.num_of_seats and
+            self.seat_status == other.seat_status and
+            self.notes == other.notes and
+            self.date == other.date and
+            self.table_footer == other.table_footer
+        )
