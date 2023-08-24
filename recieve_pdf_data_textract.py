@@ -269,8 +269,8 @@ def lambda_handler(event, context):
 
         # Insert each flight into Firestore
         for flight in flights:
-            # Set the origin for each flight
-            if flight.origin == "N/A":
+            # Set the origin for each flight if it was found
+            if flight_origin != "N/A":
                 flight.origin = flight_origin
             
             firestore_client.insert_flight(flight)
