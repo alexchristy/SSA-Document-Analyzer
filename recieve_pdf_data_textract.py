@@ -11,15 +11,15 @@ import sns_event_message
 from datetime import datetime as dt  # Importing datetime class as dt to avoid naming conflicts
 
 def initialize_clients():
+    # Set environment variables
+    load_dotenv()
+
     # Initialize logging
     logging.basicConfig(level=logging.INFO)
 
     # Check if running in a local environment
     if os.getenv('RUN_LOCAL'):
         logging.info("Running in a local environment.")
-
-        # Set environment variables
-        load_dotenv()
         
         # Setup AWS session
         boto3.setup_default_session(
