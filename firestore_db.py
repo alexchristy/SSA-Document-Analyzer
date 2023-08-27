@@ -189,3 +189,55 @@ class FirestoreClient:
             
             # Return None to indicate that no PDF was found
             return None
+        
+    def get_potential_destinations(self):
+
+        terminal_collection = os.getenv('TERMINAL_COLLECTION')
+        if not terminal_collection:
+            logging.error("TERMINAL_COLLECTION environment variable is not set.")
+            raise Exception("TERMINAL_COLLECTION environment variable is not set.")
+        
+        # Get all the terminals from Firestore
+        terminals = self.db.collection(terminal_collection).get()
+
+        # Create a list to store the potential destinations
+        potential_destinations = []
+
+        # Iterate through the terminals
+        for terminal in terminals:
+            # Get the terminal's data
+            terminal_data = terminal.to_dict()
+            
+            # Get the terminal's location
+            terminal_location = terminal_data['location']
+            terminal_name = terminal_data['name']
+            
+            # Add the tuple to the list
+            potential_destinations.append((terminal_name, terminal_location))
+        
+        return potential_destinations
+    
+    def get_terminal_name_by_location(self, location):
+        terminal_collection = os.getenv('TERMINAL_COLLECTION')
+        if not terminal_collection:
+            logging.error("TERMINAL_COLLECTION environment variable is not set.")
+            raise Exception("TERMINAL_COLLECTION environment variable is not set.")
+        
+        # Create a query to find the terminal with the specified location
+        query = self.db.collection(terminal_collection).where('location', '==', location)
+        
+        # Execute the query
+        query_result = query.get()
+        
+        # Check if the query returned any results
+        if query_result:
+            # Get the terminal's data
+            terminal_data = query_result[0].to_dict()
+            
+            # Get the terminal's name
+            terminal_name = terminal_data['name']
+            
+            return terminal_name
+        else:
+            logging.error(f"No terminal found with location {location}.")
+            return None
