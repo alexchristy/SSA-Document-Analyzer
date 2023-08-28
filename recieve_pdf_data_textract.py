@@ -1,20 +1,17 @@
 import json
 import boto3
 import os
-import re
 from firestore_db import FirestoreClient
-from flight import Flight
 import logging
 from dotenv import load_dotenv
 import tests.doc_analysis_responses as doc_analysis_responses
 import tests.sns_event_message as sns_event_message
 from datetime import datetime as dt  # Importing datetime class as dt to avoid naming conflicts
 from destination_correction import find_best_location_match
-
+from table import Table, convert_textract_response_to_tables
 
 # REMOVE WHEN FINISHED TESTING
 from tests import sns_event_message
-
 
 def initialize_clients():
     # Set environment variables
@@ -108,23 +105,19 @@ def lambda_handler(event, context):
 
     # If the job succeeded, parse the Textract response
     if status == 'SUCCEEDED':
-        response = doc_analysis_responses.norfolk_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
-        # flights = parse_textract_response_to_flights(response)
+        response = doc_analysis_responses.bwi_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
 
-        # # Insert each flight into Firestore
-        # for flight in flights:
-        #     # Set the origin for each flight if it was found
-        #     if flight_origin != "N/A":
-        #         flight.origin_terminal = flight_origin
-            
-        #     # firestore_client.insert_flight(flight)
-        #     flight.pretty_print()
+        tables = convert_textract_response_to_tables(response)
+        for i, table in enumerate(tables):
+            print(f"Table {i + 1}")
+            print(table.to_markdown())
+            print("=" * 60)
 
-    return {
+        
+        return {
         'statusCode': 200,
         'body': json.dumps('Lambda function executed successfully!')
     }
 
 if __name__ == "__main__":
     lambda_handler(sns_event_message.sns_event_message_textract_successful_job, None)
-
