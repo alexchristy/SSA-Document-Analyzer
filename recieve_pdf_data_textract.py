@@ -200,7 +200,9 @@ def lambda_handler(event, context):
             raise
 
         # Reprocess tables with low confidence rows
+        logging.info(f"Reprocessing {len(tables_to_reprocess)} tables.")
         for table in tables_to_reprocess:
+            logging.info(f"Reprocessing table with page number: {table.page_number}")
 
             # Get table page number
             page_number = table.page_number
@@ -243,7 +245,10 @@ def lambda_handler(event, context):
             # Remove the screen shot of the table
             os.remove(table_screen_shot)
 
+    # Remove PDF from local directory
+    os.remove(local_pdf_path)
 
+        
 
         
         
