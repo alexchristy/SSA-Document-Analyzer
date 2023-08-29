@@ -8,7 +8,8 @@ import tests.doc_analysis_responses as doc_analysis_responses
 import tests.sns_event_message as sns_event_message
 from datetime import datetime as dt  # Importing datetime class as dt to avoid naming conflicts
 from destination_correction import find_best_location_match
-from table import Table, convert_textract_response_to_tables
+from table import Table
+from table_utils import *
 
 # REMOVE WHEN FINISHED TESTING
 from tests import sns_event_message
@@ -108,10 +109,11 @@ def lambda_handler(event, context):
         response = doc_analysis_responses.bwi_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
 
         tables = convert_textract_response_to_tables(response)
-        for i, table in enumerate(tables):
-            print(f"Table {i + 1}")
+
+        for table in tables:
+            table = remove_incorrect_column_header_rows(table)
+            table = rearrange_columns(table)
             print(table.to_markdown())
-            print("=" * 60)
 
         
         return {
