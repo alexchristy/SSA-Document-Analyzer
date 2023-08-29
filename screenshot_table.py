@@ -7,7 +7,7 @@ from tests.doc_analysis_responses import bwi_1_textract_response
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
 
-def capture_table_from_pdf(pdf_path, textract_response, page_number, output_folder='.', padding=50, include_title=True):
+def capture_screen_shot_of_table_from_pdf(pdf_path, textract_response, page_number, output_folder='.', padding=50, include_title=True):
     """
     Capture tables from a PDF based on AWS Textract response.
 
