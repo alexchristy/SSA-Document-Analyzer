@@ -160,7 +160,7 @@ def lambda_handler(event, context):
     if status != 'SUCCEEDED':
         raise("Job did not succeed.")
 
-    response = doc_analysis_responses.bwi_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
+    response = doc_analysis_responses.norfolk_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
 
     tables = gen_tables_from_textract_response(response)
 
@@ -207,12 +207,12 @@ def lambda_handler(event, context):
             # Get table page number
             page_number = table.page_number
 
-            table_screen_shot = capture_screen_shot_of_table_from_pdf(pdf_path=local_pdf_path, page_number=page_number, 
+            table_screen_shot_with_title = capture_screen_shot_of_table_from_pdf(pdf_path=local_pdf_path, page_number=page_number, 
                                                                       textract_response=response, output_folder=download_dir,
                                                                       padding=75, include_title=True)
             
             # Read the local PDF file
-            with open(table_screen_shot, "rb") as file:
+            with open(table_screen_shot_with_title, "rb") as file:
                 file_bytes = bytearray(file.read())
 
             # Send to screen shot to Textract for reprocessing
@@ -243,13 +243,15 @@ def lambda_handler(event, context):
                 table = reprocessed_table
 
             # Remove the screen shot of the table
-            os.remove(table_screen_shot)
+            os.remove(table_screen_shot_with_title)
 
     # Remove PDF from local directory
     os.remove(local_pdf_path)
 
         
+    for table in tables:
 
+        print(table.to_markdown())
         
         
 
@@ -260,4 +262,4 @@ def lambda_handler(event, context):
     }
 
 if __name__ == "__main__":
-    lambda_handler(sns_event_message.sns_event_message_textract_successful_job, None)
+    lambda_handler(sns_event_message.sns_event_message_textract_successful_job_norfolk_1, None)
