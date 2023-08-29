@@ -61,7 +61,7 @@ def convert_textract_response_to_tables(json_response):
     except Exception as e:
         logging.error(f"An error occurred while converting to table: {e}")
         return None
-    
+
 def remove_incorrect_column_header_rows(table):
     rollcallRegexList = [re.compile(r'rollcall', re.IGNORECASE), re.compile(r'roll call', re.IGNORECASE)]
     destinationRegexList = [re.compile(r'destination', re.IGNORECASE), re.compile(r'destinations', re.IGNORECASE)]
@@ -71,25 +71,19 @@ def remove_incorrect_column_header_rows(table):
 
     # Search for a row that meets the conditions
     for row_index, row in enumerate(table.rows):
-        rollcall_found = destination_found = seats_found = 0
+        rollcall_found = any(regex.search(cell[0]) for regex in rollcallRegexList for cell in row)
+        destination_found = any(regex.search(cell[0]) for regex in destinationRegexList for cell in row)
+        seats_found = any(regex.search(cell[0]) for regex in seatsRegexList for cell in row)
 
-        for cell, _ in row:
-            if any(regex.search(cell) for regex in rollcallRegexList):
-                rollcall_found += 1
-            if any(regex.search(cell) for regex in destinationRegexList):
-                destination_found += 1
-            if any(regex.search(cell) for regex in seatsRegexList):
-                seats_found += 1
-
-        if rollcall_found == 1 and destination_found == 1 and seats_found == 1:
+        if rollcall_found and destination_found and seats_found:
             match_row_index = row_index
             break
 
-    # If a match is found, rebuild the table
     if match_row_index is not None:
-        new_rows = table.rows[match_row_index:]
-        table.rows = new_rows
-    
+        del table.rows[:match_row_index]
+    else:
+        logging.warning("No matching header row found. Table headers may be incorrect.")
+
     return table
 
 def rearrange_columns(table):
