@@ -6,7 +6,8 @@ class Table:
         self.title_confidence = 0.0
         self.footer = ""
         self.footer_confidence = 0.0
-        self.table_confidence = 0.0  # New field for table confidence
+        self.table_confidence = 0.0
+        self.page_number = 0  # New field for storing the page number
         self.rows = []  # Each row is a list of tuples (cell_text, confidence)
         self.table_number = 0  # Table number, to be set externally
 
@@ -19,22 +20,21 @@ class Table:
         try:
             md = []
             if self.title:
-                md.append(f"## Table {self.table_number} (Confidence: {self.table_confidence})\n") 
+                md.append(f"## Table {self.table_number} (Page: {self.page_number}, Confidence: {self.table_confidence})\n") 
                 md.append(f"{self.title} (Confidence: {self.title_confidence})\n")
             # Calculate maximum width for each column for alignment
             column_count = len(self.rows[0]) if self.rows else 0
             max_widths = [0] * column_count
             for row in self.rows:
                 for i, cell in enumerate(row):
-                    if i < column_count:  # Check to prevent IndexError
+                    if i < column_count:
                         max_widths[i] = max(max_widths[i], len(f"{cell[0]} ({cell[1]})"))
-            # Create header row from the first row of the table
+            # Create header and rows
             if self.rows:
                 header_row = [f"{cell[0]} ({cell[1]})".ljust(max_widths[i]) for i, cell in enumerate(self.rows[0])]
                 md.append("| " + " | ".join(header_row) + " |")
                 separator_row = ["-" * max_widths[i] for i in range(column_count)]
                 md.append("| " + " | ".join(separator_row) + " |")
-            # Create table rows
             for row in self.rows[1:]:
                 formatted_row = [f"{cell[0]} ({cell[1]})".ljust(max_widths[i]) for i, cell in enumerate(row)]
                 md.append("| " + " | ".join(formatted_row) + " |")
@@ -45,13 +45,14 @@ class Table:
         except Exception as e:
             logging.error(f"An error occurred while converting the table to Markdown: {e}")
             return None
-    
-    def average_row_confidence(self, row_index):
+
+    def get_average_row_confidence(self, row_index, ignore_empty_cells=False):
         """
         Calculate and return the average confidence of a row specified by row_index.
         
         Parameters:
         row_index (int): The index of the row for which to calculate the average confidence.
+        ignore_empty_cells (bool): Whether to ignore empty cells when calculating average confidence.
         
         Returns:
         float: The average confidence of the row, or None if an error occurs.
@@ -64,6 +65,10 @@ class Table:
 
             # Extract the row based on the index
             row = self.rows[row_index]
+
+            # Filter out empty cells if ignore_empty_cells is True
+            if ignore_empty_cells:
+                row = [cell for cell in row if cell[0].strip() != ""]
 
             # Calculate the total confidence for the row
             total_confidence = sum(cell[1] for cell in row)
