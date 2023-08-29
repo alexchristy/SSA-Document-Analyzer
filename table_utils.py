@@ -2,7 +2,6 @@ from table import Table
 import logging
 import re
 
-# Modifying the function to set the table confidence
 def convert_textract_response_to_tables(json_response):
     """Convert AWS Textract JSON response to a list of Table objects."""
     try:
@@ -25,9 +24,10 @@ def convert_textract_response_to_tables(json_response):
             if block.get('BlockType') == 'TABLE':
                 current_table = Table()
                 current_table.table_number = len(tables) + 1
-                current_table.table_confidence = block.get('Confidence', 0.0)  # Set the table confidence
+                current_table.table_confidence = block.get('Confidence', 0.0)
+                current_table.page_number = block.get('Page', 1)  # Setting the page number
                 tables.append(current_table)
-
+                
             elif block.get('BlockType') == 'CELL':
                 cell_text = collect_text_from_children(block)
                 cell_confidence = block.get('Confidence', 0.0)
