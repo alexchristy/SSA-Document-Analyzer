@@ -1,16 +1,12 @@
-# Importing the logging module for logging configuration and error handling
 import logging
 
-# Configuring the logging
-logging.basicConfig(level=logging.INFO)
-
-# Defining the Table class
 class Table:
     def __init__(self):
         self.title = ""
         self.title_confidence = 0.0
         self.footer = ""
         self.footer_confidence = 0.0
+        self.table_confidence = 0.0  # New field for table confidence
         self.rows = []  # Each row is a list of tuples (cell_text, confidence)
         self.table_number = 0  # Table number, to be set externally
 
@@ -23,7 +19,8 @@ class Table:
         try:
             md = []
             if self.title:
-                md.append(f"## Table {self.table_number} - {self.title} (Confidence: {self.title_confidence})")
+                md.append(f"## Table {self.table_number} (Confidence: {self.table_confidence})\n") 
+                md.append(f"{self.title} (Confidence: {self.title_confidence})\n")
             # Calculate maximum width for each column for alignment
             column_count = len(self.rows[0]) if self.rows else 0
             max_widths = [0] * column_count
@@ -48,54 +45,41 @@ class Table:
         except Exception as e:
             logging.error(f"An error occurred while converting the table to Markdown: {e}")
             return None
+    
+    def average_row_confidence(self, row_index):
+        """
+        Calculate and return the average confidence of a row specified by row_index.
+        
+        Parameters:
+        row_index (int): The index of the row for which to calculate the average confidence.
+        
+        Returns:
+        float: The average confidence of the row, or None if an error occurs.
+        """
+        try:
+            # Check if the row index is out of range
+            if row_index < 0 or row_index >= len(self.rows):
+                logging.error(f"Row index {row_index} out of range. Valid range is 0 to {len(self.rows) - 1}.")
+                return None
 
-# Defining the function to convert AWS Textract JSON to Table objects
-def convert_textract_response_to_tables(json_response):
-    """Convert AWS Textract JSON response to a list of Table objects."""
-    try:
-        tables = []
-        block_id_to_block = {block['Id']: block for block in json_response.get('Blocks', [])}
+            # Extract the row based on the index
+            row = self.rows[row_index]
 
-        # Helper function to collect text from child blocks
-        def collect_text_from_children(block):
-            text = block.get('Text', '')
-            for relationship in block.get('Relationships', []):
-                if relationship['Type'] == 'CHILD':
-                    for child_id in relationship.get('Ids', []):
-                        child_block = block_id_to_block.get(child_id, {})
-                        text += ' ' + collect_text_from_children(child_block)
-            return text.strip()
+            # Calculate the total confidence for the row
+            total_confidence = sum(cell[1] for cell in row)
 
-        current_table = None
+            # Calculate the average confidence
+            avg_confidence = total_confidence / len(row) if len(row) > 0 else 0.0
 
-        for block in json_response.get('Blocks', []):
-            if block.get('BlockType') == 'TABLE':
-                current_table = Table()
-                current_table.table_number = len(tables) + 1
-                tables.append(current_table)
+            return avg_confidence
 
-            elif block.get('BlockType') == 'CELL':
-                cell_text = collect_text_from_children(block)
-                cell_confidence = block.get('Confidence', 0.0)
-                row_index = block.get('RowIndex', 0) - 1
+        except IndexError:
+            # Catch IndexError specifically
+            logging.error(f"Row index {row_index} is out of bounds.")
+            return None
 
-                while len(current_table.rows) <= row_index:
-                    current_table.add_row([])
+        except Exception as e:
+            # Log the exception
+            logging.error(f"An error occurred while calculating the average confidence for row {row_index}: {e}")
+            return None
 
-                current_row = current_table.rows[row_index]
-                current_row.append((cell_text, cell_confidence))
-
-            elif block.get('BlockType') == 'TABLE_TITLE':
-                title_text = collect_text_from_children(block)
-                current_table.title = title_text
-                current_table.title_confidence = block.get('Confidence', 0.0)
-
-            elif block.get('BlockType') == 'TABLE_FOOTER':
-                footer_text = collect_text_from_children(block)
-                current_table.footer = footer_text
-                current_table.footer_confidence = block.get('Confidence', 0.0)
-                    
-        return tables
-    except Exception as e:
-        logging.error(f"An error occurred while converting to table: {e}")
-        return None
