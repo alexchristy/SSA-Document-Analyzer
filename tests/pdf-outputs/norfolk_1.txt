@@ -1,0 +1,27 @@
+## Table 1 (Page: 2, Confidence: 99.853515625)
+
+DEPARTURES FROM: NORFOLK (NGU) FRIDAY, AUGUST 18 2023 (Confidence: 90.478515625)
+
+| ROLL CALL (94.04296875) | DESTINATION (96.2890625)                                                                                                           | SEATS (92.822265625) |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+|  (35.8642578125)        | PROTA,SP/SIGONELLA, IT/BAHRAIN/ (36.71875)                                                                                         |  (39.501953125)      |
+| 1930 (33.8134765625)    | DIEGO GARCIA (DELAYED MISSION) (34.619140625)                                                                                      |  (39.501953125)      |
+|  (39.794921875)         | *S/A Passengers must have a Spanish residency ID or have a Spanish Passport to make Rota, Spain their destination. (40.7470703125) |  (39.501953125)      |
+| 2100 (88.427734375)     | JACKSONVILLE NAS, FL (90.576171875)                                                                                                | T-60 (87.3046875)    |
+## Table 2 (Page: 3, Confidence: 99.755859375)
+
+DEPARTURES FROM: NORFOLK (NGU) SATURDAY, AUGUST 19 2023 (Confidence: 91.259765625)
+
+| ROLL CALL (92.333984375) | DESTINATION (96.630859375)                              | SEATS (91.015625)  |
+| ------------------------ | ------------------------------------------------------- | ------------------ |
+| 1000 (88.4765625)        | JOINT BASE ANDREWS, MD (92.578125)                      | TBD (87.255859375) |
+| 1115 (91.650390625)      | GULFPORT-BILOXI INTL., MS MCGUIRE FIELD,NJ (95.8984375) | TBD (90.33203125)  |
+*Seats: T - Tentative, F - - Firm, TBD - - To Be Determined* (Confidence: 68.212890625)
+## Table 3 (Page: 4, Confidence: 99.609375)
+
+DEPARTURES FROM: NORFOLK (NGU) SUNDAY, AUGUST 17 2023 (Confidence: 87.744140625)
+
+| ROLL CALL (91.015625) | DESTINATION (95.947265625) | SEATS (89.306640625) |
+| --------------------- | -------------------------- | -------------------- |
+| 1115 (89.990234375)   | JACKSON, MS (94.873046875) | TBD (88.330078125)   |
+*Seats: T - Tentative, F - - Firm, TBD - To Be Determined* (Confidence: 52.490234375)
