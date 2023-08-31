@@ -1,6 +1,8 @@
 import logging
 from table import Table
 import re
+from gpt3_turbo_analysis import GPT3TurboAnalysis
+import json
 
 def parse_seat_data(seat_data):
     """
@@ -15,6 +17,11 @@ def parse_seat_data(seat_data):
     
     num_of_seats = 0
     seat_status = ''
+
+    # If seat data is empty, return empty values
+    if seat_data == '':
+        logging.info("Seat data is empty.")
+        return num_of_seats, seat_status
     
     # Case 1: Format is number followed by letter (e.g., 60T)
     if seat_data[:-1].isdigit() and seat_data[-1].upper() in ['T', 'F']:
@@ -45,6 +52,11 @@ def parse_rollcall_time(time_str):
     - str: A string representing the rollcall time in 24-hour format.
     """
     
+    # If time string is empty, return empty string
+    if time_str == '':
+        logging.info("Rollcall time is empty.")
+        return ''
+
     # Extract the first 4 digits to represent the 24-hour time
     rollcall_time = time_str[:4]
     
@@ -56,6 +68,42 @@ def parse_rollcall_time(time_str):
     logging.info(f"Parsed rollcall time: {rollcall_time}")
     
     return rollcall_time
+
+def parse_destination(destination_data: str):
+
+    # If destination data is empty, return empty string
+    if destination_data == '':
+        logging.info("Destination data is empty.")
+        return ''
+    
+    # Initialize GPT analysis object
+    gpt3_turbo_analysis = GPT3TurboAnalysis()
+
+    # Split the destination data into two parts: one without the text in parenthesis and one with only the text in parenthesis
+    no_parenth_text, parenth_text = split_parenthesis(destination_data)
+
+    # If no text within parenthesis is found, use the entire destination data as the input text
+    if not parenth_text:
+        input_text = destination_data
+    else:
+        input_text = no_parenth_text
+
+    # Analyze the input text using GPT-3 Turbo
+    returned_str = gpt3_turbo_analysis.get_destination_analysis(input_text)
+
+    # If GPT determines there are no destinations, return None
+    if returned_str is None or returned_str == 'None':
+        return None
+    
+    # Parse the returned string into a list of destinations
+    try:
+        destinations = json.loads(returned_str)
+    except Exception as e:
+        logging.error(f"An error occurred processing GPT returned destinations. Error: {e}")
+        logging.error(f"Returned string: {returned_str}")
+        return None
+    
+    return destinations
 
 def split_parenthesis(text):
     """
@@ -85,24 +133,32 @@ def split_parenthesis(text):
         logging.error(f"An error occurred: {e}")
         return None, None
 
-def convert_table_to_flights(table: Table):
+def parse_row_to_flight(row_index: int):
+    logging.info(f"Processing row {row_index}: {row}")
 
-    table_no_column_headers = table.rows[1:]
+    row = table.rows[row_index]
 
-    flights = []
+    # Guard statements for basic validation
+    if len(row) < 3:
+        logging.error(f"Skipping row {row_index} due to insufficient number of cells.")
+        return None
+    
+    roll_call_time_cell, destination_cell, seat_cell = row[0], row[1], row[2]
 
-    # Iterate through each row with flight data
-    for row in table_no_column_headers:
+    # Parse and check rollcall time
+    roll_call_time = parse_rollcall_time(roll_call_time_cell[0])
+    if roll_call_time is None:
+        return None
+    
+    # Parse and check seat data
+    num_of_seats, seat_status = parse_seat_data(seat_cell[0])
+    if num_of_seats is None or seat_status is None:
+        return None
+    
+    # Parse and check destination
 
-        # Get rollcall time
-        rollcall_time = parse_rollcall_time(row[0])
 
-        # Get destination/s
-        destination_data = row[1]
 
-        # Get seat information
-        num_of_seats, seat_status = parse_seat_data(row[2])
-
-        
-        
-        
+if __name__ == "__main__":
+    # Create a table object
+    table = Table.load_state(filename="table1_state.pkl")
