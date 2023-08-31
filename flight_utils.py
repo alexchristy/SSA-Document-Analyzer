@@ -22,14 +22,20 @@ def parse_seat_data(seat_data):
     if seat_data == '':
         logging.info("Seat data is empty.")
         return num_of_seats, seat_status
-    
-    # Case 1: Format is number followed by letter (e.g., 60T)
-    if seat_data[:-1].isdigit() and seat_data[-1].upper() in ['T', 'F']:
+
+    # Case 1: Seat data is TBD
+    if seat_data == 'TBD':
+        logging.info("Seat data is TBD.")
+        seat_status = 'TBD'
+        return num_of_seats, seat_status
+
+    # Case 2: Format is number followed by letter (e.g., 60T)
+    elif seat_data[:-1].isdigit() and seat_data[-1].upper() in ['T', 'F']:
         num_of_seats = int(seat_data[:-1])
         seat_status = seat_data[-1].upper()
         logging.info(f"Parsed data in format 'number letter' (60T). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
     
-    # Case 2: Format is letter dash number (e.g., T-60)
+    # Case 3: Format is letter dash number (e.g., T-60)
     elif seat_data[0].upper() in ['T', 'F'] and seat_data[1] == '-' and seat_data[2:].isdigit():
         num_of_seats = int(seat_data[2:])
         seat_status = seat_data[0].upper()
@@ -121,7 +127,7 @@ def split_parenthesis(text):
         
         # If no text within parenthesis is found, log a warning
         if not parenth_text:
-            logging.warning(f"No text within parenthesis found in '{text}'.")
+            logging.info(f"No text within parenthesis found in '{text}'.")
         
         # Remove text within parenthesis from the original string
         no_parenth_text = re.sub(r'\(.*?\)', '', text).strip()
@@ -133,10 +139,10 @@ def split_parenthesis(text):
         logging.error(f"An error occurred: {e}")
         return None, None
 
-def parse_row_to_flight(row_index: int):
-    logging.info(f"Processing row {row_index}: {row}")
+def parse_row(table: Table, row_index: int):
 
     row = table.rows[row_index]
+    logging.info(f"Processing row {row_index}: {row}")
 
     # Guard statements for basic validation
     if len(row) < 3:
@@ -148,17 +154,28 @@ def parse_row_to_flight(row_index: int):
     # Parse and check rollcall time
     roll_call_time = parse_rollcall_time(roll_call_time_cell[0])
     if roll_call_time is None:
+        logging.info(f'Exiting parse_row_to_flight due to invalid rollcall time data.')
         return None
     
     # Parse and check seat data
     num_of_seats, seat_status = parse_seat_data(seat_cell[0])
     if num_of_seats is None or seat_status is None:
+        logging.info(f'Exiting parse_row_to_flight due to invalid seat data.')        
         return None
     
     # Parse and check destination
+    destinations = parse_destination(destination_cell[0])
+    if destinations is None:
+        logging.info(f'Exiting parse_row_to_flight due to invalid destination data.')
+        return None
+    
+    return roll_call_time, destinations, num_of_seats, seat_status
+
+
 
 
 
 if __name__ == "__main__":
     # Create a table object
-    table = Table.load_state(filename="table1_state.pkl")
+    table = Table.load_state(filename="table3_state.pkl")
+    print(parse_row(table, 1))
