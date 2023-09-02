@@ -1,0 +1,38 @@
+## Table 1 (Page: 2, Confidence: 99.755859375)
+
+Friday August 18th 2023 (Confidence: 99.93765258789062)
+
+| ROLL CALL (92.431640625) | DESTINATION (96.533203125)                    | SEATS (92.626953125) |
+| ------------------------ | --------------------------------------------- | -------------------- |
+| 1420 (90.625)            | Djibouti, Djibouti (94.62890625)              |  (90.8203125)        |
+| 1720 (91.50390625)       | Sigonella, Italy Niamey, Niger (95.556640625) | 53T (91.69921875)    |
+| 1850 (92.431640625)      | Joint Base Charleston, SC (96.533203125)      | 51T (92.626953125)   |
+## Table 2 (Page: 3, Confidence: 99.609375)
+
+Saturday August 19th 2023 (Confidence: 99.96537780761719)
+
+| ROLL CALL (93.359375) | DESTINATION (96.533203125)                                                                         | SEATS (92.919921875) |
+| --------------------- | -------------------------------------------------------------------------------------------------- | -------------------- |
+| 0815 (90.966796875)   | Dover Air Force Base, DE (94.091796875)                                                            | TBD (90.576171875)   |
+| 1040 (76.953125)      | Aviano Air Base, Italy (Space R pax only) Adana Air Base, Turkey (Space R pax only) (79.541015625) | TBD (76.611328125)   |
+## Table 3 (Page: 4, Confidence: 99.853515625)
+
+Sunday August 20th 2023 (Confidence: 99.92411041259766)
+
+| ROLL CALL (93.408203125) | DESTINATION (96.875)                      | SEATS (93.603515625) |
+| ------------------------ | ----------------------------------------- | -------------------- |
+| 0330 (91.89453125)       | Kuwait, Kuwait (95.3125)                  | TBD (92.08984375)    |
+| 0410 (91.259765625)      | Joint Base Charleston, SC (94.62890625)   | TBD (91.455078125)   |
+| 0840 (89.94140625)       | Sigonella, Italy (93.310546875)           | TBD (90.13671875)    |
+| 0910 (92.724609375)      | Mildenhall, United Kingdom (96.19140625)  | TBD (92.919921875)   |
+| 0940 (91.943359375)      | Dover Air Force Base, DE (95.361328125)   | TBD (92.138671875)   |
+| 1050 (92.67578125)       | Al Udeid AB, Qatar (96.142578125)         | TBD (92.87109375)    |
+| 1220 (92.333984375)      | Mildenhall, United Kingdom (95.751953125) | TBD (92.529296875)   |
+*Seats: T - Tentative, F - Firm, TBD - To Be Determined* (Confidence: 90.478515625)
+## Table 4 (Page: 5, Confidence: 98.779296875)
+
+Friday August 18th 2023 (Confidence: 99.9409408569336)
+
+| Pick up Time (90.087890625) | From (95.458984375)                  |
+| --------------------------- | ------------------------------------ |
+|  (89.84375)                 | No remaining arrivals (95.166015625) |
