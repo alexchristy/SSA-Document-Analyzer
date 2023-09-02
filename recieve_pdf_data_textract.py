@@ -18,8 +18,9 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from andersen_1_72hr_sns_messages import andersen_1_72hr_successful_job_sns_message as current_sns_message
-from andersen_1_72hr_textract_response import andersen_1_72hr_textract_response as current_textract_response
+from incirlik_1_72hr_sns_messages import incirlik_1_72hr_successful_job_sns_message as current_sns_message
+from incirlik_1_72hr_textract_response import incirlik_1_72hr_textract_response as current_textract_response
+
 def initialize_clients():
     # Set environment variables
     load_dotenv()
