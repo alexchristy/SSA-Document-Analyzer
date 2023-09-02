@@ -1,7 +1,10 @@
 import unittest
-import tests.doc_analysis_responses as doc_analysis_responses
-import tests.sns_event_message as sns_event_message
 from recieve_pdf_data_textract import parse_sns_event
+import sys
+
+sys.path.append("./sns-event-messages")
+
+from bwi_1_72hr_sns_messages import *
 
 class TestSNSEventParsing(unittest.TestCase):
 
@@ -12,10 +15,10 @@ class TestSNSEventParsing(unittest.TestCase):
         """
 
         # Arrange
-        event = sns_event_message.sns_event_message_textract_successful_job
+        event = bwi_1_72hr_successful_job_sns_message
 
         # Act
-        _, status = parse_sns_event(event)
+        _, status, _, _ = parse_sns_event(event)
 
         # Assert
         self.assertEqual(status, 'SUCCEEDED')
@@ -27,10 +30,10 @@ class TestSNSEventParsing(unittest.TestCase):
         """
 
         # Arrange
-        event = sns_event_message.sns_event_message_textract_failed_job
+        event = bwi_1_72hr_failed_job_sns_message
 
         # Act
-        _, status = parse_sns_event(event)
+        _, status, _, _ = parse_sns_event(event)
 
         # Assert
         self.assertEqual(status, 'FAILED')
@@ -42,10 +45,10 @@ class TestSNSEventParsing(unittest.TestCase):
         """
 
         # Arrange
-        event = sns_event_message.sns_event_message_textract_error_job
+        event = bwi_1_72hr_error_job_sns_message
 
         # Act
-        _, status = parse_sns_event(event)
+        _, status, _, _ = parse_sns_event(event)
 
         # Assert
         self.assertEqual(status, 'ERROR')
