@@ -1,168 +1,66 @@
 import unittest
-import tests.doc_analysis_responses as doc_analysis_responses
-import flight
-from recieve_pdf_data_textract import parse_textract_response_to_flights
+import sys
+import hashlib
+import recieve_pdf_data_textract
+
+# Include test data directories
+sys.path.append('tests/textract-responses')
+sys.path.append('tests/sns-event-messages')
 
 class TestTextractResponseParsing(unittest.TestCase):
 
-    def test_bwi_1(self):
+    def test_bwi_1_72hr(self):
 
-        mcguire_flight_known = flight.Flight(
-            date = "20230818",
-            destination_terminal = "Joint Base McGuire Dix Lakehurst Passenger Terminal",
-            notes = "",
-            num_of_seats = 5,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1200L",
-            seat_status = "T",
-            table_footer = "N/A"
-        )
 
-        incirlik_flight_known = flight.Flight(
-            date = "20230820",
-            destination_terminal = "Incirlik AB Passenger Terminal",
-            notes = "",
-            num_of_seats = 37,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "2300L",
-            seat_status = "T",
-            table_footer = "SPACE REQUIRED CHECK IN 2010L AND NO LATER THAN 2350L SPACE A MUST BE MARKED PRESENT PRIOR TO 2230L"
-        )
+        # Import test data
+        from bwi_1_72hr_sns_messages import bwi_1_72hr_successful_job_sns_message as sns_message
+        from bwi_1_72hr_textract_response import bwi_1_72hr_textract_response as textract_response
+        
+        table_string = recieve_pdf_data_textract.lambda_test_handler(sns_message, textract_response)
 
-        ramstein_flight_known = flight.Flight(
-            date = "20230820",
-            destination_terminal = "Ramstein AB Passenger Terminal",
-            notes = "",
-            num_of_seats = 69,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "2300L",
-            seat_status = "T",
-            table_footer = "SPACE REQUIRED CHECK IN 2010L AND NO LATER THAN 2350L SPACE A MUST BE MARKED PRESENT PRIOR TO 2230L"
-        )
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
 
-        known_flights = [mcguire_flight_known, incirlik_flight_known, ramstein_flight_known]
+        print(table_string)
+        print(table_string_hash)
 
-        parsed_flights = parse_textract_response_to_flights(doc_analysis_responses.bwi_1_textract_response)
+        self.assertEqual(table_string_hash, '12aa0730b16eb4385847e101818e8f61b5eab874a2340d0c09a1a41bd987b9c8')
 
-        # Check that the number of flights is correct
-        self.assertEqual(len(parsed_flights), len(known_flights))
+    def test_norfolk_1_72hr(self):
 
-        # Check that each known flight has a match in the parsed flights
-        for known_flight in known_flights:
-            self.assertTrue(any(known_flight == parsed_flight for parsed_flight in parsed_flights))
+        # Import test data
+        from norfolk_1_72hr_sns_messages import norfolk_1_72hr_successful_job_sns_message as sns_message
+        from norfolk_1_72hr_textract_response import norfolk_1_72hr_textract_response as textract_response
+        
+        table_string = recieve_pdf_data_textract.lambda_test_handler(sns_message, textract_response)
 
-    def test_norfolk_1(self):
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
 
-        rota_flight_known = flight.Flight(
-            date = "20230818",
-            destination_terminal = "Naval Air Station Rota Passenger Terminal",
-            notes = "S/A Passengers must have a Spanish residency ID or have a Spanish Passport to make Rota, Spain their destination.",
-            num_of_seats = 0,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1930",
-            seat_status = "TDB",
-            table_footer = "N/A"
-        )
+        print(table_string)
+        print(table_string_hash)
 
-        sigonella_flight_known = flight.Flight(
-            date = "20230818",
-            destination_terminal = "NAS Sigonella Air Terminal",
-            notes = "S/A Passengers must have a Spanish residency ID or have a Spanish Passport to make Rota, Spain their destination.",
-            num_of_seats = 0,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1930",
-            seat_status = "TDB",
-            table_footer = "N/A"
-        )
+        self.assertEqual(table_string_hash, 'ed62c9ee60dbaff72dd34f8423e7a12e8cd6853618451740f5998e6bac7fdce9')
 
-        bahrain_flight_known = flight.Flight(
-            date = "20230818",
-            destination_terminal = "Bahrain Passenger Terminal",
-            notes = "S/A Passengers must have a Spanish residency ID or have a Spanish Passport to make Rota, Spain their destination.",
-            num_of_seats = 0,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1930",
-            seat_status = "TDB",
-            table_footer = "N/A"
-        )
+    def test_iwakuni_1_72hr(self):
 
-        diego_garcia_flight_known = flight.Flight(
-            date = "20230818",
-            destination_terminal = "Diego Garcia",
-            notes = "DELAYED MISSION;S/A Passengers must have a Spanish residency ID or have a Spanish Passport to make Rota, Spain their destination.",
-            num_of_seats = 0,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1930",
-            seat_status = "TDB",
-            table_footer = "N/A"
-        )
+        # Import test data
+        from iwakuni_1_72hr_sns_messages import iwakuni_1_72hr_successful_job_sns_message as sns_message
+        from iwakuni_1_72hr_textract_response import iwakuni_1_72hr_textract_response as textract_response
 
-        jacksonville_flight_known = flight.Flight(
-            date = "20230818",
-            destination_terminal = "Naval Air Station Jacksonville Passenger Terminal",
-            notes = "",
-            num_of_seats = 60,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "2100",
-            seat_status = "T",
-            table_footer = "N/A"
-        )
+        table_string = recieve_pdf_data_textract.lambda_test_handler(sns_message, textract_response)
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
 
-        jb_andrews_flight_known = flight.Flight(
-            date = "20230819",
-            destination_terminal = "Joint Base Andrews Passenger Terminal",
-            notes = "",
-            num_of_seats = 0,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1000",
-            seat_status = "TDB",
-            table_footer = "Seats: T - Tentative, F - Firm, TBD - To Be Determined"
-        )
+        self.assertEqual(table_string_hash, '219c443421e3b572e29b1d200051219e6d2d61366bbc722ba1105279cfa7e95b')
 
-        biloxi_flight_known = flight.Flight(
-            date = "20230819",
-            destination_terminal = "GULFPORT-BILOXI INTL., MS",
-            notes = "",
-            num_of_seats = 0,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1115",
-            seat_status = "TDB",
-            table_footer = "Seats: T - Tentative, F - Firm, TBD - To Be Determined"
-        )
+    def test_ramstein_1_72hr(self):
 
-        mcguire_field_flight_known = flight.Flight(
-            date = "20230819",
-            destination_terminal = "Joint Base McGuire Dix Lakehurst Passenger Terminal",
-            notes = "",
-            num_of_seats = 0,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1115",
-            seat_status = "TDB",
-            table_footer = "Seats: T - Tentative, F - Firm, TBD - To Be Determined"
-        )
+        # Import test data
+        from ramstein_1_72hr_sns_messages import ramstein_1_72hr_successful_job_sns_message as sns_message
+        from ramstein_1_72hr_textract_response import ramstein_1_72hr_textract_response as textract_response
 
-        jackson_flight_known = flight.Flight(
-            date = "20230817",
-            destination_terminal = "Jackson, MS",
-            notes = "",
-            num_of_seats = 0,
-            origin_terminal = "", # Origin is blank as it is added outside of the parsing function
-            rollcall_time = "1115",
-            seat_status = "TDB",
-            table_footer = "Seats: T - Tentative, F - Firm, TBD - To Be Determined"
-        )
+        table_string = recieve_pdf_data_textract.lambda_test_handler(sns_message, textract_response)
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
 
-        known_flights = [rota_flight_known, sigonella_flight_known, bahrain_flight_known, diego_garcia_flight_known, jacksonville_flight_known, jb_andrews_flight_known, biloxi_flight_known, mcguire_field_flight_known, jackson_flight_known]
-
-        parsed_flights = parse_textract_response_to_flights(doc_analysis_responses.norfolk_1_textract_response)
-
-        # Check that the number of flights is correct
-        self.assertEqual(len(parsed_flights), len(known_flights))
-
-        # Check that each known flight has a match in the parsed flights
-        for known_flight in known_flights:
-            self.assertTrue(any(known_flight == parsed_flight for parsed_flight in parsed_flights))
-            
+        self.assertEqual(table_string_hash, 'f977773d0b330c5a392aeafa95615d93e4384d6b5f248dcdbbe829945f7315ed')
 
 if __name__ == '__main__':
     unittest.main()
