@@ -1,0 +1,30 @@
+## Table 1 (Page: 1, Confidence: 99.853515625)
+
+ARRIVALS TO: MCAS Iwakuni, JP 19 August - 21 August 2023 (Confidence: 60.9375)
+
+| DATE (88.37890625)    | ORIGIN (94.677734375)                                     | ETA (90.966796875)        |
+| --------------------- | --------------------------------------------------------- | ------------------------- |
+| 19 AUG (88.916015625) | KADENA, OKINAWA, JAPAN **PATRIOT EXPRESS** (95.263671875) | 1135L-1205L (91.50390625) |
+| 20 AUG (86.03515625)  | NO FLIGHTS SCHEDULED (92.1875)                            | - (88.57421875)           |
+| 21 AUG (89.306640625) | NO FLIGHTS SCHEDULED (95.703125)                          | - (91.943359375)          |
+## Table 2 (Page: 2, Confidence: 99.951171875)
+
+DEPARTURES FROM: MCAS Iwakuni, JP Saturday, 19 August 2023 (Confidence: 94.140625)
+
+| ROLL CALL (91.796875) | DESTINATION (96.09375)                                                                                                                                                         | SEATS (92.1875)        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
+| 1020L (59.86328125)   | **PATRIOT EXPRESS** YOKOTA AIR BASE, JAPAN SEATTLE TACOMA WASHINGTON **SHOWTIME FOR BOOKED PASSENGERS 0730-1020L** **EARLY BAGGAGE CHECK-IN FRIDAY 1600-1730L** (62.646484375) | 30T TBD (60.107421875) |
+## Table 3 (Page: 3, Confidence: 99.658203125)
+
+DEPARTURES FROM: MCAS Iwakuni, JP Sunday, 20 August 2023 (Confidence: 96.923828125)
+
+| ROLL CALL (90.33203125) | DESTINATION (95.80078125)           | SEATS (89.55078125) |
+| ----------------------- | ----------------------------------- | ------------------- |
+| - (89.94140625)         | NO FLIGHTS SCHEDULED (95.361328125) | - (89.111328125)    |
+## Table 4 (Page: 4, Confidence: 99.609375)
+
+DEPARTURES FROM: MCAS Iwakuni, JP Monday, 21 August 2023 (Confidence: 83.3984375)
+
+| ROLL CALL (90.478515625) | DESTINATION (95.556640625)          | SEATS (89.990234375) |
+| ------------------------ | ----------------------------------- | -------------------- |
+| - (89.94140625)          | NO FLIGHTS SCHEDULED (94.970703125) | - (89.453125)        |
