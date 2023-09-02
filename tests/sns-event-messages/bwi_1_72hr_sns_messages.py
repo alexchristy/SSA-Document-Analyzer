@@ -1,4 +1,4 @@
-sns_event_message_textract_successful_job_bwi_1 = {
+bwi_1_72hr_successful_job_sns_message = {
     "Records": [
         {
             "EventSource": "aws:sns",
@@ -21,7 +21,7 @@ sns_event_message_textract_successful_job_bwi_1 = {
     ]
 }
 
-sns_event_message_textract_failed_job_bwi_1 = {
+bwi_1_72hr_failed_job_sns_message = {
     "Records": [
         {
             "EventSource": "aws:sns",
@@ -44,7 +44,7 @@ sns_event_message_textract_failed_job_bwi_1 = {
     ]
 }
 
-sns_event_message_textract_error_job_bwi_1 = {
+bwi_1_72hr_error_job_sns_message = {
     "Records": [
         {
             "EventSource": "aws:sns",

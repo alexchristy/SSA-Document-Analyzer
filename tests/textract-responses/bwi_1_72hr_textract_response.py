@@ -1,5 +1,5 @@
 # Debug print
-bwi_1_textract_response = {
+bwi_1_72hr_textract_response = {
     "DocumentMetadata": {
         "Pages": 3
     },

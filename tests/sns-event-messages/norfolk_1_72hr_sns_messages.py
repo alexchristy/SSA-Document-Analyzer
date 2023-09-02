@@ -1,4 +1,4 @@
-sns_event_message_textract_successful_job_norfolk_1 = {
+norfolk_1_72hr_successful_job_sns_message = {
     "Records": [
         {
             "EventSource": "aws:sns",

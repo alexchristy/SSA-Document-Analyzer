@@ -1,4 +1,4 @@
-norfolk_1_textract_response = {
+norfolk_1_72hr_textract_response = {
     "DocumentMetadata": {
         "Pages": 4
     },
