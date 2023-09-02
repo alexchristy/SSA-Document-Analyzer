@@ -54,8 +54,11 @@ def convert_textract_response_to_tables(json_response):
             elif block_type == 'TABLE_TITLE':
                 if current_table:
                     title_text = collect_text_from_children(block)
-                    current_table.title = title_text
-                    current_table.title_confidence = block.get('Confidence', 0.0)
+
+                    # Check if title has the date in it
+                    if check_date_string(title_text):
+                        current_table.title = title_text
+                        current_table.title_confidence = block.get('Confidence', 0.0)
             elif block_type == 'TABLE_FOOTER':
                 if current_table:
                     footer_text = collect_text_from_children(block)
