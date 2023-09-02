@@ -1,4 +1,5 @@
 import logging
+import pickle
 
 class Table:
     def __init__(self):
@@ -86,5 +87,32 @@ class Table:
         except Exception as e:
             # Log the exception
             logging.error(f"An error occurred while calculating the average confidence for row {row_index}: {e}")
+            return None
+        
+    def save_state(self, filename="table_state.pkl"):
+        try:
+            with open(filename, "wb") as f:
+                pickle.dump(self, f)
+            return True
+        except Exception as e:
+            logging.error(f"An error occurred while saving the table state: {e}")
+            return False
+        
+    def get_row(self,index: int):
+
+        if index < 0 or index >= len(self.rows):
+            logging.error(f"Row index {index} out of range. Valid range is 0 to {len(self.rows) - 1}.")
+            return None
+
+        return self.rows[index]
+
+    @classmethod
+    def load_state(cls, filename="table_state.pkl"):
+        try:
+            with open(filename, "rb") as f:
+                loaded_table = pickle.load(f)
+            return loaded_table
+        except Exception as e:
+            logging.error(f"An error occurred while loading the table state: {e}")
             return None
 
