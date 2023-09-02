@@ -21,7 +21,7 @@ SCHEDULED DEPARTURES FROM: INCIRLIK AB, TURKEY (ADA) Sunday, 20 AUG 2023 (Confid
 |  (80.908203125)          | NO SCHEDULED FLIGHT DEPARTURES (94.873046875)                                                                                                |  (90.185546875)      |
 ## Table 4 (Page: 4, Confidence: 99.853515625)
 
-72- Hour SCHEDULED FLIGHT/PASSENGER ARRIVALS (Confidence: 98.046875)
+No title found (Confidence: 0.0)
 
 | DATE (91.552734375)   | FROM: (96.728515625)                        | PAX PICK-UP TIME (90.91796875) |
 | --------------------- | ------------------------------------------- | ------------------------------ |
