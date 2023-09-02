@@ -3,11 +3,15 @@ import logging
 import re
 
 def convert_textract_response_to_tables(json_response):
-    """Convert AWS Textract JSON response to a list of Table objects."""
+    """
+    Convert AWS Textract JSON response to a list of Table objects.
+    """
     try:
         tables = []
+        # Check for the presence of any TABLE_TITLE blocks
+        has_table_title = any(block.get('BlockType', '') == 'TABLE_TITLE' for block in json_response.get('Blocks', []))
         block_id_to_block = {block['Id']: block for block in json_response.get('Blocks', []) if 'Id' in block}
-
+        
         # Helper function to collect text from child blocks
         def collect_text_from_children(block):
             text = block.get('Text', '')
@@ -17,50 +21,90 @@ def convert_textract_response_to_tables(json_response):
                         child_block = block_id_to_block.get(child_id, {})
                         text += ' ' + collect_text_from_children(child_block)
             return text.strip()
-
+        
         current_table = None
-
         for block in json_response.get('Blocks', []):
             block_type = block.get('BlockType')
             
             if block_type == 'TABLE':
                 current_table = Table()
+                # Use find_table_title_with_date function if there are no TABLE_TITLE blocks
+                if not has_table_title:
+                    found_title, found_title_confidence = find_table_title_with_date(json_response.get('Blocks', []), block)
+                    if found_title:
+                        current_table.title = found_title
+                        current_table.title_confidence = found_title_confidence  # Set the confidence value
+                    else:
+                        current_table.title = 'No title found'
+                        current_table.title_confidence = 0.0  # Set confidence to 0 as no title was found
                 current_table.table_number = len(tables) + 1
                 current_table.table_confidence = block.get('Confidence', 0.0)
                 current_table.page_number = block.get('Page', 1)  # Setting the page number
                 tables.append(current_table)
-                
             elif block_type == 'CELL':
                 if current_table is None:
-                    logging.warning("Encountered a CELL block before a TABLE block.")
+                    logging.warning('Encountered a CELL block before a TABLE block.')
                     continue
-                
                 cell_text = collect_text_from_children(block)
                 cell_confidence = block.get('Confidence', 0.0)
                 row_index = block.get('RowIndex', 0) - 1
-
                 while len(current_table.rows) <= row_index:
                     current_table.add_row([])
-
                 current_row = current_table.rows[row_index]
                 current_row.append((cell_text, cell_confidence))
-
             elif block_type == 'TABLE_TITLE':
                 if current_table:
                     title_text = collect_text_from_children(block)
                     current_table.title = title_text
                     current_table.title_confidence = block.get('Confidence', 0.0)
-
             elif block_type == 'TABLE_FOOTER':
                 if current_table:
                     footer_text = collect_text_from_children(block)
                     current_table.footer = footer_text
                     current_table.footer_confidence = block.get('Confidence', 0.0)
-                    
         return tables if tables else None
     except Exception as e:
-        logging.error(f"An error occurred while converting to table: {e}")
+        logging.error(f'An error occurred while converting to table: {e}')
         return None
+
+def check_date_string(input_string):
+    date_patterns = [
+        r"(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:th|st|nd|rd)?(?:,\s+\d{4})?",
+        r"\d{1,2}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)(?:,\s+\d{4})?",
+        r"\d{4}\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{1,2}(?:th|st|nd|rd)?",
+        r"\d{1,2}(?:th|st|nd|rd)?\s+(?:Jan(?:uary)?|Feb(?:ruary)?|Mar(?:ch)?|Apr(?:il)?|May|Jun(?:e)?|Jul(?:y)?|Aug(?:ust)?|Sep(?:tember)?|Oct(?:ober)?|Nov(?:ember)?|Dec(?:ember)?)\s+\d{4}"
+    ]
+
+    for pattern in date_patterns:
+        if re.search(pattern, input_string):
+            return True
+    return False
+    
+def find_table_title_with_date(blocks, table_block):
+    """
+    Returns the table title if found, otherwise returns None. Also returns the confidence level of the found title.
+    """
+    table_top = table_block['Geometry']['BoundingBox']['Top']
+    table_page = table_block.get('Page', None)
+    
+    # Filter out blocks that are text lines, are located above the table, and are on the same page
+    text_lines_above_table = [
+        block for block in blocks
+        if block['BlockType'] == 'LINE'
+        and block['Geometry']['BoundingBox']['Top'] < table_top
+        and block.get('Page', None) == table_page
+    ]
+    
+    # Sort the lines by their vertical position, so that we can search from nearest to farthest from the table
+    text_lines_above_table.sort(key=lambda x: table_top - x['Geometry']['BoundingBox']['Top'])
+    
+    # Search for a title containing a date
+    for line_block in text_lines_above_table:
+        line_text = line_block['Text']
+        if check_date_string(line_text):
+            return line_text, line_block.get('Confidence', 0.0)  # Found a title with a date, and it should be the closest one based on sorting
+    
+    return None, 0.0  # No suitable title found
 
 def remove_incorrect_column_header_rows(table):
     rollcallRegexList = [re.compile(r'rollcall', re.IGNORECASE), re.compile(r'roll call', re.IGNORECASE)]
