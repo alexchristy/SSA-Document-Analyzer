@@ -8,8 +8,6 @@ def convert_textract_response_to_tables(json_response):
     """
     try:
         tables = []
-        # Check for the presence of any TABLE_TITLE blocks
-        has_table_title = any(block.get('BlockType', '') == 'TABLE_TITLE' for block in json_response.get('Blocks', []))
         block_id_to_block = {block['Id']: block for block in json_response.get('Blocks', []) if 'Id' in block}
         
         # Helper function to collect text from child blocks
@@ -28,15 +26,16 @@ def convert_textract_response_to_tables(json_response):
             
             if block_type == 'TABLE':
                 current_table = Table()
+
                 # Use find_table_title_with_date function if there are no TABLE_TITLE blocks
-                if not has_table_title:
-                    found_title, found_title_confidence = find_table_title_with_date(json_response.get('Blocks', []), block)
-                    if found_title:
-                        current_table.title = found_title
-                        current_table.title_confidence = found_title_confidence  # Set the confidence value
-                    else:
-                        current_table.title = 'No title found'
-                        current_table.title_confidence = 0.0  # Set confidence to 0 as no title was found
+                found_title, found_title_confidence = find_table_title_with_date(json_response.get('Blocks', []), block)
+                if found_title:
+                    current_table.title = found_title
+                    current_table.title_confidence = found_title_confidence  # Set the confidence value
+                else:
+                    current_table.title = 'No title found'
+                    current_table.title_confidence = 0.0  # Set confidence to 0 as no title was found
+
                 current_table.table_number = len(tables) + 1
                 current_table.table_confidence = block.get('Confidence', 0.0)
                 current_table.page_number = block.get('Page', 1)  # Setting the page number
