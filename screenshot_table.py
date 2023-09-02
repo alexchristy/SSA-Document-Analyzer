@@ -2,7 +2,6 @@ import os
 import logging
 from pdf2image import convert_from_path
 from PIL import Image
-from tests.doc_analysis_responses import bwi_1_textract_response
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
