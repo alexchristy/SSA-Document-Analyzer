@@ -4,17 +4,21 @@ import os
 from firestore_db import FirestoreClient
 import logging
 from dotenv import load_dotenv
-import tests.doc_analysis_responses as doc_analysis_responses
-import tests.sns_event_message as sns_event_message
 from datetime import datetime as dt  # Importing datetime class as dt to avoid naming conflicts
 from destination_correction import find_best_location_match
 from table import Table
 from table_utils import *
 from s3_bucket import S3Bucket
 from screenshot_table import capture_screen_shot_of_table_from_pdf
+from flight_utils import *
 
 # REMOVE WHEN FINISHED TESTING
-from tests import sns_event_message
+import sys
+sys.path.append("./tests/textract_responses")
+sys.path.append("./tests/sns-event-messages")
+import bwi_1_72hr_textract_response
+from bwi_1_72hr_sns_messages import bwi_1_72hr_successful_job_sns_message
+
 
 def initialize_clients():
     # Set environment variables
@@ -160,7 +164,7 @@ def lambda_handler(event, context):
     if status != 'SUCCEEDED':
         raise("Job did not succeed.")
 
-    response = doc_analysis_responses.norfolk_1_textract_response # textract_client.get_document_analysis(JobId=job_id)
+    response = bwi_1_72hr_textract_response # textract_client.get_document_analysis(JobId=job_id)
 
     tables = gen_tables_from_textract_response(response)
 
@@ -248,10 +252,12 @@ def lambda_handler(event, context):
     # Remove PDF from local directory
     os.remove(local_pdf_path)
 
-        
+    i = 1
     for table in tables:
 
         print(table.to_markdown())
+        table.save_state(filename=f"table{i}_state.pkl")
+        i += 1
         
         
 
@@ -262,4 +268,4 @@ def lambda_handler(event, context):
     }
 
 if __name__ == "__main__":
-    lambda_handler(sns_event_message.sns_event_message_textract_successful_job_norfolk_1, None)
+    lambda_handler(bwi_1_72hr_successful_job_sns_message, None)
