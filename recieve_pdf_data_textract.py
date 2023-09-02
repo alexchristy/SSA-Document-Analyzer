@@ -1,3 +1,4 @@
+import hashlib
 import json
 import boto3
 import os
@@ -14,11 +15,11 @@ from flight_utils import *
 
 # REMOVE WHEN FINISHED TESTING
 import sys
-sys.path.append("./tests/textract_responses")
+sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
-import bwi_1_72hr_textract_response
-from bwi_1_72hr_sns_messages import bwi_1_72hr_successful_job_sns_message
 
+from ramstein_1_72hr_sns_messages import ramstein_1_72hr_successful_job_sns_message as current_sns_message
+from ramstein_1_72hr_textract_response import ramstein_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -164,7 +165,137 @@ def lambda_handler(event, context):
     if status != 'SUCCEEDED':
         raise("Job did not succeed.")
 
-    response = bwi_1_72hr_textract_response # textract_client.get_document_analysis(JobId=job_id)
+    response = context # textract_client.get_document_analysis(JobId=job_id)
+
+    tables = gen_tables_from_textract_response(response)
+
+    # List to hold tables needing reprocessing
+    tables_to_reprocess = []
+
+    # Iterate through tables to find low confidence rows
+    for table in tables:
+
+        # Get the lowest confidence row
+        _, lowest_confidence = get_lowest_confidence_row(table)
+
+        # If the lowest confidence row is below the threshold
+        # add the table to the list of tables to reprocess
+        if lowest_confidence < 80:
+            tables_to_reprocess.append(table)
+
+    # Check if any tables need to be reprocessed
+    if tables_to_reprocess:
+        # Get download directory
+        download_dir = os.getenv('DOWNLOAD_DIR')
+        if not download_dir:
+            logging.error("Download directory is not set.")
+            raise EnvironmentError("Download directory is not set.")
+
+        # Get PDF filename from S3 object path
+        pdf_filename = os.path.basename(s3_object_path)
+
+        # Create local path to download PDF to
+        local_pdf_path = os.path.join(download_dir, pdf_filename)
+
+        # Download PDF from S3
+        try:
+            s3_client.download_from_s3(s3_object_path, local_pdf_path)
+        except Exception as e:
+            logging.error(f"Failed to download PDF from S3: {e}")
+            raise
+
+        # Reprocess tables with low confidence rows
+        logging.info(f"Reprocessing {len(tables_to_reprocess)} tables.")
+        for table in tables_to_reprocess:
+            logging.info(f"Reprocessing table with page number: {table.page_number}")
+
+            # Get table page number
+            page_number = table.page_number
+
+            table_screen_shot_with_title = capture_screen_shot_of_table_from_pdf(pdf_path=local_pdf_path, page_number=page_number, 
+                                                                      textract_response=response, output_folder=download_dir,
+                                                                      padding=75, include_title=True)
+            
+            # Read the local PDF file
+            with open(table_screen_shot_with_title, "rb") as file:
+                file_bytes = bytearray(file.read())
+
+            # Send to screen shot to Textract for reprocessing
+            # Call AnalyzeDocument API
+            reprocess_response = textract_client.analyze_document(
+                Document={'Bytes': file_bytes},
+                FeatureTypes=["TABLES"]
+            )
+
+            # Parse the response
+            reprocessed_table = gen_tables_from_textract_response(reprocess_response)
+
+            # Check if more than one table was found
+            if len(reprocessed_table) > 1:
+                logging.error("More than one table found in reprocessed table.")
+                raise Exception("More than one table found in reprocessed table.")
+            
+            # Get the only table in the list
+            reprocessed_table = reprocessed_table[0]
+
+            # Get the lowest confidence row of the reproccessed table
+            _, lowest_confidence_row_reproccessed = get_lowest_confidence_row(reprocessed_table)
+
+            # Compare the lowest confidence row to the original table
+            # If the confidence is higher, replace the original table with the reprocessed table
+            if lowest_confidence_row_reproccessed > get_lowest_confidence_row(table)[1]:
+                logging.info("Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table.")
+                table = reprocessed_table
+
+            # Remove the screen shot of the table
+            os.remove(table_screen_shot_with_title)
+
+        # Remove PDF from local directory
+        os.remove(local_pdf_path)
+
+    i = 1
+    table_str = ""
+    for table in tables:
+
+        print(table.to_markdown())
+        table_str += table.to_markdown()
+        table.save_state(filename=f"table{i}_state.pkl")
+        i += 1
+
+    table_string_hash = hashlib.sha256(table_str.encode()).hexdigest()
+    print(table_string_hash)
+        
+    return {
+        'statusCode': 200,
+        'body': json.dumps('Lambda function executed successfully!')
+    }
+
+def lambda_test_handler(event, context):
+
+    # Parse the SNS message
+    job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
+
+    # Initialize S3 client
+    s3_client = S3Bucket(bucket_name=s3_bucket_name)
+
+    if not job_id or not status:
+        logging.error("JobId or Status missing in SNS message.")
+        return
+
+    # Update the job status in Firestore
+    firestore_client.update_job_status(job_id, status)
+
+    # Get flight origin from Firestore
+    pdf_hash = firestore_client.get_textract_job(job_id).get('pdf_hash', None)
+
+    # flight_origin = get_flight_origin_terminal(pdf_hash)
+    flight_origin = "N/A"
+
+    # If job failed exit program
+    if status != 'SUCCEEDED':
+        raise("Job did not succeed.")
+
+    response = context # textract_client.get_document_analysis(JobId=job_id)
 
     tables = gen_tables_from_textract_response(response)
 
@@ -252,20 +383,12 @@ def lambda_handler(event, context):
     # Remove PDF from local directory
     os.remove(local_pdf_path)
 
-    i = 1
+    tables_str = ""
     for table in tables:
+        tables_str += table.to_markdown()
+        
+    return tables_str
 
-        print(table.to_markdown())
-        table.save_state(filename=f"table{i}_state.pkl")
-        i += 1
-        
-        
-
-        
-    return {
-        'statusCode': 200,
-        'body': json.dumps('Lambda function executed successfully!')
-    }
 
 if __name__ == "__main__":
-    lambda_handler(bwi_1_72hr_successful_job_sns_message, None)
+    lambda_handler(current_sns_message, current_textract_response)
