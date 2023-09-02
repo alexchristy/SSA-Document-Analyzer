@@ -1,0 +1,23 @@
+## Table 1 (Page: 1, Confidence: 97.900390625)
+
+DEPARTURES FROM: BWI Intl Airport (BWI) FRIDAY AUG 18 2023 (Confidence: 98.779296875)
+
+| A ROLL CALL (18.0908203125) | DESTINATION (41.5771484375)            | SEATS (43.212890625) |
+| --------------------------- | -------------------------------------- | -------------------- |
+| 1200L (47.7294921875)       | MCGUIRE AFB, NEW JERSEY (92.724609375) | 5T (72.94921875)     |
+## Table 2 (Page: 2, Confidence: 82.03125)
+
+DEPARTURES FROM: BWI Intl Airport (BWI) SATURDAY AUG 19 2023 (Confidence: 97.509765625)
+
+| SPACE-A ROLL CALL (40.5029296875) | DESTINATION (66.11328125)   | SEATS (59.86328125) |
+| --------------------------------- | --------------------------- | ------------------- |
+|  (55.712890625)                   | NO DEPARTURES (90.91796875) |  (82.275390625)     |
+## Table 3 (Page: 3, Confidence: 99.462890625)
+
+DEPARTURES FROM: BWI Intl Airport (BWI) SUNDAY AUG 20 2023 (Confidence: 98.583984375)
+
+| SPACE-A ROLL CALL (36.81640625) | DESTINATION (47.16796875)          | SEATS (43.603515625) |
+| ------------------------------- | ---------------------------------- | -------------------- |
+| 2300L (71.044921875)            | RAMSTEIN AB, GERMANY (91.015625)   | 69T (84.130859375)   |
+| 2300L (73.583984375)            | INCIRLIK AB, TURKEY (94.287109375) | 37T (87.158203125)   |
+*SPACE REQUIRED CHECK IN 2010L AND NO LATER THAN 2350L SPACE A MUST BE MARKED PRESENT PRIOR TO 2230L* (Confidence: 57.8125)
