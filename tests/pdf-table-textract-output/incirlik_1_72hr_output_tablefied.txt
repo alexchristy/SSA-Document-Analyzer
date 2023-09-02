@@ -1,0 +1,30 @@
+## Table 1 (Page: 1, Confidence: 90.283203125)
+
+SCHEDULED DEPARTURES FROM: INCIRLIK AB, TURKEY (ADA) Friday, 18 AUG 2023 (Confidence: 61.1328125)
+
+| ROLL CALL (92.529296875) | DESTINATION ROLL CALL TIME IS FOR SPACE A TRAVEL ROLL CALL TIME IS NOT THE START OF CHECK-IN and IT IS NOT THE DEPARTURE TIME (96.142578125) | SEATS (90.625)  |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+|  (92.87109375)           | NO SCHEDULED FLIGHT DEPARTURES (96.484375)                                                                                                   |  (90.966796875) |
+## Table 2 (Page: 2, Confidence: 97.119140625)
+
+Saturday, 19 AUG 2023 (Confidence: 99.93358612060547)
+
+| ROLL CALL (93.017578125) | DESTINATION ROLL CALL TIME IS FOR SPACE A TRAVEL ROLL CALL TIME IS NOT THE START OF CHECK-IN and IT IS NOT THE DEPARTURE TIME (96.875) | SEAT (91.69921875) |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+|  (92.578125)             | NO SCHEDULED FLIGHT DEPARTURES (96.484375)                                                                                             |  (91.30859375)     |
+## Table 3 (Page: 3, Confidence: 92.919921875)
+
+SCHEDULED DEPARTURES FROM: INCIRLIK AB, TURKEY (ADA) Sunday, 20 AUG 2023 (Confidence: 67.333984375)
+
+| ROLL CALL (80.322265625) | DESTINATION ROLL CALL TIME IS FOR SPACE A TRAVEL ROLL CALL TIME IS NOT THE START OF CHECK-IN and IT IS NOT THE DEPARTURE TIME (94.189453125) | SEATS (89.501953125) |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+|  (80.908203125)          | NO SCHEDULED FLIGHT DEPARTURES (94.873046875)                                                                                                |  (90.185546875)      |
+## Table 4 (Page: 4, Confidence: 99.853515625)
+
+72- Hour SCHEDULED FLIGHT/PASSENGER ARRIVALS (Confidence: 98.046875)
+
+| DATE (91.552734375)   | FROM: (96.728515625)                        | PAX PICK-UP TIME (90.91796875) |
+| --------------------- | ------------------------------------------- | ------------------------------ |
+| 18 AUG (89.306640625) | NO SCHEDULED FLIGHT ARRIVALS (94.384765625) | N/A (88.720703125)             |
+| 19 AUG (88.427734375) | NO SCHEDULED FLIGHT ARRIVALS (93.408203125) | N/A (87.841796875)             |
+| 20 AUG (89.306640625) | NO SCHEDULED FLIGHT ARRIVALS (94.384765625) | N/A (88.720703125)             |
