@@ -18,9 +18,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from ramstein_1_72hr_sns_messages import ramstein_1_72hr_successful_job_sns_message as current_sns_message
-from ramstein_1_72hr_textract_response import ramstein_1_72hr_textract_response as current_textract_response
-
+from andersen_1_72hr_sns_messages import andersen_1_72hr_successful_job_sns_message as current_sns_message
+from andersen_1_72hr_textract_response import andersen_1_72hr_textract_response as current_textract_response
 def initialize_clients():
     # Set environment variables
     load_dotenv()
@@ -380,8 +379,8 @@ def lambda_test_handler(event, context):
             # Remove the screen shot of the table
             os.remove(table_screen_shot_with_title)
 
-    # Remove PDF from local directory
-    os.remove(local_pdf_path)
+        # Remove PDF from local directory
+        os.remove(local_pdf_path)
 
     tables_str = ""
     for table in tables:
