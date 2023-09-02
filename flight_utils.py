@@ -3,6 +3,7 @@ from table import Table
 import re
 from gpt3_turbo_analysis import GPT3TurboAnalysis
 import json
+from flight import Flight
 
 def parse_seat_data(seat_data):
     """
@@ -15,12 +16,13 @@ def parse_seat_data(seat_data):
     - tuple: A tuple containing the number of seats (int) and seat status (str).
     """
     
-    num_of_seats = 0
+    num_of_seats = -1
     seat_status = ''
 
-    # If seat data is empty, return empty values
+    # If seat data is empty, return TDB
     if seat_data == '':
         logging.info("Seat data is empty.")
+        seat_status = 'TBD'
         return num_of_seats, seat_status
 
     # Case 1: Seat data is TBD
@@ -141,10 +143,20 @@ def split_parenthesis(text):
 
 def parse_row(table: Table, row_index: int):
 
-    row = table.rows[row_index]
+    row = table.get_row(row_index)
     logging.info(f"Processing row {row_index}: {row}")
 
     # Guard statements for basic validation
+    if row is None:
+        logging.error(f"Skipping row {row_index} due to None value.")
+        return None
+
+    # Skip header row
+    if row_index == 0:
+        logging.error(f"Skipping row {row_index} due to header row.")
+        return None
+
+    # Skip row if it has less than 3 cells
     if len(row) < 3:
         logging.error(f"Skipping row {row_index} due to insufficient number of cells.")
         return None
@@ -171,11 +183,67 @@ def parse_row(table: Table, row_index: int):
     
     return roll_call_time, destinations, num_of_seats, seat_status
 
+def is_complete_row(row: list):
+    '''
+    This checks that a row has a rollcall time, destination, and seat data.
+    '''
+
+    logging.info(f"Processing row: {row}")
+
+    # Guard statements for basic validation
+    if row is None:
+        logging.error(f"Skipping row due to None value.")
+        return False
+
+    # Get cell values
+    roll_call_time_cell, destination_cell, seat_cell = row[0], row[1], row[2]
+
+    # Parse and check rollcall time
+    roll_call_time = parse_rollcall_time(roll_call_time_cell[0])
+    if roll_call_time == '':
+        logging.info(f'Empty rollcall time.')
+        return False
+    
+    # Parse and check seat data
+    num_of_seats, seat_status = parse_seat_data(seat_cell[0])
+    if num_of_seats is None or seat_status is None:
+        logging.info(f'Empty seat data.')
+        return False
+    
+    # Parse and check destination
+    destinations = parse_destination(destination_cell[0])
+    if destinations == []:
+        logging.info(f'Empty destination data.')
+        return False
+    
+    return True
+
+def get_row_similarity(row1: list, row2: list):
+
+    # Get confidence scores for each cell
+    rollcall_1_confidence = row1[0][1]
+    destination_1_confidence = row1[1][1]
+    seat_1_confidence = row1[2][1]
+
+    rollcall_2_confidence = row2[0][1]
+    destination_2_confidence = row2[1][1]
+    seat_2_confidence = row2[2][1]
+
+    # Average the confidence scores for each row
+    row1_avg_confidence = (rollcall_1_confidence + destination_1_confidence + seat_1_confidence) / 3
+    row2_avg_confidence = (rollcall_2_confidence + destination_2_confidence + seat_2_confidence) / 3
+
+    # Get the difference between the two rows
+    row_diff = abs(row1_avg_confidence - row2_avg_confidence)
+
+    return row_diff
 
 
+
+
+        
 
 
 if __name__ == "__main__":
     # Create a table object
-    table = Table.load_state(filename="table3_state.pkl")
-    print(parse_row(table, 1))
+    table = Table.load_state(filename="table1_state.pkl")
