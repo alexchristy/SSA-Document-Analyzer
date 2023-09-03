@@ -172,5 +172,16 @@ class TestTextractResponseParsing(unittest.TestCase):
 
         self.assertEqual(table_string_hash, '0215633345159add231d6cd8237a4b32fa0e75f45849f4278f3eba38237f5c58')
 
+    def test_hickam_1_72hr(self):
+
+        # Import test data
+        from hickam_1_72hr_sns_messages import hickam_1_72hr_successful_job_sns_message as sns_message
+        from hickam_1_72hr_textract_response import hickam_1_72hr_textract_response as textract_response
+
+        table_string = recieve_pdf_data_textract.lambda_test_handler(sns_message,textract_response)
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
+
+        self.assertEqual(table_string_hash, '44e3d8ab37eafae8d42aa32328261b6fd6092212f952149a69d58c2daec297cf')
+
 if __name__ == '__main__':
     unittest.main()

@@ -1,0 +1,27 @@
+## Table 1 (Page: 1, Confidence: 99.853515625)
+
+DEPARTURES JOINT BASE PEARL HARBOR-HICKAM FRIDAY, 18 AUGUST 2023 (Confidence: 99.169921875)
+
+| ROLL CALL (91.259765625) | DESTINATION (94.580078125)    | SEATS (91.30859375) |
+| ------------------------ | ----------------------------- | ------------------- |
+| 0411 (89.84375)          | TRAVIS AFB, CA (93.1640625)   | 8T (89.892578125)   |
+| 0500 (88.671875)         | TRAVIS AFB, CA (91.943359375) | 42F (88.720703125)  |
+| 0936 (89.84375)          | MACDILL AFB, FL (93.1640625)  | 10T (89.892578125)  |
+| 1140 (87.79296875)       | MACDILL AFB, FL (91.015625)   | 10T (87.841796875)  |
+| 2055 (91.455078125)      | TRAVIS AFB, CA (94.775390625) | TBD (91.50390625)   |
+## Table 2 (Page: 2, Confidence: 99.853515625)
+
+DEPARTURES JOINT BASE PEARL HARBOR-HICKAM SATURDAY, 19 AUGUST 2023 (Confidence: 98.095703125)
+
+| ROLL CALL (89.6484375) | DESTINATION (94.580078125)                                            | SEATS (42.2119140625) |
+| ---------------------- | --------------------------------------------------------------------- | --------------------- |
+| 0940 (90.673828125)    | ANDERSEN AFB, GUAM MISAWA AB, JAPAN (95.654296875)                    | 43T (42.7001953125)   |
+| 1640 (90.673828125)    | ANDERSEN AFB, GUAM ** SPACE-REQUIRED PASSENGERS ONLY** (95.654296875) | 54T (42.7001953125)   |
+## Table 3 (Page: 3, Confidence: 99.658203125)
+
+DEPARTURES JOINT BASE PEARL HARBOR-HICKAM SUNDAY, 20 AUGUST 2023 (Confidence: 89.404296875)
+
+| ROLL CALL (88.18359375) | DESTINATION (93.65234375)      | SEATS (46.435546875) |
+| ----------------------- | ------------------------------ | -------------------- |
+| 0408 (85.986328125)     | MIRAMAR, CA (91.30859375)      | 10T (45.263671875)   |
+| 0820 (88.818359375)     | KWAJALEIN ATOLL (94.384765625) | 41T (46.77734375)    |
