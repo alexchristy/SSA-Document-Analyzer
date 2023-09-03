@@ -1,0 +1,55 @@
+## Table 1 (Page: 1, Confidence: 99.462890625)
+
+DEPARTURES FROM: Kadena AB, Japan Friday, August 18, 2023 (Confidence: 83.203125)
+
+| ROLL CALL (90.087890625) | DESTINATION (95.8984375)          | SEATS (89.74609375) |
+| ------------------------ | --------------------------------- | ------------------- |
+|  (54.8828125)            | Yokota AB, Japan (50.830078125)   | 53F (47.55859375)   |
+| 1645 (54.8828125)        | Elmendorf AFB, AK (49.0966796875) |  (45.947265625)     |
+|  (54.8828125)            | Travis AFB, CA (54.052734375)     | 20F (50.5859375)    |
+## Table 2 (Page: 2, Confidence: 99.853515625)
+
+DEPARTURES FROM: Kadena AB, Japan Saturday, August 19, 2023 (Confidence: 99.0234375)
+
+| ROLL CALL (93.896484375) | DESTINATION (97.119140625)                                                                             | SEATS (92.87109375) |
+| ------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------- |
+|  (42.2607421875)         | *PATRIOT EXPRESS* (54.345703125)                                                                       |  (51.953125)        |
+|  (42.2607421875)         | Iwakuni MCAS, Japan (58.0078125)                                                                       | 40T (55.419921875)  |
+|  (42.2607421875)         | Yokota AB, Japan (64.599609375)                                                                        | 37T (61.71875)      |
+| 0650 (42.2607421875)     | Seattle Tacoma INTL., WA (54.833984375)                                                                | 20T (52.392578125)  |
+|  (42.2607421875)         | Early Bird: 18 Aug 0900-1400 Check In Starts: 19 Aug @ 0350 Doors Close: 19 Aug @ 0650 (40.4052734375) |  (38.623046875)     |
+| 0700 (83.642578125)      | Iwakuni MCAS, Japan (86.5234375)                                                                       | 53T (82.71484375)   |
+| 0740 (88.76953125)       | Yokota AB, Japan (91.796875)                                                                           | 10T (87.744140625)  |
+## Table 3 (Page: 3, Confidence: 99.755859375)
+
+DEPARTURES FROM: Kadena AB, Japan Sunday, August 20, 2023 (Confidence: 99.0234375)
+
+| ROLL CALL (91.50390625) | DESTINATION (96.435546875)                                                | SEATS (90.72265625) |
+| ----------------------- | ------------------------------------------------------------------------- | ------------------- |
+|  (50.68359375)          | *PATRIOT EXPRESS* (54.4921875)                                            |  (51.26953125)      |
+|  (50.68359375)          | Andersen AFB, Guam (55.17578125)                                          | 29T (51.904296875)  |
+|  (50.68359375)          | Ted Stevens INTL., AK (57.177734375)                                      | OF (53.759765625)   |
+| 1120 (50.68359375)      | Seattle Tacoma INTL., WA (45.1904296875)                                  | 70T (42.5048828125) |
+|  (50.68359375)          | Check In Starts: 20 Aug @ 0820 Doors Close: 20 Aug @ 1120 (35.2294921875) |  (33.154296875)     |
+## Table 4 (Page: 4, Confidence: 99.755859375)
+
+Arrivals at: Kadena AB, Japan Friday, August 18, 2023 (Confidence: 97.412109375)
+
+| ARRIVALS (92.96875)                                  | PASSENGER PICKUP TIME (91.943359375) |
+| ---------------------------------------------------- | ------------------------------------ |
+| *Patriot Express* Iwakuni MCAS, Japan (40.771484375) | 1630-1730 (40.3564453125)            |
+## Table 5 (Page: 5, Confidence: 99.853515625)
+
+Arrivals at: Kadena AB, Japan Saturday, August 19, 2023 (Confidence: 96.2890625)
+
+| ARRIVALS (94.43359375)                            | PASSENGER PICKUP TIME (93.896484375) |
+| ------------------------------------------------- | ------------------------------------ |
+| Yokota AB, Japan (91.796875)                      | 1435-1535 (91.30859375)              |
+| *Patriot Express* Andersen AFB, Guam (49.8046875) | 1900-2000 (49.51171875)              |
+## Table 6 (Page: 6, Confidence: 99.609375)
+
+Arrivals at: Kadena AB, Japan Sunday, August 20, 2023 (Confidence: 88.427734375)
+
+| ARRIVALS (92.431640625)              | PASSENGER PICKUP TIME (90.966796875) |
+| ------------------------------------ | ------------------------------------ |
+| No Scheduled Arrivals (93.896484375) | *** (92.431640625)                   |
