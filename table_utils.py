@@ -6,6 +6,9 @@ def convert_textract_response_to_tables(json_response):
     """
     Convert AWS Textract JSON response to a list of Table objects.
     """
+
+    table_title_exclusion_list = ['updated']
+
     try:
         tables = []
         block_id_to_block = {block['Id']: block for block in json_response.get('Blocks', []) if 'Id' in block}
@@ -55,8 +58,8 @@ def convert_textract_response_to_tables(json_response):
                 if current_table:
                     title_text = collect_text_from_children(block)
 
-                    # Check if title has the date in it
-                    if check_date_string(title_text):
+                    # Check if title has the date in it and no words in the exclusion list
+                    if check_date_string(title_text) and all(exclude not in title_text.lower() for exclude in table_title_exclusion_list):
                         current_table.title = title_text
                         current_table.title_confidence = block.get('Confidence', 0.0)
             elif block_type == 'TABLE_FOOTER':
@@ -86,6 +89,8 @@ def find_table_title_with_date(blocks, table_block):
     """
     Returns the table title if found, otherwise returns None. Also returns the confidence level of the found title.
     """
+    table_title_exclusion_list = ['updated']
+
     table_top = table_block['Geometry']['BoundingBox']['Top']
     table_page = table_block.get('Page', None)
     
@@ -103,7 +108,9 @@ def find_table_title_with_date(blocks, table_block):
     # Search for a title containing a date
     for line_block in text_lines_above_table:
         line_text = line_block['Text']
-        if check_date_string(line_text):
+
+        # Exclude any lines that contain the words in the exclusion list
+        if check_date_string(line_text) and all(exclude not in line_text.lower() for exclude in table_title_exclusion_list):
             return line_text, line_block.get('Confidence', 0.0)  # Found a title with a date, and it should be the closest one based on sorting
     
     return None, 0.0  # No suitable title found
