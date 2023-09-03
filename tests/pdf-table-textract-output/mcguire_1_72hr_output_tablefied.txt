@@ -1,0 +1,22 @@
+## Table 1 (Page: 1, Confidence: 99.4140625)
+
+DEPARTURES: McGuire AFB, NJ FRIDAY, AUGUST 18, 2023 (Confidence: 96.875)
+
+| ROLL CALL (90.234375) | DESTINATION (95.751953125)         | SEAT (89.697265625) |
+| --------------------- | ---------------------------------- | ------------------- |
+|  (89.990234375)       | NO OUTBOUND FLIGHTS (95.458984375) |  (89.453125)        |
+## Table 2 (Page: 2, Confidence: 99.853515625)
+
+DEPARTURES: McGuire AFB, NJ SATURDAY, AUGUST 19, 2023 (Confidence: 98.388671875)
+
+| ROLL CALL (91.30859375) | DESTINATION (96.2890625)           | SEAT (91.11328125) |
+| ----------------------- | ---------------------------------- | ------------------ |
+| 0640 (87.6953125)       | MARTHAS VINEYARD, MA (92.48046875) | TBD (87.5)         |
+| 1650 (89.94140625)      | CAMPBELL AAF, KY (94.82421875)     | 53T (89.74609375)  |
+## Table 3 (Page: 3, Confidence: 99.169921875)
+
+DEPARTURES: McGuire AFB, NJ SUNDAY, AUGUST 20, 2023 (Confidence: 95.166015625)
+
+| ROLL CALL (89.6484375) | DESTINATION (95.458984375)         | SEAT (89.84375) |
+| ---------------------- | ---------------------------------- | --------------- |
+|  (89.453125)           | NO OUTBOUND FLIGHTS (95.263671875) |  (89.6484375)   |
