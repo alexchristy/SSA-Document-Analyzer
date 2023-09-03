@@ -1,0 +1,5 @@
+INFO:root:Running in a local environment.
+INFO:root:Running in a local environment.
+INFO:root:Successfully updated job b6ea1959b8eee0224ef57a58ef2adff72e9abc0e43edbdf51be4e6c3f3f62ad2 with status SUCCEEDED
+ERROR:root:Expected a list of tables, got something else.
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
