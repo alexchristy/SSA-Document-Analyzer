@@ -18,9 +18,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from mcconnell_1_72hr_sns_messages import mcconnell_1_72hr_successful_job_sns_message as current_sns_message
-from mcconnell_1_72hr_textract_response import mcconnell_1_72hr_textract_response as current_textract_response
-
+from naples_1_72hr_sns_messages import naples_1_72hr_successful_job_sns_message as current_sns_message
+from naples_1_72hr_textract_response import naples_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -231,13 +230,22 @@ def lambda_handler(event, context):
             # Parse the response
             reprocessed_table = gen_tables_from_textract_response(reprocess_response)
 
+            # Remove the screen shot of the table
+            os.remove(table_screen_shot_with_title)
+
             # Check if more than one table was found
             if len(reprocessed_table) > 1:
                 logging.error("More than one table found in reprocessed table.")
                 raise Exception("More than one table found in reprocessed table.")
             
-            # Get the only table in the list
-            reprocessed_table = reprocessed_table[0]
+            # Get the only table in the list if there is a table
+            # found. If not, set reprocessed_table to None and 
+            # continue to the next table.
+            if reprocessed_table:
+                reprocessed_table = reprocessed_table[0]
+            else:
+                logging.warning("No tables found in reprocessed table.")
+                continue
 
             # Get the lowest confidence row of the reproccessed table
             _, lowest_confidence_row_reproccessed = get_lowest_confidence_row(reprocessed_table)
@@ -247,9 +255,6 @@ def lambda_handler(event, context):
             if lowest_confidence_row_reproccessed > get_lowest_confidence_row(table)[1]:
                 logging.info("Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table.")
                 table = reprocessed_table
-
-            # Remove the screen shot of the table
-            os.remove(table_screen_shot_with_title)
 
         # Remove PDF from local directory
         os.remove(local_pdf_path)
@@ -271,6 +276,7 @@ def lambda_handler(event, context):
         'body': json.dumps('Lambda function executed successfully!')
     }
 
+# Lambda handler used for testing
 def lambda_test_handler(event, context):
 
     # Parse the SNS message
@@ -361,13 +367,22 @@ def lambda_test_handler(event, context):
             # Parse the response
             reprocessed_table = gen_tables_from_textract_response(reprocess_response)
 
+            # Remove the screen shot of the table
+            os.remove(table_screen_shot_with_title)
+
             # Check if more than one table was found
             if len(reprocessed_table) > 1:
                 logging.error("More than one table found in reprocessed table.")
                 raise Exception("More than one table found in reprocessed table.")
             
-            # Get the only table in the list
-            reprocessed_table = reprocessed_table[0]
+            # Get the only table in the list if there is a table
+            # found. If not, set reprocessed_table to None and 
+            # continue to the next table.
+            if reprocessed_table:
+                reprocessed_table = reprocessed_table[0]
+            else:
+                logging.warning("No tables found in reprocessed table.")
+                continue
 
             # Get the lowest confidence row of the reproccessed table
             _, lowest_confidence_row_reproccessed = get_lowest_confidence_row(reprocessed_table)
@@ -377,9 +392,6 @@ def lambda_test_handler(event, context):
             if lowest_confidence_row_reproccessed > get_lowest_confidence_row(table)[1]:
                 logging.info("Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table.")
                 table = reprocessed_table
-
-            # Remove the screen shot of the table
-            os.remove(table_screen_shot_with_title)
 
         # Remove PDF from local directory
         os.remove(local_pdf_path)
