@@ -106,5 +106,16 @@ class TestTextractResponseParsing(unittest.TestCase):
 
         self.assertEqual(table_string_hash, '2c276921b48d6a526e2ba1ef5a4fa8f72d0b388bf609ee9c30e8343a51df453d')
 
+    def test_guantanamo_1_72hr(self):
+
+        # Import test data
+        from guantanamo_1_72hr_sns_messages import guantanamo_1_72hr_successful_job_sns_message as sns_message
+        from guantanamo_1_72hr_textract_response import guantanamo_1_72hr_textract_response as textract_response
+
+        table_string = recieve_pdf_data_textract.lambda_test_handler(sns_message, textract_response)
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
+
+        self.assertEqual(table_string_hash, '4f94198c375d4e7ed68953f8f0d0b51894e816c01909879b3c4c30502ab064b5')
+
 if __name__ == '__main__':
     unittest.main()
