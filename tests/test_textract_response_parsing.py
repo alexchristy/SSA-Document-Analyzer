@@ -206,6 +206,10 @@ class TestTextractResponseParsing(unittest.TestCase):
         self.assertEqual(table_string_hash, 'ed8cea51777d198503a8e5eddaadf41f8b7b6d955ce1ede58f7b9843f600d23f')
 
     def test_little_rock_1_72hr(self):
+        # Note that for this test little_rock_1_72hr_textract_response will return no tables. This is correct behavior.
+        # This is because of the poorly formated tables in the PDF that Textract is unable to parse.
+
+        # TODO: Update this test when fall back to camelot/text parser is implemented
 
         # Import test data
         from little_rock_1_72hr_sns_messages import little_rock_1_72hr_successful_job_sns_message as sns_message
@@ -215,6 +219,17 @@ class TestTextractResponseParsing(unittest.TestCase):
         table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
 
         self.assertEqual(table_string_hash, 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855')
+
+    def test_macdill_1_72hr(self):
+
+        # Import test data
+        from macdill_1_72hr_sns_messages import macdill_1_72hr_successful_job_sns_message as sns_message
+        from macdill_1_72hr_textract_response import macdill_1_72hr_textract_response as textract_response
+
+        table_string = recieve_pdf_data_textract.lambda_test_handler(sns_message,textract_response)
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
+
+        self.assertEqual(table_string_hash, 'a5489385b655d5016e1bc5c0c50913aa0e700cd45525d257e5327ae91594c984')
 
 if __name__ == '__main__':
     unittest.main()
