@@ -128,5 +128,16 @@ class TestTextractResponseParsing(unittest.TestCase):
 
         self.assertEqual(table_string_hash, '4ee0f47eb822595597bdd51d3bd83d8df5ebd1730ecfdc8aa5de6cad1a86ee32')
 
+    def test_al_udeid_1_72hr(self):
+
+        # Import test data
+        from al_udeid_1_72hr_sns_messages import al_udeid_1_72hr_successful_job_sns_message as sns_message
+        from al_udeid_1_72hr_textract_response import al_udeid_1_72hr_textract_response as textract_response
+
+        table_string = recieve_pdf_data_textract.lambda_test_handler(sns_message, textract_response)
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
+
+        self.assertEqual(table_string_hash, 'd36db2516c24464dcbb3f4c0058d97cc1a3efa875087bfd6d1739980fd974187')
+        
 if __name__ == '__main__':
     unittest.main()
