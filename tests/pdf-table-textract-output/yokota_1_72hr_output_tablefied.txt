@@ -1,0 +1,23 @@
+## Table 1 (Page: 4, Confidence: 99.853515625)
+
+DEPARTURES FROM: YOKOTAAB, JAPAN (OKO) SATURDAY, AUG 19TH (Confidence: 97.021484375)
+
+| ROLL CALL (90.576171875) | DESTINATION (95.5078125)                                                                                                                                                                                                                                                    | SEATS (87.5)       |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| 0835L (91.015625)        | KADENA AIR BASE, JAPAN (DNA) (95.99609375)                                                                                                                                                                                                                                  | 73T (87.939453125) |
+| 1045L (90.478515625)     | OSAN AIR BASE, REPUBLIC OF KOREA (OSN) (95.41015625)                                                                                                                                                                                                                        | 53T (87.40234375)  |
+| 1235L (91.552734375)     | SEATTLE-TACOMA INT'L, WASHINGTON **PATRIOT EXPRESS** **PRE-BOOK PASSENGERS REPORT NO LATER THAN 1400(L)** **EARLY BIRD CHECK-IN IS ONLY AVAILABLE FOR PRE-BOOKED PASSENGERS @ 1800-2000L (Day prior to departure) BRING ALL CHECKED BAGGAGE (PET w/KENNEL)** (96.533203125) | TBD (88.427734375) |
+## Table 2 (Page: 5, Confidence: 99.853515625)
+
+DEPARTURES FROM: YOKOTAAB, JAPAN (OKO) SUNDAY, AUG 20TH (Confidence: 79.443359375)
+
+| ROLL CALL (88.818359375) | DESTINATION (94.921875)                 | SEATS (83.154296875) |
+| ------------------------ | --------------------------------------- | -------------------- |
+| - (89.697265625)         | **NO SCHEDULED FLIGHTS** (95.849609375) | - (83.935546875)     |
+## Table 3 (Page: 6, Confidence: 99.658203125)
+
+DEPARTURES FROM: YOKOTAAB, JAPAN (OKO) MONDAY, AUG 21ST (Confidence: 69.384765625)
+
+| ROLL CALL (89.0625) | DESTINATION (95.5078125)              | SEATS (84.228515625) |
+| ------------------- | ------------------------------------- | -------------------- |
+| - (88.720703125)    | **NO SCHEDULED FLIGHTS** (95.1171875) | - (83.88671875)      |
