@@ -1,0 +1,31 @@
+## Table 1 (Page: 1, Confidence: 99.609375)
+
+DEPARTURES FROM: RAF Mildenhall (MHZ) Friday 18th August, 2023 (Confidence: 92.7734375)
+
+| ROLL CALL (91.015625) | DESTINATION (95.849609375)          | SEATS (88.37890625) |
+| --------------------- | ----------------------------------- | ------------------- |
+|  (90.4296875)         | NO SPACE A DEPARTURES (95.21484375) |  (87.79296875)      |
+## Table 2 (Page: 2, Confidence: 99.609375)
+
+DEPARTURES FROM: RAF Mildenhall (MHZ) Saturday 19th August, 2023 (Confidence: 96.09375)
+
+| ROLL CALL (90.0390625) | DESTINATION (95.703125)              | SEATS (88.525390625) |
+| ---------------------- | ------------------------------------ | -------------------- |
+|  (89.697265625)        | NO SPACE A DEPARTURES (95.361328125) |  (88.232421875)      |
+## Table 3 (Page: 3, Confidence: 99.853515625)
+
+DEPARTURES FROM: RAF Mildenhall (MHZ) Sunday 20th August, 2023 (Confidence: 98.828125)
+
+| ROLL CALL (91.748046875) | DESTINATION (96.533203125)                               | SEATS (89.892578125) |
+| ------------------------ | -------------------------------------------------------- | -------------------- |
+| 1150 (88.96484375)       | RAMSTEIN AB, GERMANY (93.603515625)                      | TBD (87.158203125)   |
+| 1330 (90.576171875)      | MCGUIRE AFB, NJ Travel Restrictions Apply (95.263671875) | TBD (88.720703125)   |
+## Table 4 (Page: 6, Confidence: 72.607421875)
+
+No title found (Confidence: 0.0)
+
+| Carry-On Bag 3.4 ounces (100 ml) or smaller sized containers resealable bag may go in carry-on and through (47.55859375) | that fit in 1 quart-sized, checkpoint security. (47.55859375) |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
+| 3.4 oz 3.4 ounces 2.5 oz 1 oz (14.73388671875)                                                                           |  (18.84765625)                                                |
+| Checked Bag Containers that are larger than 3.4 ounces amount inside must be in checked baggage. (42.333984375)          | (100ml) regardless of (42.333984375)                          |
+| 9 oz Container 6 oz Containe 4 oz Container 3.4 ounces (14.83154296875)                                                  |  (18.9697265625)                                              |
