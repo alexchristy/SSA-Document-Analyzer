@@ -1,0 +1,26 @@
+## Table 1 (Page: 2, Confidence: 99.755859375)
+
+DEPARTURES FROM: POPE AAF, NC (POB) Friday, 18 August 2023 (Confidence: 84.228515625)
+
+| ROLL CALL (89.6484375) | DESTINATION (95.361328125)        | SEATS (88.134765625) |
+| ---------------------- | --------------------------------- | -------------------- |
+| 2245 (88.57421875)     | LITTLE ROCK AFB, AR (94.23828125) | TBD (87.060546875)   |
+## Table 2 (Page: 3, Confidence: 99.853515625)
+
+DEPARTURES FROM: POPE AAF, NC (POB) Saturday, 19 August 2023 (Confidence: 90.0390625)
+
+| ROLL CALL (91.845703125) | DESTINATION (96.19140625)        | SEATS (88.76953125) |
+| ------------------------ | -------------------------------- | ------------------- |
+| 1600 (88.623046875)      | LITTLE ROCK AFB, AR (92.7734375) | TBD (85.64453125)   |
+| 2000 (90.52734375)       | JB CHARLESTON, SC (94.775390625) | TBD (87.5)          |
+## Table 3 (Page: 4, Confidence: 99.755859375)
+
+DEPARTURES FROM: POPE AAF, NC (POB) Sunday, 20 August 2023 (Confidence: 95.751953125)
+
+| ROLL CALL (93.408203125) | DESTINATION (96.875)               | SEATS (91.455078125) |
+| ------------------------ | ---------------------------------- | -------------------- |
+| 0135 (89.501953125)      | JB CHARLESTON, SC (92.822265625)   | 10F (87.59765625)    |
+| 0615 (90.771484375)      | JB LEWIS-MCCHORD, WA (94.140625)   | 10F (88.818359375)   |
+| 0726 (91.69921875)       | JB CHARLESTON, SC (95.1171875)     | 10F (89.794921875)   |
+| 1100 (91.30859375)       | TRAVIS AFB, CA (94.677734375)      | 10F (89.35546875)    |
+| 1600 (91.11328125)       | LITTLE ROCK AFB, AR (94.482421875) | TBD (89.208984375)   |
