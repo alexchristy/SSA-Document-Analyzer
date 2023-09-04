@@ -1,0 +1,21 @@
+## Table 1 (Page: 1, Confidence: 99.560546875)
+
+DEPARTURES FROM: SEATTLE IAP, WA (SEA) Saturday, August 19th 2023 (Confidence: 90.087890625)
+
+| ROLL CALL (92.67578125) | DESTINATION (94.62890625)          | SEATS (91.2109375) |
+| ----------------------- | ---------------------------------- | ------------------ |
+|  (53.41796875)          | No Scheduled Flights (54.58984375) |  (52.587890625)    |
+## Table 2 (Page: 2, Confidence: 99.853515625)
+
+DEPARTURES FROM: SEATTLE IAP, WA (SEA) Sunday, August 20th 2023 (Confidence: 95.458984375)
+
+| ROLL CALL (93.017578125) | DESTINATION (94.970703125)                                                                           | SEATS (92.626953125) |
+| ------------------------ | ---------------------------------------------------------------------------------------------------- | -------------------- |
+| 0530L (60.05859375)      | Misawa AB, Japan Osan AB, Korea * Check in from 0130-0530L at the AMC Ticketing Counter* (61.328125) | 118T (59.765625)     |
+## Table 3 (Page: 3, Confidence: 99.853515625)
+
+DEPARTURES FROM: SEATTLE IAP, WA (SEA) Monday, August 21st 2023 (Confidence: 92.1875)
+
+| ROLL CALL (93.310546875) | DESTINATION (95.01953125)                                                                | SEATS (92.08984375) |
+| ------------------------ | ---------------------------------------------------------------------------------------- | ------------------- |
+| 0430L (63.623046875)     | Kadena AB, Japan * Check in from 0030-0430L at the AMC ticketing counter* (64.794921875) | 106T (62.79296875)  |
