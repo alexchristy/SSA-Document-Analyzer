@@ -174,5 +174,3 @@ def rearrange_columns(table):
         
     table.rows = new_rows
     return table
-
-print(check_date_string("Friday 18th August, 2023"))
