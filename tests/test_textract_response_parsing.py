@@ -453,5 +453,16 @@ class TestTextractResponseParsing(unittest.TestCase):
 
         self.assertEqual(table_string_hash, '96e5fb868040f3af899779fdf01bda88231954496606d525279cf68dd0003dc4')
 
+    def test_mcchord_1_72hr(self):
+
+        # Import test data
+        from mcchord_1_72hr_sns_messages import mcchord_1_72hr_successful_job_sns_message as sns_message
+        from mcchord_1_72hr_textract_response import mcchord_1_72hr_textract_response as textract_response
+
+        table_string = lambda_test_handler(sns_message, textract_response)
+        table_string_hash=hashlib.sha256(table_string.encode()).hexdigest()
+
+        self.assertEqual(table_string_hash, '1037dd26251af4bf9a7e1a480b290742444a501f35ce50029f41c1eef1d88fff') 
+
 if __name__ == '__main__':
     unittest.main()
