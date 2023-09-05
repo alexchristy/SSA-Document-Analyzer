@@ -1,0 +1,97 @@
+## Table 1 (Page: 1, Confidence: 97.65625)
+
+No title found (Confidence: 0.0)
+
+| WARNINGS (82.763671875)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | INFORMATION (82.763671875)                                                                                                                                                                                                                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| TRANSPORTATION OF FIREARMS AND INSPECTION OF CHECKED BAGGAGE (68.359375)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | CHECKED BAGGAGE LIMITATIONS (68.359375)                                                                                                                                                                                                                                                                                                                                                                       |
+| FAA REGULATIONS REQUIRE THAT FIREARMS IN CHECKED BAGGAGE MUST BE DECLARED, UNLOADED AND IN A LOCKED CONTAINER. PASSENGERS FAILING TO DECLARE FIREARMS OR TRASPORTING LOADED FIREARMS ARE SUBJECT TO CIVIL PENALTY OF $25,000. PASSENGERS REFUSING TO PRESENT IDENTIFICATION AND/OR PERMIT CHECKED BAGGAGE INSPECTION MAY NOT BE TRANSPORTED. (85.205078125)                                                                                                                                                                                                                                                            | PASSENGERS ARE ENTITLED TO TWO PIECES OF CHECKED BAGGAGE NOT TO EXCEED 70LBS. EACH FOR A TOTAL OF 140LBS. NEITHER WILL EXCEED 62 LINEAR INCHES (LENGTH+WIDTH+HEIGHT). IDENTIFICATION OF CHECKED BAGGAGE (85.205078125)                                                                                                                                                                                        |
+| CARRIAGE OF HAZARDOUS MATERIALS (46.77734375)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | GOVERNMENT REGULATIONS REQUIRE THAT NO PASSENGER'S BAGGAGE BE CHECKED FOR TRANSPORTATION UNLESS THE (46.77734375)                                                                                                                                                                                                                                                                                             |
+| FEDERAL LAW FORBIDS THE CARRIAGE OF HAZARDOUS MATERIALS ABOARD AIRCRAFT IN CHECKED OR HAND CARRIED BAGGAGE. A VIOLATION CAN RESULT IN PENALTIES OF UP TO $25,000 AND FIVE YEARS IMPRISONMENT HAZARDOUS MATERIALS INCLUDE EXPLOSIVES, COMPRESSED GASES, FLAMMABLE LIQUIDS AND SOLIDS, OXIDIZER, POISONS, CORROSIVE AND RADIOACTIVE MATERIALS. THERE ARE SPECIAL EXPECTATIONS FOR SMALL QUANTITIES OF LIQUIDS, GELS OR AEROSOLS: THREE OUNCES PER CONTAINER PACKED IN A ONE QUART ZIP CLOSURE BAG. E-CIGARETTE SMOKING MATERIALS ARE ALSO PERMITTED IN HAND CARRIED BAGGAGE. TRANSPORTATION OF NARCOTICS (27.9052734375) | PASSENGER'S NAME IS ON THE OUTSIDE OF SUCH BAGGAGE. CARRY-ON BAGGAGE LIMITATIONS FAA REGULATIONS REQUIRE THAT CARRY-ON BAGGAGE BE LIMITED TO ITEMS THAT CAN BE CONVENIENTLY STOWED UNDER YOUR SEAT OR IN AN APPROVED STORAGE COMPARTMENT. ITEMS WHICH CANNOT MEET THIS REQUIREMENT MUST BE CHECKED AS REGULAR BAGGAGE. FOR FURTHER INFORMATION CONTACT YOUR PASSENGER SERVICE REPRESENTATIVE. (27.9052734375) |
+| FEDERAL LAW PROHIBITS THE TRANFER, USE OR POSSESSION OF NARCOTICS, INCLUDING MARIJUANA, ABOARD AIRCRAFT. BATTERIES NO LOOSE BATTERIES, INCLUDING ORIGINAL PACKAGING, ARE AUTHORIZED IN CHECKED EXCEPT FOR THOSE CONTAINED IN DEVICES. PLEASE BE SURE TO PLACE ALL LOOSE AND ORIGINALLY PACKED IN CARRY-ON BAGS. (34.8876953125)                                                                                                                                                                                                                                                                                        | AMCVA 24-5, 1 October 2007 Supersedes AMCVA 24-3, 1 March 1995 OPR HQ AMC/A4T Prescribing Directive: PUBLIC LAW 107-71-Nov 19, 2001 Releasability: There are no releasability restrictions on this Visual Aid (34.8876953125)                                                                                                                                                                                 |
+## Table 2 (Page: 5, Confidence: 78.759765625)
+
+No title found (Confidence: 0.0)
+
+|  (60.64453125)   | SPACE AVAILABLE (81.298828125) | NAS SIGONELLA (58.3984375) |
+| ---------------- | ------------------------------ | -------------------------- |
+| COMMAND (65.625) | REMINDERS (81.298828125)       |  (63.18359375)             |
+## Table 3 (Page: 6, Confidence: 88.0859375)
+
+No title found (Confidence: 0.0)
+
+| SIZE RESTRICTION: (66.552734375)                                                                                                                                                                                                                |  (56.787109375)             |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------- |
+| Service animal must be able to fit in the service animal handler's lap or in the service animal handler's foot space For more Service Animal information visit AMC Pet page @ www.amc.af.mil/AMC-Travel-Site/AMC-Pet-Travel-Page (37.451171875) | PCS TRAVELER (56.787109375) |
+## Table 4 (Page: 7, Confidence: 99.853515625)
+
+Friday, August 18th 2023 (Confidence: 99.86332702636719)
+
+| PICK UP TIME (94.091796875) | FROM (96.6796875)      | REMARKS (92.96875)          |
+| --------------------------- | ---------------------- | --------------------------- |
+|  (89.306640625)             |  (91.748046875)        |  (88.232421875)             |
+|  (85.888671875)             |  (88.232421875)        |  (84.86328125)              |
+|  (80.908203125)             |  (83.154296875)        |  (79.98046875)              |
+| 22:55 (89.697265625)        | ROTA (92.1875)         | Patriot Express (88.671875) |
+| 21:30 (90.33203125)         | LARNACA (92.822265625) |  (89.2578125)               |
+|  (85.986328125)             |  (88.330078125)        |  (84.9609375)               |
+| 12:45 (93.505859375)        | BAHRAIN (96.09375)     |  (92.431640625)             |
+*Seat: T=Tentative; F=Firm; TBD To Be Determined* (Confidence: 84.5703125)
+## Table 5 (Page: 8, Confidence: 99.609375)
+
+Saturday, August 19th 2023 (Confidence: 99.8254623413086)
+
+| PICK UP TIME (92.236328125) | FROM (95.01953125)               | REMARKS (90.673828125) |
+| --------------------------- | -------------------------------- | ---------------------- |
+| 03:55 (89.501953125)        | BAHRAIN (92.1875)                |  (87.98828125)         |
+| 14:45 (87.98828125)         | SOUDA BAY (90.625)               |  (86.474609375)        |
+| 16:00 (88.037109375)        | KEFLAVIK (90.72265625)           |  (86.572265625)        |
+| 17:00 (91.89453125)         | PALMA DE MALLORCA (94.677734375) |  (90.33203125)         |
+*Seat : T=Tentative; F=Firm; TBD To Be Determined* (Confidence: 67.822265625)
+## Table 6 (Page: 9, Confidence: 99.4140625)
+
+Sunday, August 20th 2023 (Confidence: 99.82913208007812)
+
+|  (89.16015625)       |  (92.041015625)         |  (87.451171875)                |
+| -------------------- | ----------------------- | ------------------------------ |
+| 10:05 (91.50390625)  | BAHRAIN (94.43359375)   | PATRIOT EXPRESS (89.697265625) |
+| 16:05 (89.599609375) | RAMSTEIN (92.431640625) |  (87.841796875)                |
+| 19:00 (92.48046875)  | ROTA (95.41015625)      |  (90.673828125)                |
+## Table 7 (Page: 10, Confidence: 98.974609375)
+
+Friday, August 18th 2023 (Confidence: 99.8194580078125)
+
+|  (93.75)             |  (95.703125)                                   |  (92.7734375)       |
+| -------------------- | ---------------------------------------------- | ------------------- |
+|  (89.16015625)       |  (91.015625)                                   |  (88.232421875)     |
+|  (91.11328125)       |  (93.017578125)                                |  (90.185546875)     |
+|  (89.794921875)      |  (91.69921875)                                 |  (88.916015625)     |
+|  (90.234375)         |  (92.08984375)                                 |  (89.306640625)     |
+|  (89.74609375)       |  (91.650390625)                                |  (88.8671875)       |
+| 12:00 (91.6015625)   | KEFLAVIK (93.505859375)                        | TBD (90.673828125)  |
+| 21:00 (91.50390625)  | BAHRAIN *** ( Patriot Express ) (93.408203125) | T.16 (90.576171875) |
+| 07:00 (93.505859375) | SOUDA BAY / LARNACA (95.458984375)             | TBD (92.578125)     |
+*Seat : T=Tentative; F=Firm; TBD To Be Determined* (Confidence: 63.330078125)
+## Table 8 (Page: 11, Confidence: 99.609375)
+
+Saturday, August 19th 2023 (Confidence: 99.76231384277344)
+
+| ROLL CALL (92.87109375) | DESTINATIONS (96.240234375) | SEATS (91.796875)   |
+| ----------------------- | --------------------------- | ------------------- |
+| 07:00 (89.599609375)    | ROTA (92.822265625)         | T.O (88.525390625)  |
+| 07:00 (90.576171875)    | NORFOLK (93.84765625)       | T.10 (89.501953125) |
+| 07:00 (86.03515625)     | SOUDA BAY (89.111328125)    | TBD (85.009765625)  |
+| 13:00 (92.138671875)    | **BAHRAIN (95.458984375)    | TBD (91.064453125)  |
+## Table 9 (Page: 12, Confidence: 99.853515625)
+
+Sunday, August 20th 2023 (Confidence: 99.82962799072266)
+
+| ROLL CALL (92.333984375) | DESTINATION (94.62890625)                  | SEATS (91.162109375) |
+| ------------------------ | ------------------------------------------ | -------------------- |
+| 09:00 (94.140625)        | ROTA ( Patriot Express ) (96.484375)       | T.20 (92.919921875)  |
+| 09:00 (90.478515625)     | NORFOLK ( Patriot Express ) (92.724609375) | T.20 (89.306640625)  |
+| 15:45 (90.234375)        | SOUDA BAY (92.48046875)                    | TBD (89.0625)        |
+| 15:45 (90.771484375)     | BATOUMI (93.06640625)                      | TBD (89.6484375)     |
+| 06:00 (90.673828125)     | ROTA (92.919921875)                        | TBD (89.501953125)   |
+| 06:00 (89.74609375)      | NORFOLK (91.9921875)                       | TBD (88.623046875)   |
+| 07:00 (93.06640625)      | ROTA (95.41015625)                         | TBD (91.89453125)    |
