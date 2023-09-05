@@ -11,8 +11,15 @@ def convert_textract_response_to_tables(json_response):
 
     try:
         tables = []
-        block_id_to_block = {block['Id']: block for block in json_response.get('Blocks', []) if 'Id' in block}
-        
+        # Check if the input is paginated (list of blocks) or not (single page JSON response)
+        if isinstance(json_response, list):
+            blocks = json_response
+        else:
+            blocks = json_response.get('Blocks', [])
+
+        # Create a dictionary mapping block IDs to blocks
+        block_id_to_block = {block['Id']: block for block in blocks if 'Id' in block}
+
         # Helper function to collect text from child blocks
         def collect_text_from_children(block):
             text = block.get('Text', '')
@@ -24,14 +31,14 @@ def convert_textract_response_to_tables(json_response):
             return text.strip()
         
         current_table = None
-        for block in json_response.get('Blocks', []):
+        for block in blocks:
             block_type = block.get('BlockType')
             
             if block_type == 'TABLE':
                 current_table = Table()
 
                 # Use find_table_title_with_date function if there are no TABLE_TITLE blocks
-                found_title, found_title_confidence = find_table_title_with_date(json_response.get('Blocks', []), block)
+                found_title, found_title_confidence = find_table_title_with_date(blocks, block)
                 if found_title:
                     current_table.title = found_title
                     current_table.title_confidence = found_title_confidence  # Set the confidence value
