@@ -1,0 +1,29 @@
+## Table 1 (Page: 2, Confidence: 99.267578125)
+
+DEPARTURES: TRAVIS AFB, CA (SUU), THURSDAY, 17 AUG 2023 (Confidence: 95.703125)
+
+| ROLL CALL (89.697265625) | DESTINATIONS (96.09375)            | SEATS (87.353515625) |
+| ------------------------ | ---------------------------------- | -------------------- |
+|  (88.57421875)           | NO REMAINING FLIGHTS (94.82421875) |  (86.23046875)       |
+## Table 2 (Page: 3, Confidence: 99.8046875)
+
+DEPARTURES: TRAVIS AFB, CA (SUU), FRIDAY, 18 AUG 2023 (Confidence: 95.751953125)
+
+| ROLL CALL (92.28515625) | DESTINATIONS (96.826171875)      | SEATS (89.892578125) |
+| ----------------------- | -------------------------------- | -------------------- |
+| 0540 (87.79296875)      | FAIRCHILD AFB, WA (92.138671875) | 10T (85.546875)      |
+| 0625 (89.0625)          | CAMPBELL AAF, KY (93.505859375)  | 17F (86.767578125)   |
+| 0740 (90.185546875)     | SCOTT AFB, IL (94.62890625)      | 40T (87.841796875)   |
+## Table 3 (Page: 4, Confidence: 99.853515625)
+
+DEPARTURES: TRAVIS AFB, CA (SUU), SATURDAY, 19 AUG 2023 (Confidence: 99.755859375)
+
+| ROLL CALL (94.140625) | DESTINATIONS (97.021484375)                                                              | SEATS (91.69921875) |
+| --------------------- | ---------------------------------------------------------------------------------------- | ------------------- |
+| 0425 (90.4296875)     | CANNON AFB, NM (93.212890625)                                                            | 10F (88.0859375)    |
+| 0500 (89.404296875)   | WRIGHT-PATTERSON AFB, OH (92.138671875)                                                  | 19T (87.060546875)  |
+| 0640 (93.9453125)     | JB PEARL HARBOR-HICKAM, HI ANDERSEN AFB, GUAM YOKOTA AB, JAPAN KADENA AB, JAPAN (96.875) | 73T (91.50390625)   |
+| 0700 (89.35546875)    | FAIRCHILD AFB, WA (92.08984375)                                                          | 10T (87.01171875)   |
+| 0741 (92.08984375)    | BIGGS AAF, TX (94.921875)                                                                | 19T (89.697265625)  |
+| 0840 (91.162109375)   | JB CHARLESTON, SC (93.994140625)                                                         | 53F (88.76953125)   |
+| 1525 (92.333984375)   | JB PEARL HARBOR-HICKAM, HI (PATRIOT EXPRESS) (95.166015625)                              | 33F (89.94140625)   |
