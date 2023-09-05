@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from souda_bay_1_72hr_sns_messages import souda_bay_1_72hr_successful_job_sns_message as current_sns_message
-from souda_bay_1_72hr_textract_response import souda_bay_1_textract_response as current_textract_response
+from travis_1_72hr_sns_messages import travis_1_72hr_successful_job_sns_message as current_sns_message
+from travis_1_72hr_textract_response import travis_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
