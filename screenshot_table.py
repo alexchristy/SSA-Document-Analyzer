@@ -45,8 +45,13 @@ def capture_screen_shot_of_table_from_pdf(pdf_path, textract_response, page_numb
     table_count = 0
     last_screenshot_path = None
 
-    # Loop through blocks in the Textract response to find tables
-    for block in textract_response.get('Blocks', []):
+    # Check if the input is paginated (list of blocks) or not (single page JSON response)
+    if isinstance(textract_response, list):
+        blocks_to_process = textract_response
+    else:
+        blocks_to_process = textract_response.get('Blocks', [])
+        
+    for block in blocks_to_process:
         if block['BlockType'] == 'TABLE' and block['Page'] == page_number:
             # Increment table counter
             table_count += 1
@@ -65,7 +70,7 @@ def capture_screen_shot_of_table_from_pdf(pdf_path, textract_response, page_numb
             max_bottom = max(max_bottom, bb['Top'] + bb['Height'])
 
             # Update bounding box to include table title and footer if needed
-            for related_block in textract_response.get('Blocks', []):
+            for related_block in blocks_to_process:
                 if related_block['BlockType'] in ['TABLE_TITLE', 'TABLE_FOOTER'] and related_block['Page'] == page_number:
                     if include_title or related_block['BlockType'] != 'TABLE_TITLE':
                         bb = related_block['Geometry']['BoundingBox']
