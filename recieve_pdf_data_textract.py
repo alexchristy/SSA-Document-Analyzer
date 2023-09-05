@@ -13,6 +13,7 @@ from table_utils import *
 from s3_bucket import S3Bucket
 from screenshot_table import capture_screen_shot_of_table_from_pdf
 from flight_utils import *
+import uuid
 
 # REMOVE WHEN FINISHED TESTING
 import sys
@@ -172,80 +173,98 @@ def get_document_analysis_results(client, job_id):
 
 def reprocess_tables(tables: List[Table], s3_client: str, s3_object_path: str, response: dict) -> None:
     # Check if any tables need to be reprocessed
-    if tables:
-        # Get download directory
-        download_dir = os.getenv('DOWNLOAD_DIR')
-        if not download_dir:
-            logging.error("Download directory is not set.")
-            raise EnvironmentError("Download directory is not set.")
-
-        # Get PDF filename from S3 object path
-        pdf_filename = os.path.basename(s3_object_path)
-
-        # Create local path to download PDF to
-        local_pdf_path = os.path.join(download_dir, pdf_filename)
-
-        # Download PDF from S3
+    if not tables:
+        logging.info("No tables need to be reprocessed.")
+        return
+    
+    download_dir = os.getenv('DOWNLOAD_DIR')
+    if not download_dir:
+        logging.error("Download directory is not set.")
+        raise EnvironmentError("Download directory is not set.")
+        
+    # Create local path to download PDF to
+    unique_dir_name = str(uuid.uuid4())
+    download_dir = os.path.join(download_dir, unique_dir_name)
+    
+    # Check if download directory exists
+    if not os.path.isdir(download_dir):
+        # Create download directory
         try:
-            s3_client.download_from_s3(s3_object_path, local_pdf_path)
+            os.makedirs(download_dir, exist_ok=True)
         except Exception as e:
-            logging.error(f"Failed to download PDF from S3: {e}")
+            logging.error(f"Failed to create download directory: {e}")
             raise
 
-        # Reprocess tables with low confidence rows
-        logging.info(f"Reprocessing {len(tables)} tables.")
-        for table in tables:
-            logging.info(f"Reprocessing table with page number: {table.page_number}")
+    # Get PDF filename from S3 object path
+    pdf_filename = os.path.basename(s3_object_path)
 
-            # Get table page number
-            page_number = table.page_number
+    # Create local path to PDF
+    local_pdf_path = os.path.join(download_dir, pdf_filename)
 
-            table_screen_shot_with_title = capture_screen_shot_of_table_from_pdf(pdf_path=local_pdf_path, page_number=page_number, 
-                                                                      textract_response=response, output_folder=download_dir,
-                                                                      padding=75, include_title=True)
-            
-            # Read the local PDF file
-            with open(table_screen_shot_with_title, "rb") as file:
-                file_bytes = bytearray(file.read())
+    # Download PDF from S3
+    try:
+        s3_client.download_from_s3(s3_object_path, local_pdf_path)
+    except Exception as e:
+        logging.error(f"Failed to download PDF from S3: {e}")
+        raise
 
-            # Send to screen shot to Textract for reprocessing
-            # Call AnalyzeDocument API
-            reprocess_response = textract_client.analyze_document(
-                Document={'Bytes': file_bytes},
-                FeatureTypes=["TABLES"]
-            )
+    # Reprocess tables with low confidence rows
+    logging.info(f"Reprocessing {len(tables)} tables.")
+    for table in tables:
+        logging.info(f"Reprocessing table with page number: {table.page_number}")
 
-            # Parse the response
-            reprocessed_table = gen_tables_from_textract_response(reprocess_response)
+        # Get table page number
+        page_number = table.page_number
 
-            # Remove the screen shot of the table
-            os.remove(table_screen_shot_with_title)
+        table_screen_shot_with_title = capture_screen_shot_of_table_from_pdf(pdf_path=local_pdf_path, page_number=page_number, 
+                                                                    textract_response=response, output_folder=download_dir,
+                                                                    padding=75, include_title=True)
+        
+        # Read the local PDF file
+        with open(table_screen_shot_with_title, "rb") as file:
+            file_bytes = bytearray(file.read())
 
-            # Check if more than one table was found
-            if len(reprocessed_table) > 1:
-                logging.error("More than one table found in reprocessed table.")
-                raise Exception("More than one table found in reprocessed table.")
-            
-            # Get the only table in the list if there is a table
-            # found. If not, set reprocessed_table to None and 
-            # continue to the next table.
-            if reprocessed_table:
-                reprocessed_table = reprocessed_table[0]
-            else:
-                logging.warning("No tables found in reprocessed table.")
-                continue
+        # Send to screen shot to Textract for reprocessing
+        # Call AnalyzeDocument API
+        reprocess_response = textract_client.analyze_document(
+            Document={'Bytes': file_bytes},
+            FeatureTypes=["TABLES"]
+        )
 
-            # Get the lowest confidence row of the reproccessed table
-            _, lowest_confidence_row_reproccessed = get_lowest_confidence_row(reprocessed_table)
+        # Parse the response
+        reprocessed_table = gen_tables_from_textract_response(reprocess_response)
 
-            # Compare the lowest confidence row to the original table
-            # If the confidence is higher, replace the original table with the reprocessed table
-            if lowest_confidence_row_reproccessed > get_lowest_confidence_row(table)[1]:
-                logging.info("Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table.")
-                table = reprocessed_table
+        # Remove the screen shot of the table
+        os.remove(table_screen_shot_with_title)
 
-        # Remove PDF from local directory
-        os.remove(local_pdf_path)
+        # Check if more than one table was found
+        if len(reprocessed_table) > 1:
+            logging.error("More than one table found in reprocessed table.")
+            raise Exception("More than one table found in reprocessed table.")
+        
+        # Get the only table in the list if there is a table
+        # found. If not, set reprocessed_table to None and 
+        # continue to the next table.
+        if reprocessed_table:
+            reprocessed_table = reprocessed_table[0]
+        else:
+            logging.warning("No tables found in reprocessed table.")
+            continue
+
+        # Get the lowest confidence row of the reproccessed table
+        _, lowest_confidence_row_reproccessed = get_lowest_confidence_row(reprocessed_table)
+
+        # Compare the lowest confidence row to the original table
+        # If the confidence is higher, replace the original table with the reprocessed table
+        if lowest_confidence_row_reproccessed > get_lowest_confidence_row(table)[1]:
+            logging.info("Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table.")
+            table = reprocessed_table
+
+    # Remove PDF from local directory
+    os.remove(local_pdf_path)
+
+    # Remove the local directory
+    os.rmdir(download_dir)
 
 # Main Lambda function
 def lambda_handler(event, context):
