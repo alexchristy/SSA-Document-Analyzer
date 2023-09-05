@@ -442,5 +442,16 @@ class TestTextractResponseParsing(unittest.TestCase):
 
         self.assertEqual(table_string_hash, '5589916fe786404e6719e787b3dcbf1ff43d629c61109ee602283e8c0fe7b17f')
 
+    def test_souda_bay_1_72hr(self):
+
+        # Import test data
+        from souda_bay_1_72hr_sns_messages import souda_bay_1_72hr_successful_job_sns_message as sns_message
+        from souda_bay_1_72hr_textract_response import souda_bay_1_72hr_textract_response as textract_response
+
+        table_string = lambda_test_handler(sns_message, textract_response)
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
+
+        self.assertEqual(table_string_hash, '96e5fb868040f3af899779fdf01bda88231954496606d525279cf68dd0003dc4')
+
 if __name__ == '__main__':
     unittest.main()
