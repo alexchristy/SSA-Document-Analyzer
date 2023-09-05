@@ -7,7 +7,7 @@ def convert_textract_response_to_tables(json_response):
     Convert AWS Textract JSON response to a list of Table objects.
     """
 
-    table_title_exclusion_list = ['updated']
+    table_title_exclusion_list = ['updated', 'current']
 
     try:
         tables = []
@@ -98,7 +98,7 @@ def find_table_title_with_date(blocks, table_block):
     """
     Returns the table title if found, otherwise returns None. Also returns the confidence level of the found title.
     """
-    table_title_exclusion_list = ['updated']
+    table_title_exclusion_list = ['updated', 'current']
 
     table_top = table_block['Geometry']['BoundingBox']['Top']
     table_page = table_block.get('Page', None)
