@@ -137,9 +137,9 @@ class FirestoreClient:
         except Exception as e:
             logging.error(f"An error occurred while updating the job status: {e}")
     
-    def get_flight_origin_by_pdf_hash(self, hash: str) -> str:
+    def get_terminal_name_by_pdf_hash(self, hash: str) -> str:
         """
-        This function returns the location of the terminal that owns the PDF that is
+        This function returns the name of the terminal that owns the PDF that is
         identified by the supplied hash.
         
         :param hash: The SHA-256 hash of the PDF file
@@ -169,19 +169,7 @@ class FirestoreClient:
             # Return the terminal name
             terminalName = pdf_data['terminal']
             logging.info(f'Terminal name: {terminalName}')
-
-            # Create a reference to the terminal document
-            terminal_ref = self.db.collection(terminal_coll).document(terminalName)
-
-            # Try to retrieve the terminal document
-            if not terminal_ref:
-                logging.error(f'Terminal {terminalName} does not exist in the database.')
-                return None
-            
-            # Get the terminal document's data
-            terminal_data = terminal_ref.get().to_dict()
-            terminal_location = terminal_data['location']
-            return terminal_location
+            return terminalName
         
         else:
             # The document does not exist
