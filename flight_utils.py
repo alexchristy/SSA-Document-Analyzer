@@ -1,9 +1,12 @@
+from datetime import datetime
 import logging
+from typing import List
 from table import Table
 import re
 from gpt3_turbo_analysis import GPT3TurboAnalysis
 import json
 from flight import Flight
+from table_utils import check_date_string
 
 def parse_seat_data(seat_data):
     """
@@ -19,30 +22,37 @@ def parse_seat_data(seat_data):
     num_of_seats = -1
     seat_status = ''
 
-    # If seat data is empty, return TDB
+    # Case 0: If seat data is empty, return TDB
     if seat_data == '':
         logging.info("Seat data is empty.")
-        seat_status = 'TBD'
+        seat_status = 'Empty'
         return num_of_seats, seat_status
 
     # Case 1: Seat data is TBD
     if seat_data == 'TBD':
         logging.info("Seat data is TBD.")
         seat_status = 'TBD'
+        num_of_seats = 0
         return num_of_seats, seat_status
 
+    # Case 2.5: Special case for '0F' and '0T', case insensitive
+    elif seat_data.upper() == '0F' or seat_data.upper() == '0T':
+        num_of_seats = 0
+        seat_status = seat_data[-1].upper()
+        logging.info(f"Parsed special case '0F' or '0T'. num_of_seats = {num_of_seats}, seat_status = {seat_status}")
+
     # Case 2: Format is number followed by letter (e.g., 60T)
-    elif seat_data[:-1].isdigit() and seat_data[-1].upper() in ['T', 'F']:
+    elif seat_data[:-1].isdigit() and len(seat_data[:-1]) > 0 and seat_data[-1].upper() in ['T', 'F']:
         num_of_seats = int(seat_data[:-1])
         seat_status = seat_data[-1].upper()
         logging.info(f"Parsed data in format 'number letter' (60T). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
-    
+
     # Case 3: Format is letter dash number (e.g., T-60)
     elif seat_data[0].upper() in ['T', 'F'] and seat_data[1] == '-' and seat_data[2:].isdigit():
         num_of_seats = int(seat_data[2:])
         seat_status = seat_data[0].upper()
         logging.info(f"Parsed data in format 'letter - number' (T-60). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
-    
+     
     else:
         logging.error(f"Failed to parse seat data: Invalid format '{seat_data}'")
         return None, None
@@ -183,7 +193,18 @@ def parse_row(table: Table, row_index: int):
     
     return roll_call_time, destinations, num_of_seats, seat_status
 
-def is_complete_row(row: list):
+def ocr_correction(input_str):
+    correction_map = {
+        'O': '0',
+        'I': '1',
+        'l': '1',
+        'S': '5',
+        'Z': '2',
+        'B': '8'
+    }
+    return ''.join(correction_map.get(char, char) for char in input_str)
+
+def has_complete_data(row: list):
     '''
     This checks that a row has a rollcall time, destination, and seat data.
     '''
@@ -218,7 +239,7 @@ def is_complete_row(row: list):
     
     return True
 
-def get_row_similarity(row1: list, row2: list):
+def get_row_confidence_diff(row1: list, row2: list):
 
     # Get confidence scores for each cell
     rollcall_1_confidence = row1[0][1]
@@ -238,12 +259,271 @@ def get_row_similarity(row1: list, row2: list):
 
     return row_diff
 
+def get_roll_call_column_index(table: Table) -> int:
+    """
+    This function returns the index number of the column containing roll call times.
+    """
+    
+    logging.info(f"Retrieving roll call column index.")
 
+    if table is None:
+        logging.error(f"Exiting function! Table is empty.")
+        return None
+    
+    if table.rows is None:
+        logging.error(f"Exiting function! There are no rows in the table.")
+        return None
+    
+    if table.get_num_of_columns() == 0:
+        logging.error(f"Exiting function! There are no columns in the table.")
+        return None
 
+    # Define regex pattern to match roll call time
+    # column header
+    patterns = [r'(?i)\broll\s*call\s*(time)?\b']
 
+    # Get column index
+    for index, column_header in enumerate(table.rows[0]):
+        for pattern in patterns:
+            if re.search(pattern, column_header[0]):
+                logging.info(f"Found roll call time column header: {column_header[0]}")
+                return index
+
+def get_destination_column_index(table: Table) -> int:
+    """
+    This function returns the index number of the column containing roll call times.
+    """
+    
+    logging.info(f"Retrieving roll call column index.")
+
+    if table is None:
+        logging.error(f"Exiting function! Table is empty.")
+        return None
+    
+    if table.rows is None:
+        logging.error(f"Exiting function! There are no rows in the table.")
+        return None
+    
+    if table.get_num_of_columns() == 0:
+        logging.error(f"Exiting function! There are no columns in the table.")
+        return None
+
+    # Define regex pattern to match destination
+    # column header
+    patterns = [r'(?i)\bdestination(s)?\b']
+
+    # Get column index
+    for index, column_header in enumerate(table.rows[0]):
+        for pattern in patterns:
+            if re.search(pattern, column_header[0]):
+                logging.info(f"Found roll call time column header: {column_header[0]}")
+                return index
+            
+def get_seats_column_index(table: Table) -> int:
+    """
+    This function returns the index number of the column containing roll call times.
+    """
+    
+    logging.info(f"Retrieving roll call column index.")
+
+    if table is None:
+        logging.error(f"Exiting function! Table is empty.")
+        return None
+    
+    if table.rows is None:
+        logging.error(f"Exiting function! There are no rows in the table.")
+        return None
+    
+    if table.get_num_of_columns() == 0:
+        logging.error(f"Exiting function! There are no columns in the table.")
+        return None
+
+    # Define regex pattern to match seats
+    # column header
+    patterns = [r'(?i)\bseat(s)?\b']
+    
+    # Get column index
+    for index, column_header in enumerate(table.rows[0]):
+        for pattern in patterns:
+            if re.search(pattern, column_header[0]):
+                logging.info(f"Found roll call time column header: {column_header[0]}")
+                return index
+
+def convert_note_column_to_notes(table: Table, current_row: int, note_columns: List[int]) -> dict:
+    """
+    This function takes in a list of columns that contain information not related
+    to roll call time, seats, or destinations and turns them into a json string.
+    """
+
+    # Check if table is empty
+    if table is None:
+        logging.error(f"Nothing to covert to notes. Table is empty.")
+        return ''
+    
+    # Check if note columns is empty
+    if note_columns is None:
+        logging.error(f"Nothing to convert to notes. There are no note columns.")
+        return ''
+    
+    # Create a dictionary to store notes
+    notes = {}
+
+    # Get notes from each cell
+    for note_column in note_columns:
+        note = table.get_cell_text(note_column, current_row)
+
+        note_column_header_text = table.get_cell_text(note_column, 0)
+
+        if note_column_header_text is None:
+            logging.error(f"Failed to get note column header text from cell (0, {note_column}).")
+            return ''
         
+        if note is None:
+            logging.error(f"Failed to get note from cell ({current_row}, {note_column}).")
+            return ''
+        
+        notes[note_column_header_text] = note
+    
+    # Add footnote if it exists
+    if table.footer is not None and table.footer != '':
+        notes['footnote'] = table.footer
 
+    return notes
 
-if __name__ == "__main__":
-    # Create a table object
-    table = Table.load_state(filename="table1_state.pkl")
+def reformat_date(date_str, current_date):
+    pattern = r"(?P<day>\d{1,2})(?:th|st|nd|rd)?(?:\s*,?\s*)?(?P<month>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    try:
+        search_result = re.search(pattern, date_str, re.IGNORECASE)
+        if not search_result:
+            raise ValueError("Could not parse date")
+        
+        day = int(search_result.group('day'))
+        month = search_result.group('month')[:3].lower()
+        
+        current_year = current_date.year
+        current_month = current_date.month
+        
+        # Special case for early January when the current month is December
+        if month == "jan" and day <= 4 and current_month == 12:
+            inferred_year = current_year + 1
+        else:
+            inferred_year = current_year
+
+        date_obj = datetime.strptime(f"{day} {month} {inferred_year}", "%d %b %Y")
+        return date_obj.strftime('%Y%m%d')
+        
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return date_str
+
+def convert_72hr_table_to_flights(table: Table, origin_terminal: str) -> List[Flight]:
+    """
+    This function takes in a table from a 72hr flight schedule and 
+    converts it to a list of Flight objects.
+    """
+
+    # Initialize list of flights
+    flights = []
+
+    # Check if table is empty
+    if table is None:
+        logging.error(f"Table is empty.")
+        return flights
+    
+    # Get number of rows in table
+    if table.rows is None:
+        logging.error(f"There are no rows in the table.")
+        return flights
+
+    # Get number of columns in table
+    if table.get_num_of_columns() == 0:
+        logging.error(f"There are no columns in the table.")
+        return flights
+    
+    if table.get_num_of_columns() < 3:
+        logging.error(f"There are not enough columns in the table. Only {table.get_num_of_columns()} columns found.")
+        return flights
+    
+    # Get column indices
+    if table.get_num_of_columns() > 3:
+        logging.info(f"There are more than 3 columns in the table. Treating extra columns as notes.")
+        roll_call_column_index = get_roll_call_column_index(table)
+        destination_column_index = get_destination_column_index(table)
+        seats_column_index = get_seats_column_index(table)
+
+        # Make extra columns into notes
+        note_column_indices = []
+        for index, column_header in enumerate(table.rows[0]):
+            if index not in [roll_call_column_index, destination_column_index, seats_column_index]:
+                note_column_indices.append(index)
+    else:
+        roll_call_column_index = 0
+        destination_column_index = 1
+        seats_column_index = 2
+
+    # Check origin terminal
+    if origin_terminal is None:
+        logging.error(f"Origin terminal is empty.")
+        return flights
+
+    # Iterate through each row
+    for row_index, row in enumerate(table.rows):
+
+        # Special flight data variables
+        roll_call_note = False
+
+        # Skip header row
+        if row_index == 0:
+            continue
+
+        # Convert note columns to notes
+        notes = convert_note_column_to_notes(table, row_index, note_column_indices)
+
+        # Parse roll call time
+        roll_call_time = parse_rollcall_time(row[roll_call_column_index][0])
+
+        # Parse destination
+        destinations = parse_destination(row[destination_column_index][0])
+
+        # Parse seat data
+        num_of_seats, seat_status = parse_seat_data(row[seats_column_index][0])
+
+        # Skip row if it doesn't have complete data
+        if roll_call_time is None and num_of_seats is None and seat_status is None and destinations is None:
+            logging.info(f"Skipping row {row_index} due to incomplete data.")
+            continue
+
+        # Handle special cases:
+        # Case 1: If roll call time is not a number, check if it's a note
+        if roll_call_time is None:
+            
+            if len(row[roll_call_column_index][0]) > 0:
+                roll_call_note = True
+                logging.info(f'Appears to be special roll call format or note. Saving as \"Roll Call Note\" in notes.')
+                notes['Roll Call Note'] = row[roll_call_column_index][0]
+
+        # Case 2: If seat data parsing fails, try correcting common OCR errors
+        if num_of_seats is None and seat_status is None:
+            new_seat_data = ocr_correction(row[seats_column_index][0])
+            logging.info(f'Atempting to correct OCR errors. New seat data: {new_seat_data}')
+            num_of_seats, seat_status = parse_seat_data(new_seat_data)
+
+        # Get date for flight from table title
+        if table.title is None:
+            logging.error(f"Table title is empty.")
+            return flights
+        
+        match = check_date_string(table.title, return_match=True)
+
+        if match is None:
+            logging.error(f"Failed to get date from table title.")
+            return flights
+        
+        date = reformat_date(match, datetime.now())
+
+        # Create flight object
+        flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, num_of_seats=num_of_seats, seat_status=seat_status, notes=json.dumps(notes), date=date, rollcall_note=roll_call_note)
+
+        flights.append(flight)
+    
+    return flights
