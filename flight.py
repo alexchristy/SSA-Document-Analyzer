@@ -2,7 +2,7 @@ import hashlib
 
 class Flight:
 
-    def __init__(self, origin_terminal: str, destinations: list, rollcall_time: str, num_of_seats: int, seat_status: str, notes: str, date: str, table_footer: str):
+    def __init__(self, origin_terminal: str, destinations: list, rollcall_time: str, num_of_seats: int, seat_status: str, notes: str, date: str, rollcall_note=False):
 
         self.origin_terminal = origin_terminal
         self.destinations = destinations
@@ -11,10 +11,10 @@ class Flight:
         self.seat_status = seat_status
         self.notes = notes
         self.date = date
-        self.table_footer = table_footer
+        self.rollcall_note = rollcall_note
 
         # Generate a deterministic unique flight ID based on attributes using SHA-256
-        attributes_str = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}{self.table_footer}"
+        attributes_str = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}"
         self.flight_id = hashlib.sha256(attributes_str.encode()).hexdigest()
 
 
@@ -31,25 +31,22 @@ class Flight:
             'notes': self.notes,
             'flight_id': self.flight_id,
             'date': self.date,
-            'table_footer': self.table_footer
+            'rollcall_note': self.rollcall_note
         }
     
     def pretty_print(self):
-        """
-        Pretty-prints the Flight object's attributes in a visually appealing manner.
-        """
-        print(f"{'-' * 40}")
+        print(f"{'=' * 40}")
         print(f"Flight ID: {self.flight_id}")
         print(f"{'-' * 40}")
         print(f"Origin Terminal: {self.origin_terminal if self.origin_terminal else 'N/A'}")
-        print(f"Destination Terminal: {self.destinations if self.destinations else 'N/A'}")
-        print(f"Roll Call Time: {self.rollcall_time if self.rollcall_time else 'N/A'}")
-        print(f"Number of Seats: {self.num_of_seats if self.num_of_seats else 'N/A'}")
+        print(f"Destination/s: {self.destinations if self.destinations else 'N/A'}")
+        rollcall_text = "**See note below**" if self.rollcall_note else self.rollcall_time
+        print(f"Roll Call Time: {rollcall_text if rollcall_text else 'N/A'}")
+        print(f"Number of Seats: {self.num_of_seats if self.num_of_seats is not None else 0}")
         print(f"Seat Status: {self.seat_status if self.seat_status else 'N/A'}")
         print(f"Notes: {self.notes if self.notes else 'N/A'}")
         print(f"Date: {self.date if self.date else 'N/A'}")
-        print(f"Table Footer: {self.table_footer if self.table_footer else 'N/A'}")
-        print(f"{'-' * 40}")
+        print(f"{'=' * 40}")
 
     def __eq__(self, other):
         if not isinstance(other, Flight):
@@ -62,5 +59,6 @@ class Flight:
             self.seat_status == other.seat_status and
             self.notes == other.notes and
             self.date == other.date and
-            self.table_footer == other.table_footer
+            self.flight_id == other.flight_id and
+            self.rollcall_note == other.rollcall_note
         )
