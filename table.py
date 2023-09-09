@@ -106,6 +106,34 @@ class Table:
 
         return self.rows[index]
 
+    def get_num_of_columns(self):
+
+        if len(self.rows) == 0:
+            return 0
+
+        if len(self.rows[0]):
+            return len(self.rows[0])
+        else:
+            return 0
+      
+    def get_cell_text(self, column_index: int, row_index: int) -> str:
+
+        # Check if the row index is out of range
+        if row_index < 0 or row_index >= len(self.rows):
+            logging.error(f"Row index {row_index} out of range. Valid range is 0 to {len(self.rows) - 1}.")
+            return None
+        
+        # Check if the column index is out of range
+        if column_index < 0 or column_index >= len(self.rows[row_index]):
+            logging.error(f"Column index {column_index} out of range. Valid range is 0 to {len(self.rows[row_index]) - 1}.")
+            return None
+        
+        # Extract the cell text
+        cell_text = self.rows[row_index][column_index][0]
+
+        return cell_text
+
+
     @classmethod
     def load_state(cls, filename="table_state.pkl"):
         try:
