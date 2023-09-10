@@ -392,9 +392,21 @@ def convert_note_column_to_notes(table: Table, current_row: int, note_columns: L
     return notes
 
 def reformat_date(date_str, current_date):
-    pattern = r"(?P<day>\d{1,2})(?:th|st|nd|rd)?(?:\s*,?\s*)?(?P<month>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    # Original pattern
+    original_pattern = r"(?P<day>\d{1,2})(?:th|st|nd|rd)?(?:\s*,?\s*)?(?P<month>jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    
+    # New pattern for the specific case (month-day-year)
+    new_pattern = r"(?P<month>[a-zA-Z]+)\s*(?P<day>\d{1,2})[,\s]*(?P<year>\d{4})?"
+    
     try:
-        search_result = re.search(pattern, date_str, re.IGNORECASE)
+        # First, try to match using the original pattern
+        search_result = re.search(original_pattern, date_str, re.IGNORECASE)
+        
+        # If the original pattern doesn't match, try the new pattern
+        if not search_result:
+            search_result = re.search(new_pattern, date_str, re.IGNORECASE)
+        
+        # If still no match, raise an error
         if not search_result:
             raise ValueError("Could not parse date")
         
