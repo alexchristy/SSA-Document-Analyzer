@@ -384,10 +384,6 @@ def convert_note_column_to_notes(table: Table, current_row: int, note_columns: L
         
         notes[note_column_header_text] = note
     
-    # Add footnote if it exists
-    if table.footer is not None and table.footer != '':
-        notes['footnote'] = table.footer
-
     return notes
 
 def reformat_date(date_str, current_date):
@@ -422,6 +418,9 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str) -> List[Fl
     converts it to a list of Flight objects.
     """
 
+    # Special bool vars for handling special cases
+    has_note_columns = False
+
     # Initialize list of flights
     flights = []
 
@@ -453,9 +452,11 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str) -> List[Fl
 
         # Make extra columns into notes
         note_column_indices = []
+        has_note_columns = True
         for index, column_header in enumerate(table.rows[0]):
             if index not in [roll_call_column_index, destination_column_index, seats_column_index]:
                 note_column_indices.append(index)
+        logging.info(f"Note column indices found: {note_column_indices}")
     else:
         roll_call_column_index = 0
         destination_column_index = 1
@@ -471,13 +472,20 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str) -> List[Fl
 
         # Special flight data variables
         roll_call_note = False
+        notes = {}
 
         # Skip header row
         if row_index == 0:
             continue
 
         # Convert note columns to notes
-        notes = convert_note_column_to_notes(table, row_index, note_column_indices)
+        if has_note_columns:
+            logging.info(f"Converting note columns to notes.")
+            notes = convert_note_column_to_notes(table, row_index, note_column_indices)
+
+        # Add table footer to notes if it exists
+        if table.footer is not None and table.footer != '':
+            notes['footnote'] = table.footer
 
         # Parse roll call time
         roll_call_time = parse_rollcall_time(row[roll_call_column_index][0])
@@ -521,8 +529,14 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str) -> List[Fl
         
         date = reformat_date(match, datetime.now())
 
+        # Check if any notes were added for the flight
+        if len(notes) == 0:
+            notes = None
+        else:
+            notes = json.dumps(notes)
+
         # Create flight object
-        flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, num_of_seats=num_of_seats, seat_status=seat_status, notes=json.dumps(notes), date=date, rollcall_note=roll_call_note)
+        flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=roll_call_note)
 
         flights.append(flight)
     
