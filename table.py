@@ -135,7 +135,7 @@ class Table:
 
 
     @classmethod
-    def load_state(cls, filename="table_state.pkl"):
+    def load_state(cls, filename="table_state.pkl") -> "Table":
         try:
             with open(filename, "rb") as f:
                 loaded_table = pickle.load(f)
