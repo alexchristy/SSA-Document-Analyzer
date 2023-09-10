@@ -25,8 +25,7 @@ def parse_seat_data(seat_data):
     # Case 0: If seat data is empty, return TDB
     if seat_data == '':
         logging.info("Seat data is empty.")
-        seat_status = 'Empty'
-        return num_of_seats, seat_status
+        return None, None
 
     # Case 1: Seat data is TBD
     if seat_data == 'TBD':
@@ -73,7 +72,7 @@ def parse_rollcall_time(time_str):
     # If time string is empty, return empty string
     if time_str == '':
         logging.info("Rollcall time is empty.")
-        return ''
+        return None
 
     # Extract the first 4 digits to represent the 24-hour time
     rollcall_time = time_str[:4]
@@ -92,7 +91,7 @@ def parse_destination(destination_data: str):
     # If destination data is empty, return empty string
     if destination_data == '':
         logging.info("Destination data is empty.")
-        return ''
+        return None
     
     # Initialize GPT analysis object
     gpt3_turbo_analysis = GPT3TurboAnalysis()
