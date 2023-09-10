@@ -49,10 +49,11 @@ class TestTableToFlights(unittest.TestCase):
 
         # Use ThreadPoolExecutor to run conversions in parallel
         with ThreadPoolExecutor() as executor:
+            fixed_date = "20230910"
             futures = {
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal),
-                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal),
-                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
@@ -102,10 +103,11 @@ class TestTableToFlights(unittest.TestCase):
 
         # Use ThreadPoolExecutor to run conversions in parallel
         with ThreadPoolExecutor() as executor:
+            fixed_date = "20230910"
             futures = {
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal),
-                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal),
-                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
@@ -155,10 +157,11 @@ class TestTableToFlights(unittest.TestCase):
 
         # Use ThreadPoolExecutor to run conversions in parallel
         with ThreadPoolExecutor() as executor:
+            fixed_date = "20230910"
             futures = {
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal),
-                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal),
-                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
@@ -182,4 +185,3 @@ class TestTableToFlights(unittest.TestCase):
         # Table 3
         for i, flight in enumerate(table3_converted_flights):
             self.assertEqual(flight, table3_flights[i])
-        
