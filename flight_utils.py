@@ -51,7 +51,13 @@ def parse_seat_data(seat_data):
         num_of_seats = int(seat_data[2:])
         seat_status = seat_data[0].upper()
         logging.info(f"Parsed data in format 'letter - number' (T-60). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
-     
+    
+    # Case 4: Format is number space letter (e.g., '20 T')
+    elif len(seat_data.split()) == 2 and seat_data.split()[0].isdigit() and seat_data.split()[1].upper() in ['T', 'F']:
+        num_of_seats = int(seat_data.split()[0])
+        seat_status = seat_data.split()[1].upper()
+        logging.info(f"Parsed data in format 'number space letter' (20 T). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
+
     else:
         logging.error(f"Failed to parse seat data: Invalid format '{seat_data}'")
         return None, None
