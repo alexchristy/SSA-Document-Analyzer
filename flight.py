@@ -1,4 +1,6 @@
 import hashlib
+import logging
+import pickle
 
 class Flight:
 
@@ -62,3 +64,13 @@ class Flight:
             self.flight_id == other.flight_id and
             self.rollcall_note == other.rollcall_note
         )
+    
+    @classmethod
+    def load_state(cls, filename="flight_state.pkl") -> "Flight":
+        try:
+            with open(filename, "rb") as f:
+                loaded_flight = pickle.load(f)
+            return loaded_flight
+        except Exception as e:
+            logging.error(f"An error occurred while loading the flight state: {e}")
+            return None
