@@ -429,7 +429,24 @@ def reformat_date(date_str, current_date):
         print(f"An error occurred: {e}")
         return date_str
 
-def convert_72hr_table_to_flights(table: Table, origin_terminal: str) -> List[Flight]:
+def create_datetime_from_str(date_str):
+
+    try:
+        # Parse the input string to extract year, month, and day
+        year = int(date_str[:4])
+        month = int(date_str[4:6])
+        day = int(date_str[6:8])
+
+        # Create a datetime object using the extracted values
+        custom_date = datetime(year=year, month=month, day=day)
+
+        return custom_date
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return None
+
+def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
     This function takes in a table from a 72hr flight schedule and 
     converts it to a list of Flight objects.
@@ -544,7 +561,19 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str) -> List[Fl
             logging.error(f"Failed to get date from table title.")
             return flights
         
-        date = reformat_date(match, datetime.now())
+        # Added this functionality to allow for testing with a fixed date
+        # which allows for proper testing of year inference functionality
+        # of the reformat_date function
+        if use_fixed_date:
+            logging.info(f"Using fixed date: {fixed_date}")
+            if fixed_date is None:
+                logging.error(f"Fixed date is empty.")
+                return flights
+
+            custom_date = create_datetime_from_str(fixed_date)
+            date = reformat_date(match, custom_date)
+        else:
+            date = reformat_date(match, datetime.now())
 
         # Check if any notes were added for the flight
         if len(notes) == 0:
