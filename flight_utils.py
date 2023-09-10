@@ -448,8 +448,34 @@ def create_datetime_from_str(date_str):
 
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
-    This function takes in a table from a 72hr flight schedule and 
-    converts it to a list of Flight objects.
+    Converts a 72-hour flight schedule table to a list of Flight objects.
+
+    Parameters:
+        table (Table): The table object containing the 72-hour flight schedule.
+        origin_terminal (str): The terminal where the flights originate.
+        use_fixed_date (bool, optional): Whether to use a fixed date for testing purposes. Default is False.
+        fixed_date (str, optional): The fixed date to use for testing in 'YYYYMMDD' format. Required if `use_fixed_date` is True.
+
+    Returns:
+        List[Flight]: A list of Flight objects created from the table.
+
+    Notes:
+        - The function can handle special cases like note columns and OCR errors.
+        - Logging is used extensively for error handling and debugging.
+        - The function expects at least three columns in the table: roll call time, destination, and seats.
+        - Extra columns are treated as notes.
+        - If the table title contains a date, it will be used for the Flight objects' date attribute.
+
+    Raises:
+        Logs an error and returns an empty list if:
+            - The table is empty or has no rows/columns.
+            - Required data like origin_terminal or table title is missing.
+            - Date parsing from the table title fails.
+
+    Examples:
+        >>> table = Table(rows=[...], title='Title with Date', footer='Footer note')
+        >>> origin_terminal = 'Terminal 1'
+        >>> flights = convert_72hr_table_to_flights(table, origin_terminal)
     """
 
     # Special bool vars for handling special cases
