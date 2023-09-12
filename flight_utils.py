@@ -285,7 +285,7 @@ def get_roll_call_column_index(table: Table) -> int:
 
     # Define regex pattern to match roll call time
     # column header
-    patterns = [r'(?i)\broll\s*call\s*(time)?\b']
+    patterns = [r'(?i)\broll\s*call\s*(time)?\b', r'(?i)\br\/c\b']
 
     # Get column index
     for index, column_header in enumerate(table.rows[0]):
@@ -345,7 +345,7 @@ def get_seats_column_index(table: Table) -> int:
 
     # Define regex pattern to match seats
     # column header
-    patterns = [r'(?i)\bseat(s)?\b']
+    patterns = [r'(?i)\bseat(s)?\b', r'(?i)\bst\/r\b']
     
     # Get column index
     for index, column_header in enumerate(table.rows[0]):
