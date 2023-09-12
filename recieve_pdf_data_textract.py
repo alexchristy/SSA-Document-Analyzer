@@ -1,4 +1,3 @@
-import hashlib
 import json
 from typing import List
 import boto3
@@ -14,14 +13,15 @@ from s3_bucket import S3Bucket
 from screenshot_table import capture_screen_shot_of_table_from_pdf
 from flight_utils import *
 import uuid
+import pickle
 
 # REMOVE WHEN FINISHED TESTING
 import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from travis_1_72hr_sns_messages import travis_1_72hr_successful_job_sns_message as current_sns_message
-from travis_1_72hr_textract_response import travis_1_72hr_textract_response as current_textract_response
+from bahrain_1_72hr_sns_messages import bahrain_1_72hr_successful_job_sns_message as current_sns_message
+from bahrain_1_72hr_textract_response import bahrain_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -92,21 +92,6 @@ def parse_sns_event(event):
     s3_bucket_name = message_dict.get('DocumentLocation', {}).get('S3Bucket', None)
     
     return job_id, status, s3_object_name, s3_bucket_name
-
-def get_flight_origin_terminal(pdf_hash: str):
-    # If pdf_hash is not None we can retrieve
-    # origin information from Firestore
-    if pdf_hash:
-        flight_origin = firestore_client.get_flight_origin_by_pdf_hash(pdf_hash)
-
-        if not flight_origin:
-            logging.error(f"Flight origin not found for PDF hash: {pdf_hash}. Is the PDF in the database?")
-            flight_origin = "N/A"
-    else:
-        logging.error(f"Firestore error when searching for PDF hash: {pdf_hash}.")
-        flight_origin = "N/A"
-
-    return flight_origin
 
 def gen_tables_from_textract_response(textract_response):
     tables = convert_textract_response_to_tables(textract_response)
@@ -282,42 +267,58 @@ def lambda_handler(event, context):
     # Update the job status in Firestore
     firestore_client.update_job_status(job_id, status)
 
+    # Get Origin terminal from S3 object path
+    pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
+    origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
+
     # If job failed exit program
     if status != 'SUCCEEDED':
         raise("Job did not succeed.")
 
-    response = context # textract_client.get_document_analysis(JobId=job_id)
+    # response = context # textract_client.get_document_analysis(JobId=job_id)
 
-    tables = gen_tables_from_textract_response(response)
+    # tables = gen_tables_from_textract_response(response)
 
-    # List to hold tables needing reprocessing
-    tables_to_reprocess = []
+    # # List to hold tables needing reprocessing
+    # tables_to_reprocess = []Seat Status: T
 
-    # Iterate through tables to find low confidence rows
-    for table in tables:
+    # # Iterate through tables to find low confidence rows
+    # for table in tables:
 
-        # Get the lowest confidence row
-        _, lowest_confidence = get_lowest_confidence_row(table)
+    #     # Get the lowest confidence row
+    #     _, lowest_confidence = get_lowest_confidence_row(table)
 
-        # If the lowest confidence row is below the threshold
-        # add the table to the list of tables to reprocess
-        if lowest_confidence < 80:
-            tables_to_reprocess.append(table)
+    #     # If the lowest confidence row is below the threshold
+    #     # add the table to the list of tables to reprocess
+    #     if lowest_confidence < 80:
+    #         tables_to_reprocess.append(table)
 
-    # Reprocess tables with low confidence rows
-    reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
+    # # Reprocess tables with low confidence rows
+    # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
+
+    table_pkl_path = 'tests/table-objects/bahrain_1_72hr_table-2.pkl'
+
+    custom_date = '20230910'
+
+    table = Table.load_state(table_pkl_path)
+
+    # Create flight objects from table
+    flights = convert_72hr_table_to_flights(table, origin_terminal=origin_terminal, use_fixed_date=True, fixed_date=custom_date)
+
+    if flights is None:
+        logging.error("Failed to convert table to flights.")
+        return
+
+    flight_obj_name = os.path.basename(table_pkl_path).split('.')[0]
 
     i = 1
-    table_str = ""
-    for table in tables:
+    for flight in flights:
+        flight.pretty_print()
 
-        print(table.to_markdown())
-        table_str += table.to_markdown()
-        table.save_state(filename=f"table{i}_state.pkl")
+        with open(f'{flight_obj_name}_flight-{i}.pkl', 'wb') as file:
+            pickle.dump(flight, file)
+        
         i += 1
-
-    table_string_hash = hashlib.sha256(table_str.encode()).hexdigest()
-    print(table_string_hash)
         
     return {
         'statusCode': 200,
