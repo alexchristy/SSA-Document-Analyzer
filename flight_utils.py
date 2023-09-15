@@ -78,19 +78,25 @@ def parse_rollcall_time(time_str):
     # If time string is empty, return empty string
     if time_str == '':
         logging.info("Rollcall time is empty.")
-        return None
+        return None, None
 
     # Extract the first 4 digits to represent the 24-hour time
     rollcall_time = time_str[:4]
     
     if len(rollcall_time) != 4 or not rollcall_time.isdigit():
         logging.error(f"Failed to parse rollcall time: Invalid format '{time_str}'")
-        return None
+        return None, None
     
     # Log the parsed rollcall time
     logging.info(f"Parsed rollcall time: {rollcall_time}")
+
+    if '(' in time_str or ')' in time_str:
+        _, parenthesis_note = split_parenthesis(time_str)
+        parenthesis_note = parenthesis_note.replace('(', '').replace(')', '')
+        logging.info(f"Rollcall time contains parenthesis note: {parenthesis_note} Saving note for flight.")
+        return rollcall_time, parenthesis_note
     
-    return rollcall_time
+    return rollcall_time, None
 
 def parse_destination(destination_data: str):
 
@@ -532,6 +538,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
         # Special flight data variables
         roll_call_note = False
+        seat_note = False
         notes = {}
 
         # Skip header row
@@ -548,7 +555,11 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
             notes['footnote'] = table.footer
 
         # Parse roll call time
-        roll_call_time = parse_rollcall_time(row[roll_call_column_index][0])
+        roll_call_time, roll_call_parenthesis_note = parse_rollcall_time(row[roll_call_column_index][0])
+        
+        # Check if there is a parenthesis note for the rollcall time cell for flight
+        if roll_call_parenthesis_note is not None:
+            notes['Roll Call Parenthesis Note'] = roll_call_parenthesis_note
 
         # Parse destination
         destinations = parse_destination(row[destination_column_index][0])
@@ -575,6 +586,15 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
             new_seat_data = ocr_correction(row[seats_column_index][0])
             logging.info(f'Atempting to correct OCR errors. New seat data: {new_seat_data}')
             num_of_seats, seat_status = parse_seat_data(new_seat_data)
+
+        # Case 2.5: If seat data parsing still fails, check if it's a note
+        if num_of_seats is None and seat_status is None:
+            if len(row[seats_column_index][0]) > 0:
+                seat_note = True
+                num_of_seats = -1
+                seat_status = ''
+                logging.info(f'Appears to be special seat format or note. Saving as \"Seat Note\" in notes.')
+                notes['Seat Note'] = row[seats_column_index][0]
 
         # Get date for flight from table title
         if table.title is None:
@@ -608,7 +628,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
             notes = json.dumps(notes)
 
         # Create flight object
-        flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=roll_call_note)
+        flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=roll_call_note, seat_note=seat_note)
 
         flights.append(flight)
     

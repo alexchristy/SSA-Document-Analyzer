@@ -4,7 +4,7 @@ import pickle
 
 class Flight:
 
-    def __init__(self, origin_terminal: str, destinations: list, rollcall_time: str, num_of_seats: int, seat_status: str, notes: str, date: str, rollcall_note=False):
+    def __init__(self, origin_terminal: str, destinations: list, rollcall_time: str, num_of_seats: int, seat_status: str, notes: str, date: str, rollcall_note=False, seat_note=False):
 
         self.origin_terminal = origin_terminal
         self.destinations = destinations
@@ -14,6 +14,7 @@ class Flight:
         self.notes = notes
         self.date = date
         self.rollcall_note = rollcall_note
+        self.seat_note = seat_note
 
         # Generate a deterministic unique flight ID based on attributes using SHA-256
         attributes_str = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}"
@@ -33,7 +34,8 @@ class Flight:
             'notes': self.notes,
             'flight_id': self.flight_id,
             'date': self.date,
-            'rollcall_note': self.rollcall_note
+            'rollcall_note': self.rollcall_note,
+            'seat_note': self.seat_note
         }
     
     def pretty_print(self):
@@ -44,8 +46,9 @@ class Flight:
         print(f"Destination/s: {self.destinations if self.destinations else 'N/A'}")
         rollcall_text = "**See note below**" if self.rollcall_note else self.rollcall_time
         print(f"Roll Call Time: {rollcall_text if rollcall_text else 'N/A'}")
+        seat_status_text = "**See note below**" if self.seat_note else self.seat_status  # Added this line
         print(f"Number of Seats: {self.num_of_seats if self.num_of_seats is not None else 0}")
-        print(f"Seat Status: {self.seat_status if self.seat_status else 'N/A'}")
+        print(f"Seat Status: {seat_status_text if seat_status_text else 'N/A'}")  # Updated this line
         print(f"Notes: {self.notes if self.notes else 'N/A'}")
         print(f"Date: {self.date if self.date else 'N/A'}")
         print(f"{'=' * 40}")
@@ -62,8 +65,10 @@ class Flight:
             self.notes == other.notes and
             self.date == other.date and
             self.flight_id == other.flight_id and
-            self.rollcall_note == other.rollcall_note
+            self.rollcall_note == other.rollcall_note and  # Corrected this line
+            self.seat_note == other.seat_note  # Added this line
         )
+
     
     @classmethod
     def load_state(cls, filename="flight_state.pkl") -> "Flight":
