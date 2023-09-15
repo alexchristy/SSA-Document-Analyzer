@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from dover_1_72hr_sns_messages import dover_1_72hr_successful_job_sns_message as current_sns_message
-from dover_1_72hr_textract_response import dover_1_72hr_textract_response as current_textract_response
+from incirlik_1_72hr_sns_messages import incirlik_1_72hr_successful_job_sns_message as current_sns_message
+from incirlik_1_72hr_textract_response import incirlik_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -296,7 +296,7 @@ def lambda_handler(event, context):
     # # Reprocess tables with low confidence rows
     # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
 
-    table_pkl_path = 'tests/table-objects/dover_1_72hr_table-3.pkl'
+    table_pkl_path = 'tests/table-objects/incirlik_1_72hr_table-4.pkl'
 
     custom_date = '20230910'
 
