@@ -299,13 +299,15 @@ def get_roll_call_column_index(table: Table) -> int:
             if re.search(pattern, column_header[0]):
                 logging.info(f"Found roll call time column header: {column_header[0]}")
                 return index
+    
+    return None
 
 def get_destination_column_index(table: Table) -> int:
     """
-    This function returns the index number of the column containing roll call times.
+    This function returns the index number of the column containing destinations.
     """
     
-    logging.info(f"Retrieving roll call column index.")
+    logging.info(f"Retrieving destination column index.")
 
     if table is None:
         logging.error(f"Exiting function! Table is empty.")
@@ -327,15 +329,17 @@ def get_destination_column_index(table: Table) -> int:
     for index, column_header in enumerate(table.rows[0]):
         for pattern in patterns:
             if re.search(pattern, column_header[0]):
-                logging.info(f"Found roll call time column header: {column_header[0]}")
+                logging.info(f"Found destination column header: {column_header[0]}")
                 return index
+            
+    return None
             
 def get_seats_column_index(table: Table) -> int:
     """
-    This function returns the index number of the column containing roll call times.
+    This function returns the index number of the column containing seat data.
     """
     
-    logging.info(f"Retrieving roll call column index.")
+    logging.info(f"Retrieving seat data column index.")
 
     if table is None:
         logging.error(f"Exiting function! Table is empty.")
@@ -357,8 +361,10 @@ def get_seats_column_index(table: Table) -> int:
     for index, column_header in enumerate(table.rows[0]):
         for pattern in patterns:
             if re.search(pattern, column_header[0]):
-                logging.info(f"Found roll call time column header: {column_header[0]}")
+                logging.info(f"Found seat data column header: {column_header[0]}")
                 return index
+            
+    return None
 
 def convert_note_column_to_notes(table: Table, current_row: int, note_columns: List[int]) -> dict:
     """
@@ -510,11 +516,24 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         return flights
     
     # Get column indices
+    roll_call_column_index = get_roll_call_column_index(table)
+    destination_column_index = get_destination_column_index(table)
+    seats_column_index = get_seats_column_index(table)
+
+    if roll_call_column_index is None:
+        logging.error(f"Failed to get roll call column index. Skipping table.")
+        return flights
+
+    if destination_column_index is None:
+        logging.error(f"Failed to get destination column index. Skipping table.")
+        return flights
+
+    if seats_column_index is None:
+        logging.error(f"Failed to get seats column index. Skipping table.")
+        return flights
+
     if table.get_num_of_columns() > 3:
         logging.info(f"There are more than 3 columns in the table. Treating extra columns as notes.")
-        roll_call_column_index = get_roll_call_column_index(table)
-        destination_column_index = get_destination_column_index(table)
-        seats_column_index = get_seats_column_index(table)
 
         # Make extra columns into notes
         note_column_indices = []
@@ -523,10 +542,6 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
             if index not in [roll_call_column_index, destination_column_index, seats_column_index]:
                 note_column_indices.append(index)
         logging.info(f"Note column indices found: {note_column_indices}")
-    else:
-        roll_call_column_index = 0
-        destination_column_index = 1
-        seats_column_index = 2
 
     # Check origin terminal
     if origin_terminal is None:
@@ -554,18 +569,22 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         if table.footer is not None and table.footer != '':
             notes['footnote'] = table.footer
 
+        # Parse destinations first so that we can
+        # use the number of destinations to determine
+        # seat data format. Sometimes the seat data
+        # has two data points, one for each destination. 
+        # Ex: 2 destination flight has seat data of 30T TBD
+        destinations = parse_destination(row[destination_column_index][0])
+
         # Parse roll call time
         roll_call_time, roll_call_parenthesis_note = parse_rollcall_time(row[roll_call_column_index][0])
-        
-        # Check if there is a parenthesis note for the rollcall time cell for flight
-        if roll_call_parenthesis_note is not None:
-            notes['Roll Call Parenthesis Note'] = roll_call_parenthesis_note
-
-        # Parse destination
-        destinations = parse_destination(row[destination_column_index][0])
 
         # Parse seat data
         num_of_seats, seat_status = parse_seat_data(row[seats_column_index][0])
+
+        # Check if there is a parenthesis note for the rollcall time cell for flight
+        if roll_call_parenthesis_note is not None:
+            notes['Roll Call Parenthesis Note'] = roll_call_parenthesis_note
 
         # Skip row if it doesn't have complete data
         if roll_call_time is None and num_of_seats is None and seat_status is None and destinations is None:
