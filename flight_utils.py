@@ -458,6 +458,32 @@ def create_datetime_from_str(date_str):
         print(f"An error occurred: {e}")
         return None
 
+def extract_note(text: str) -> str:
+    """
+    Extracts a note from a string if it is enclosed between at least two '*' characters.
+    
+    Args:
+    - text (str): The input string containing the note.
+    
+    Returns:
+    - str: The note text if found, otherwise None.
+    """
+    try:
+        # Using regular expression to find text between '*' characters
+        # The pattern ((\*+\s*)+)+ matches one or more '*' followed by optional spaces, one or more times
+        # The pattern .*? matches any character (non-greedy)
+        match = re.search(r'((\*+\s*)+)+\s*(.*?)\s*((\*+\s*)+)+', text)
+        
+        # If a match is found and the matched group is not empty, return the matched group (the text between '*')
+        if match and match.group(3).strip():
+            return match.group(3)
+        else:
+            return None
+    except Exception as e:
+        # Log any exceptions that occur
+        print(f"An error occurred: {e}")
+        return None
+
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
     Converts a 72-hour flight schedule table to a list of Flight objects.
