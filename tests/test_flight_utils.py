@@ -54,3 +54,34 @@ class TestFlightUtils(unittest.TestCase):
         for i, test_case in enumerate(multiple_note_test_data):
             with self.subTest(i=i):
                 self.assertEqual(set(extract_asterisk_notes(test_case['input'])), set(test_case['expected']))
+
+    def test_extract_parenthesis_notes(self):
+
+        from note_extract_utils import extract_parenthesis_notes
+
+        test_data = [
+            {
+                "input": "This is not a note (This is a note) and this is also not a note",
+                "expected": ["This is a note"]
+            },
+            {
+                "input": "No notes here",
+                "expected": []
+            },
+            {
+                "input": "(First note) some text (Second note) more text",
+                "expected": ["First note", "Second note"]
+            },
+            {
+                "input": "(First note) (Second note) (Third note)",
+                "expected": ["First note", "Second note", "Third note"]
+            },
+            {
+                "input": "(  Extra spaces  ) only this should be trimmed",
+                "expected": ["Extra spaces"]
+            }
+        ]
+
+        for i, test_case in enumerate(test_data):
+            with self.subTest(i=i):
+                self.assertEqual(extract_parenthesis_notes(test_case["input"]), test_case["expected"])

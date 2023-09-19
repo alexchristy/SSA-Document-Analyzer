@@ -113,3 +113,36 @@ def extract_asterisk_notes(text: str) -> list:
     except Exception as e:
         logging.error(f"Error in extract_notes: {e}")
         return []
+    
+def extract_parenthesis_notes(text: str) -> list:
+    '''
+    This function will return a list of strings that are enclosed in parentheses.
+
+    Example:
+
+        "This is not a note (This is a note) and this is also not a note" --> ['This is a note']
+
+    Args:
+        text (str): The string to extract notes from
+
+    Returns:
+        list: A list of notes found in the string
+    '''
+    
+    # Initialize an empty list to store the extracted notes
+    extracted_notes = []
+    
+    try:
+        # Use regex to find all substrings enclosed within ()
+        notes = re.findall(r'\((.*?)\)', text)
+        
+        for note in notes:
+            # Append each found note to the list
+            extracted_notes.append(note.strip())
+        
+        logging.info(f"Successfully extracted {len(extracted_notes)} notes.")
+    
+    except Exception as e:
+        logging.error(f"An error occurred while extracting notes: {e}")
+        
+    return extracted_notes
