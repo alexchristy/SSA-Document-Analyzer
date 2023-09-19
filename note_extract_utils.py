@@ -80,7 +80,7 @@ def _extract_multiple_asterisk_notes(text: str) -> list:
         logging.error(f"Error in _extract_multiple_notes: {e}")
         return []
 
-def extract_asterisk_notes(text: str) -> list:
+def _extract_asterisk_notes(text: str) -> list:
 
     '''
     This function takes a string with asterick notes and returns the notes in the string. It ignores whitespace around
@@ -114,7 +114,7 @@ def extract_asterisk_notes(text: str) -> list:
         logging.error(f"Error in extract_notes: {e}")
         return []
     
-def extract_parenthesis_notes(text: str) -> list:
+def _extract_parenthesis_notes(text: str) -> list:
     '''
     This function will return a list of strings that are enclosed in parentheses.
 
@@ -146,3 +146,24 @@ def extract_parenthesis_notes(text: str) -> list:
         logging.error(f"An error occurred while extracting notes: {e}")
         
     return extracted_notes
+
+def extract_notes(text: str) -> list:
+    '''
+    Wrapper function that extracts all notes from a string using the extract_asterisk_notes and extract_parenthesis_notes.
+
+    Args:
+        text (str): The string to extract notes from
+
+    Returns:
+        list: A list of notes found in the string
+    '''
+
+    notes = []
+
+    try:
+        notes = _extract_asterisk_notes(text)
+        notes = _merge_lists(notes, _extract_parenthesis_notes(text))
+    except Exception as e:
+        logging.error(f"Error in extract_notes: {e}")
+    
+    return notes
