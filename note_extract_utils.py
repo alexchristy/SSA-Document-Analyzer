@@ -8,7 +8,7 @@ def _remove_spaces_around_asterisks(input_str):
         logging.error(f"Error in _remove_spaces_around_asterisks: {e}")
         return None
     
-def _extract_single_note(text: str) -> str:
+def _extract_single_asterisk_note(text: str) -> str:
     """
     Extracts a note from a string if it is enclosed between at least two '*' characters.
     
@@ -41,7 +41,7 @@ def _merge_lists(list1, list2):
         logging.error(f"Error in _merge_lists: {e}")
         return []
 
-def _extract_multiple_notes(text: str) -> list:
+def _extract_multiple_asterisk_notes(text: str) -> list:
     """
     Helper function for extract_notes. Extracts multiple notes from a string by finding single notes enclosed between 
     '*' characters and then chopping them off. It removes the minimum number of surrounding asterisks.
@@ -60,7 +60,7 @@ def _extract_multiple_notes(text: str) -> list:
             return []
 
         while True:
-            note = _extract_single_note(text)
+            note = _extract_single_asterisk_note(text)
             if note:
                 notes.append(note)
                 note_with_asterisks_match = re.search(r'((\*+\s*)+)+\s*.*?\s*((\*+\s*)+)+', text)
@@ -80,7 +80,7 @@ def _extract_multiple_notes(text: str) -> list:
         logging.error(f"Error in _extract_multiple_notes: {e}")
         return []
 
-def extract_notes(text: str) -> list:
+def extract_asterisk_notes(text: str) -> list:
 
     '''
     This function takes a string with asterick notes and returns the notes in the string. It ignores whitespace around
@@ -99,11 +99,11 @@ def extract_notes(text: str) -> list:
 
     try:
 
-        notes_list_1 = _extract_multiple_notes(text)
+        notes_list_1 = _extract_multiple_asterisk_notes(text)
 
         reversed_text = _reverse_string(text)
 
-        notes_list_2 = _extract_multiple_notes(reversed_text)
+        notes_list_2 = _extract_multiple_asterisk_notes(reversed_text)
         notes_list_2 = [_reverse_string(note) for note in notes_list_2]
 
         notes = _merge_lists(notes_list_1, notes_list_2)
@@ -113,13 +113,3 @@ def extract_notes(text: str) -> list:
     except Exception as e:
         logging.error(f"Error in extract_notes: {e}")
         return []
-
-
-# Test the adjusted function with multiple notes in a string
-test_strings = [
-
-    "This is not a note"
-]
-
-for i, test_str in enumerate(test_strings):
-    print(f"Test case {i+1}: Extracted notes: {extract_notes(test_str)}")
