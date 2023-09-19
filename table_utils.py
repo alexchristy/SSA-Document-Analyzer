@@ -99,8 +99,7 @@ def check_date_string(input_string, return_match=False):
         return None
     else:
         return False
-
-    
+   
 def find_table_title_with_date(blocks, table_block):
     """
     Returns the table title if found, otherwise returns None. Also returns the confidence level of the found title.
@@ -156,6 +155,7 @@ def remove_incorrect_column_header_rows(table):
     return table
 
 def rearrange_columns(table):
+
     rollcallRegexList = [re.compile(r'rollcall', re.IGNORECASE), re.compile(r'roll call', re.IGNORECASE)]
     destinationRegexList = [re.compile(r'destination', re.IGNORECASE), re.compile(r'destinations', re.IGNORECASE)]
     seatsRegexList = [re.compile(r'seats', re.IGNORECASE)]
@@ -188,3 +188,18 @@ def rearrange_columns(table):
         
     table.rows = new_rows
     return table
+
+def gen_tables_from_textract_response(textract_response):
+    tables = convert_textract_response_to_tables(textract_response)
+    
+    if not isinstance(tables, list):
+        logging.error("Expected a list of tables, got something else.")
+        return []
+    
+    processed_tables = []
+    for table in tables:
+        processed_table = remove_incorrect_column_header_rows(table)
+        processed_table = rearrange_columns(processed_table)
+        processed_tables.append(processed_table)
+    
+    return processed_tables

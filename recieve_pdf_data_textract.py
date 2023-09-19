@@ -14,14 +14,15 @@ from screenshot_table import capture_screen_shot_of_table_from_pdf
 from flight_utils import *
 import uuid
 import pickle
+from table_utils import gen_tables_from_textract_response
 
 # REMOVE WHEN FINISHED TESTING
 import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from incirlik_1_72hr_sns_messages import incirlik_1_72hr_successful_job_sns_message as current_sns_message
-from incirlik_1_72hr_textract_response import incirlik_1_72hr_textract_response as current_textract_response
+from iwakuni_1_72hr_sns_messages import iwakuni_1_72hr_successful_job_sns_message as current_sns_message
+from iwakuni_1_72hr_textract_response import iwakuni_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -92,21 +93,6 @@ def parse_sns_event(event):
     s3_bucket_name = message_dict.get('DocumentLocation', {}).get('S3Bucket', None)
     
     return job_id, status, s3_object_name, s3_bucket_name
-
-def gen_tables_from_textract_response(textract_response):
-    tables = convert_textract_response_to_tables(textract_response)
-    
-    if not isinstance(tables, list):
-        logging.error("Expected a list of tables, got something else.")
-        return []
-    
-    processed_tables = []
-    for table in tables:
-        processed_table = remove_incorrect_column_header_rows(table)
-        processed_table = rearrange_columns(processed_table)
-        processed_tables.append(processed_table)
-    
-    return processed_tables
 
 def get_lowest_confidence_row(table):
 
@@ -296,7 +282,7 @@ def lambda_handler(event, context):
     # # Reprocess tables with low confidence rows
     # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
 
-    table_pkl_path = 'tests/table-objects/incirlik_1_72hr_table-4.pkl'
+    table_pkl_path = 'tests/table-objects/iwakuni_1_72hr_table-2.pkl'
 
     custom_date = '20230910'
 
