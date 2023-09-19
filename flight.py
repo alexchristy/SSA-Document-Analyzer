@@ -19,8 +19,8 @@ class Flight:
         self.patriot_express = patriot_express
 
         # Generate a deterministic unique flight ID based on attributes using SHA-256
-        attributes_str = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}"
-        self.flight_id = hashlib.sha256(attributes_str.encode()).hexdigest()
+        self.as_string = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}{self.rollcall_note}{self.seat_note}{self.destination_note}{self.patriot_express}"
+        self.flight_id = hashlib.sha256(self.as_string.encode()).hexdigest()
 
 
     def to_dict(self):
@@ -75,8 +75,10 @@ class Flight:
             self.destination_note == other.destination_note and
             self.patriot_express == other.patriot_express
         )
-
     
+    def to_string(self):
+        return self.as_string
+
     @classmethod
     def load_state(cls, filename="flight_state.pkl") -> "Flight":
         try:
