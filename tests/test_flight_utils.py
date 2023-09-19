@@ -5,9 +5,9 @@ sys.path.append("..")
 
 class TestFlightUtils(unittest.TestCase):
 
-    def test_extract_note(self):
+    def test_extract_asterisk_note(self):
 
-        from note_extract_utils import extract_notes
+        from note_extract_utils import extract_asterisk_notes
 
         single_note_test_data = [
             {"input": "*This is a note*", "expected": ["This is a note"]},
@@ -30,11 +30,11 @@ class TestFlightUtils(unittest.TestCase):
         
         for i, test_case in enumerate(single_note_test_data):
             with self.subTest(i=i):
-                self.assertEqual(set(extract_notes(test_case['input'])), set(test_case['expected']))
+                self.assertEqual(set(extract_asterisk_notes(test_case['input'])), set(test_case['expected']))
 
-    def test_extract_multiple_notes(self):
+    def test_extract_multiple_asterisk_notes(self):
 
-        from note_extract_utils import extract_notes
+        from note_extract_utils import extract_asterisk_notes
 
         multiple_note_test_data = [
             {
@@ -53,4 +53,4 @@ class TestFlightUtils(unittest.TestCase):
 
         for i, test_case in enumerate(multiple_note_test_data):
             with self.subTest(i=i):
-                self.assertEqual(set(extract_notes(test_case['input'])), set(test_case['expected']))
+                self.assertEqual(set(extract_asterisk_notes(test_case['input'])), set(test_case['expected']))
