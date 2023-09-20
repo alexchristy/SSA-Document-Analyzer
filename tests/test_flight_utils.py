@@ -124,3 +124,105 @@ class TestNoteExtractionUtils(unittest.TestCase):
         for i, test_case in enumerate(test_data):
             with self.subTest(i=i):
                 self.assertEqual(set(extract_notes(test_case['input'])), set(test_case['expected']))
+
+class TestCellParsingUtils(unittest.TestCase):
+
+    def test_parse_rollcall_time(self):
+
+        from cell_parsing_utils import parse_rollcall_time
+
+        test_data = [
+            {"input": "1234", "expected": "1234"},
+            {"input": "0000", "expected": "0000"},
+            {"input": "2359", "expected": "2359"},
+            {"input": "12:00", "expected": "1200"},
+            {"input": "18:59", "expected": "1859"},
+            {"input": "", "expected": None},
+            {"input": "abcd", "expected": None},
+            {"input": " 123", "expected": None},
+            {"input": "12 34", "expected": None},
+            {"input": "12345", "expected": "1234"},
+            {"input": "-123", "expected": None},
+            {"input": "12.34", "expected": None},
+            {"input": "Null", "expected": None},
+            {"input": None, "expected": None},
+            {"input": "24:00", "expected": None},
+            {"input": "23:60", "expected": None},
+            {"input": "2500", "expected": None},
+            {"input": "12;00", "expected": None},
+            {"input": "18 59", "expected": None},
+            {"input": "12 :00", "expected": None}
+        ]
+
+        for i, test_case in enumerate(test_data):
+            with self.subTest(i=i):
+                self.assertEqual(parse_rollcall_time(test_case["input"]), test_case["expected"])
+
+    def test_parse_seat_data(self):
+
+        from cell_parsing_utils import parse_seat_data
+
+        test_data = [
+            {"input": "60T", "expected": (60, "T")},
+            {"input": "T-60", "expected": (60, "T")},
+            {"input": "20 F", "expected": (20, "F")},
+            {"input": "T.20", "expected": (20, "T")},
+            {"input": "TBD", "expected": (0, "TBD")},
+            {"input": "", "expected": (None, None)},
+            {"input": "0F", "expected": (0, "F")},
+            {"input": "0f", "expected": (0, "F")},
+            {"input": "0T", "expected": (0, "T")},
+            {"input": "T_100", "expected": (100, 'T')},
+            {"input": "H-60", "expected": (None, None)},
+            {"input": "60 H", "expected": (None, None)},
+            {"input": "T.100.5", "expected": (None, None)},
+            {"input": "TBD ", "expected": (0, "TBD")},
+            {"input": " 60T", "expected": (None, None)}
+        ]
+
+        for i, test_case in enumerate(test_data):
+            with self.subTest(i=i):
+                self.assertEqual(parse_seat_data(test_case["input"]), test_case["expected"])
+
+    def test_ocr_correction(self):
+        
+        from cell_parsing_utils import ocr_correction  # Replace 'your_module' with the actual module name where `ocr_correction` resides
+
+        test_data = [
+            {'input': 'OIlS', 'expected': '0115'},  # Test OCR error characters
+            {'input': 'ZB', 'expected': '28'},  # Test more OCR error characters
+            {'input': '12345', 'expected': '12345'},  # Test numbers
+            {'input': 'ABCDE', 'expected': 'A8CDE'},  # Test a mix of letters
+            {'input': '', 'expected': ''},  # Test empty string
+            {'input': 'O_I_l_S', 'expected': '0_1_1_5'},  # Test underscores
+            {'input': 'O-I-l-S', 'expected': '0-1-1-5'},  # Test dashes
+        ]
+        
+        for i, test_case in enumerate(test_data):
+            with self.subTest(i=i):
+                self.assertEqual(ocr_correction(test_case['input']), test_case['expected'])
+
+    def test_parse_destination(self):
+
+        from cell_parsing_utils import parse_destination
+
+        test_cases = {
+            'MCCHORD FLD, WA ': ['MCCHORD FLD, WA'],
+            'MCCHORD FLD, WA (First note) (Second note)': ['MCCHORD FLD, WA'],
+            'ANDERSEN AFB, GUAM ** SPACE-REQUIRED PASSENGERS ONLY**': ['ANDERSEN AFB, GUAM'],
+            'ANDERSEN AFB, GUAM ** SPACE-REQUIRED PASSENGERS ONLY** (First note) (Second note)': ['ANDERSEN AFB, GUAM'],
+            '**PATRIOT EXPRESS** YOKOTA AIR BASE, JAPAN SEATTLE TACOMA WASHINGTON **SHOWTIME FOR BOOKED PASSENGERS 0730-1020L** **EARLY BAGGAGE CHECK-IN FRIDAY 1600-1730L**': ['YOKOTA AIR BASE, JAPAN', 'SEATTLE TACOMA WASHINGTON'],
+            'ALI AL SALEM AB - **RUMIL**_ ALIAL SALEM AB': ['ALI AL SALEM AB', 'RUMIL', 'ALI AL SALEM AB'],
+            'ALI AL SALEM AB - **RUMIL**_ ALIAL SALEM AB (First note) (Second note)': ['ALI AL SALEM AB', 'RUMIL', 'ALI AL SALEM AB'],
+            'PRINCE SULTAN BIN ABDULAZIZ INTL- MUFWAFFAQ AL SALTI AB': ['PRINCE SULTAN BIN ABDULAZIZ INTL', 'MUFWAFFAQ AL SALTI AB'],
+            'Misawa AB, Japan Osan AB, Korea * Check in from 0130-0530L at the AMC Ticketing Counter*': ['MISAWA AB, JAPAN', 'OSAN AB, KOREA'],
+            'Aviano Air Base, Italy (Space R pax only) Adana Air Base, Turkey (Space R pax only)': ['AVIANO AIR BASE, ITALY', 'ADANA AIR BASE, TURKEY'],
+            'NO FLIGHTS': None,
+            'NO FLIGHTS (First note) (Second note)': None,
+            '***NO SCHEDULED DEPARTURES***': None,
+        }
+        
+        for input_data, expected_output in test_cases.items():
+            with self.subTest(input=input_data, expected_output=expected_output):
+                result = parse_destination(input_data)
+                self.assertEqual(result, expected_output, f"For {input_data}, expected {expected_output} but got {result}")
