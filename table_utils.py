@@ -1,6 +1,7 @@
 from table import Table
 import logging
 import re
+from typing import List
 
 def convert_textract_response_to_tables(json_response):
     """
@@ -203,3 +204,136 @@ def gen_tables_from_textract_response(textract_response):
         processed_tables.append(processed_table)
     
     return processed_tables
+
+def get_destination_column_index(table: Table) -> int:
+    """
+    This function returns the index number of the column containing destinations.
+    """
+    
+    logging.info(f"Retrieving destination column index.")
+
+    if table is None:
+        logging.error(f"Exiting function! Table is empty.")
+        return None
+    
+    if table.rows is None:
+        logging.error(f"Exiting function! There are no rows in the table.")
+        return None
+    
+    if table.get_num_of_columns() == 0:
+        logging.error(f"Exiting function! There are no columns in the table.")
+        return None
+
+    # Define regex pattern to match destination
+    # column header
+    patterns = [r'(?i)\bdestination(s)?\b']
+
+    # Get column index
+    for index, column_header in enumerate(table.rows[0]):
+        for pattern in patterns:
+            if re.search(pattern, column_header[0]):
+                logging.info(f"Found destination column header: {column_header[0]}")
+                return index
+            
+    return None
+
+def get_seats_column_index(table: Table) -> int:
+    """
+    This function returns the index number of the column containing seat data.
+    """
+    
+    logging.info(f"Retrieving seat data column index.")
+
+    if table is None:
+        logging.error(f"Exiting function! Table is empty.")
+        return None
+    
+    if table.rows is None:
+        logging.error(f"Exiting function! There are no rows in the table.")
+        return None
+    
+    if table.get_num_of_columns() == 0:
+        logging.error(f"Exiting function! There are no columns in the table.")
+        return None
+
+    # Define regex pattern to match seats
+    # column header
+    patterns = [r'(?i)\bseat(s)?\b', r'(?i)\bst\/r\b']
+    
+    # Get column index
+    for index, column_header in enumerate(table.rows[0]):
+        for pattern in patterns:
+            if re.search(pattern, column_header[0]):
+                logging.info(f"Found seat data column header: {column_header[0]}")
+                return index
+            
+    return None
+
+def convert_note_column_to_notes(table: Table, current_row: int, note_columns: List[int]) -> dict:
+    """
+    This function takes in a list of columns that contain information not related
+    to roll call time, seats, or destinations and turns them into a json string.
+    """
+
+    # Check if table is empty
+    if table is None:
+        logging.error(f"Nothing to covert to notes. Table is empty.")
+        return ''
+    
+    # Check if note columns is empty
+    if note_columns is None:
+        logging.error(f"Nothing to convert to notes. There are no note columns.")
+        return ''
+    
+    # Create a dictionary to store notes
+    notes = {}
+
+    # Get notes from each cell
+    for note_column in note_columns:
+        note = table.get_cell_text(note_column, current_row)
+
+        note_column_header_text = table.get_cell_text(note_column, 0)
+
+        if note_column_header_text is None:
+            logging.error(f"Failed to get note column header text from cell (0, {note_column}).")
+            return ''
+        
+        if note is None:
+            logging.error(f"Failed to get note from cell ({current_row}, {note_column}).")
+            return ''
+        
+        notes[note_column_header_text] = note
+    
+    return notes
+
+def get_roll_call_column_index(table: Table) -> int:
+    """
+    This function returns the index number of the column containing roll call times.
+    """
+    
+    logging.info(f"Retrieving roll call column index.")
+
+    if table is None:
+        logging.error(f"Exiting function! Table is empty.")
+        return None
+    
+    if table.rows is None:
+        logging.error(f"Exiting function! There are no rows in the table.")
+        return None
+    
+    if table.get_num_of_columns() == 0:
+        logging.error(f"Exiting function! There are no columns in the table.")
+        return None
+
+    # Define regex pattern to match roll call time
+    # column header
+    patterns = [r'(?i)\broll\s*call\s*(time)?\b', r'(?i)\br\/c\b']
+
+    # Get column index
+    for index, column_header in enumerate(table.rows[0]):
+        for pattern in patterns:
+            if re.search(pattern, column_header[0]):
+                logging.info(f"Found roll call time column header: {column_header[0]}")
+                return index
+    
+    return None
