@@ -6,7 +6,6 @@ from firestore_db import FirestoreClient
 import logging
 from dotenv import load_dotenv
 from datetime import datetime as dt  # Importing datetime class as dt to avoid naming conflicts
-from destination_correction import find_best_location_match
 from table import Table
 from table_utils import *
 from s3_bucket import S3Bucket
