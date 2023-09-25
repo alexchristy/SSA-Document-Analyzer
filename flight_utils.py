@@ -2,10 +2,9 @@ from datetime import datetime
 import logging
 from typing import List
 from table import Table
-import re
 import json
 from flight import Flight
-from table_utils import check_date_string
+from date_utils import check_date_string
 from cell_parsing_utils import parse_rollcall_time, parse_seat_data, ocr_correction, parse_destination
 from table_utils import get_roll_call_column_index, get_destination_column_index, get_seats_column_index, convert_note_column_to_notes
 from date_utils import create_datetime_from_str, reformat_date

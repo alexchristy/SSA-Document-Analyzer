@@ -55,3 +55,49 @@ def create_datetime_from_str(date_str):
     except Exception as e:
         print(f"An error occurred: {e}")
         return None
+    
+def check_date_string(input_string, return_match=False):
+    """
+    Checks if a given string is a valid date string in one of several formats.
+
+    Args:
+        input_string: A string to check for a valid date string.
+        return_match: A boolean indicating whether to return the matched date string.
+
+    Returns:
+        If `return_match` is False (default), returns a boolean indicating whether the input string is a valid date string.
+        If `return_match` is True, returns the matched date string as a string, or None if no match was found.
+
+    Raises:
+        None.
+
+    Examples:
+        >>> check_date_string("1st January, 2022")
+        True
+        >>> check_date_string("2022-13-31")
+        False
+        >>> check_date_string("2022/12/31", return_match=True)
+        None
+        >>> check_date_string("2022/12/31", return_match=True)
+        '2022/12/31'
+    """
+    
+    date_patterns = [
+        r"(?i)\d{1,2}(?:th|st|nd|rd)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?),\s+\d{4}",
+        r"(?i)\d{1,2}(?:th|st|nd|rd)?\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{4}",
+        r"(?i)\d{4}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:th|st|nd|rd)?",
+        r"(?i)\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)(?:,\s+\d{4})?",
+        r"(?i)(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+\d{1,2}(?:th|st|nd|rd)?(?:,\s+\d{4})?"
+    ]
+    
+    for pattern in date_patterns:
+        match = re.search(pattern, input_string)
+        if return_match and match:
+            return match.group(0)
+        elif match:
+            return True
+    
+    if return_match:
+        return None
+    else:
+        return False
