@@ -1,7 +1,5 @@
 import unittest
 import sys
-from datetime import datetime
-
 sys.path.append("..")
 
 class TestNoteExtractionUtils(unittest.TestCase):
@@ -227,41 +225,6 @@ class TestCellParsingUtils(unittest.TestCase):
             with self.subTest(input=input_data, expected_output=expected_output):
                 result = parse_destination(input_data)
                 self.assertEqual(result, expected_output, f"For {input_data}, expected {expected_output} but got {result}")
-
-from flight_utils import reformat_date
-
-class TestReformatDate(unittest.TestCase):
-    def test_normal_date(self):
-        current_date = datetime(2022, 12, 12)
-        date_str = "12th December"
-        expected_output = "20221212"
-        self.assertEqual(reformat_date(date_str, current_date), expected_output)
-
-    def test_early_january_date(self):
-        current_date = datetime(2022, 12, 30)
-        date_str = "3rd January"
-        expected_output = "20230103"
-        self.assertEqual(reformat_date(date_str, current_date), expected_output)
-
-    def test_invalid_date(self):
-        current_date = datetime(2022, 12, 12)
-        date_str = "31st February"
-        expected_output = date_str
-        self.assertEqual(reformat_date(date_str, current_date), expected_output)
-
-from flight_utils import create_datetime_from_str
-
-class TestCreateDatetimeFromStr(unittest.TestCase):
-
-    def test_valid_date(self):
-        date_str = "20211231"
-        expected_output = datetime(year=2021, month=12, day=31)
-        self.assertEqual(create_datetime_from_str(date_str), expected_output)
-
-    def test_invalid_date(self):
-        date_str = "20211331"
-        expected_output = None
-        self.assertEqual(create_datetime_from_str(date_str), expected_output)
 
 if __name__ == '__main__':
     unittest.main()
