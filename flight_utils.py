@@ -8,6 +8,7 @@ from date_utils import check_date_string
 from cell_parsing_utils import parse_rollcall_time, parse_seat_data, ocr_correction, parse_destination
 from table_utils import get_roll_call_column_index, get_destination_column_index, get_seats_column_index, convert_note_column_to_notes
 from date_utils import create_datetime_from_str, reformat_date
+from note_extract_utils import extract_notes
 
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
@@ -123,13 +124,14 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         if table.footer is not None and table.footer != '':
             notes['footnote'] = table.footer
 
-        destinations = parse_destination(row[destination_column_index][0])
+        # Define cells for parsing
+        dest_cell_text = row[destination_column_index][0]
+        roll_call_cell_text = row[roll_call_column_index][0]
+        seats_cell_text = row[seats_column_index][0]
 
-        # Parse roll call time
-        roll_call_time = parse_rollcall_time(row[roll_call_column_index][0])
-
-        # Parse seat data
-        num_of_seats, seat_status = parse_seat_data(row[seats_column_index][0])
+        destinations = parse_destination(dest_cell_text)
+        roll_call_time = parse_rollcall_time(roll_call_cell_text)
+        num_of_seats, seat_status = parse_seat_data(seats_cell_text)
 
         # Skip row if it doesn't have complete data
         if roll_call_time is None and num_of_seats is None and seat_status is None and destinations is None:
@@ -151,7 +153,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
             logging.info(f'Atempting to correct OCR errors. New seat data: {new_seat_data}')
             num_of_seats, seat_status = parse_seat_data(new_seat_data)
 
-        # Case 2.5: If seat data parsing still fails, check if it's a note
+        # Case 2.5: If seat data parsing still fails, there is no seat data but there is a note
         if num_of_seats is None and seat_status is None:
             if len(row[seats_column_index][0]) > 0:
                 seat_note = True
@@ -165,6 +167,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
             logging.error(f"Table title is empty.")
             return flights
         
+        # Check there is a valid date in the table title
         match = check_date_string(table.title, return_match=True)
 
         if match is None:
@@ -185,11 +188,32 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         else:
             date = reformat_date(match, datetime.now())
 
+        # Check each of the three cells for extra notes
+        # This is any **Notes** or (Notes) when they accompany the data
+        extra_roll_call_notes = extract_notes(roll_call_cell_text)
+        extra_dest_notes = extract_notes(dest_cell_text)
+        extra_seat_notes = extract_notes(seats_cell_text)
+
+        # Add extra notes to notes dict
+        if extra_roll_call_notes:
+            logging.info('Found extra roll call notes.')
+            notes['Extra Roll Call Notes'] = extra_roll_call_notes
+        
+        if extra_dest_notes:
+            logging.info('Found extra destination notes.')
+            notes['Extra Destination Notes'] = extra_dest_notes
+        
+        if extra_seat_notes:
+            logging.info('Found extra seat notes.')
+            notes['Extra Seat Notes'] = extra_seat_notes
+
         # Check if any notes were added for the flight
         if len(notes) == 0:
             notes = None
         else:
             notes = json.dumps(notes)
+
+        # TODO: Check if the flight is a Patriot Express flight
 
         # Create flight object
         flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=roll_call_note, seat_note=seat_note)
