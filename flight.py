@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import pickle
+from datetime import datetime
 
 class Flight:
 
@@ -17,10 +18,10 @@ class Flight:
         self.seat_note = seat_note
         self.destination_note = destination_note
         self.patriot_express = patriot_express
-
-        # Generate a deterministic unique flight ID based on attributes using SHA-256
+        self.creation_time = int(datetime.now().strftime("%Y%m%d%H%M"))
         self.as_string = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}{self.rollcall_note}{self.seat_note}{self.destination_note}{self.patriot_express}"
-        self.flight_id = hashlib.sha256(self.as_string.encode()).hexdigest()
+
+        self.flight_id = self.generate_flight_id()
 
 
     def to_dict(self):
@@ -78,6 +79,10 @@ class Flight:
     
     def to_string(self):
         return self.as_string
+    
+    def generate_flight_id(self):
+        self.as_string = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}{self.rollcall_note}{self.seat_note}{self.destination_note}{self.patriot_express}"
+        return hashlib.sha256(self.as_string.encode()).hexdigest()
 
     @classmethod
     def load_state(cls, filename="flight_state.pkl") -> "Flight":
