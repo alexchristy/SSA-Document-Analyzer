@@ -28,6 +28,10 @@ def find_patriot_express(input_str):
         logging.info(f"An error occurred in find_patriot_express: {e}")
         return False
 
+# def get_merged_cell_text(table: Table, row_index: int, column_index: int) -> str:
+
+
+
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
     Converts a 72-hour flight schedule table to a list of Flight objects.
@@ -125,61 +129,60 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         logging.info(f"Processing row {row_index}.")
 
         # Special flight data variables
-        roll_call_note = False
-        seat_note = False
-        dest_note = False
+        has_roll_call_note = False
+        roll_call_notes = {}
+        has_seat_note = False
+        seat_notes = {}
+        has_dest_note = False
+        dest_notes = {}
         notes = {}
 
-        # Skip header row
-        if row_index == 0:
-            continue
-
-        # Convert note columns to notes
-        if has_note_columns:
-            logging.info(f"Converting note columns to notes.")
-            notes = convert_note_column_to_notes(table, row_index, note_column_indices)
-
-        # Add table footer to notes if it exists
-        if table.footer is not None and table.footer != '':
-            notes['footnote'] = table.footer
-
         # Define cells for parsing
-        dest_cell_text = row[destination_column_index][0]
-        roll_call_cell_text = row[roll_call_column_index][0]
-        seats_cell_text = row[seats_column_index][0]
+        dest_cell = row[destination_column_index]
+        roll_call_cell = row[roll_call_column_index]
+        seats_cell = row[seats_column_index]
 
-        destinations = parse_destination(dest_cell_text)
-        roll_call_time = parse_rollcall_time(roll_call_cell_text)
-        num_of_seats, seat_status = parse_seat_data(seats_cell_text)
+        # Parse the cell text
+        destinations = parse_destination(dest_cell[0])
+        roll_call_time = parse_rollcall_time(roll_call_cell[0])
+        num_of_seats, seat_status = parse_seat_data(seats_cell[0])
 
         # Skip row if it doesn't have complete data
         if roll_call_time is None and num_of_seats is None and seat_status is None and destinations is None:
             logging.info(f"Skipping row {row_index} due to incomplete data.")
             continue
 
-        # Handle special cases:
-        # Case 1: If roll call time is not a number, check if it's a note
+        # Check if the roll call time is a valid roll call time
         if roll_call_time is None:
-            
-            if len(row[roll_call_column_index][0]) > 0:
-                roll_call_note = True
-                logging.info(f'Appears to be special roll call format or note. Saving as \"Roll Call Note\" in notes.')
-                notes['Roll Call Note'] = row[roll_call_column_index][0]
+            logging.info(f"Row {row_index} roll call time is not a valid roll call time.")
 
-        # Case 2: If seat data parsing fails, try correcting common OCR errors
+            # Check if the roll call is a note
+            if len(row[roll_call_column_index][0]) > 0:
+                has_roll_call_note = True
+                logging.info(f'Appears to be special roll call format or note. Saving as \"Roll Call Note\" in notes.')
+                roll_call_notes['rollCallCellNote'] = row[roll_call_column_index][0]
+
+            # Merged cell
+            else:
+                logging.info(f'Roll call time is empty. Possibly merged cell.')
+
+                # TODO: Get merged cell text
+
+        # Check if the seat data is valid
+        # If seat data parsing fails, try correcting common OCR errors
         if num_of_seats is None and seat_status is None:
             new_seat_data = ocr_correction(row[seats_column_index][0])
             logging.info(f'Atempting to correct OCR errors. New seat data: {new_seat_data}')
             num_of_seats, seat_status = parse_seat_data(new_seat_data)
 
-        # Case 2.5: If seat data parsing still fails, there is no seat data but there is a note
+        # If seat data parsing still fails, there is no seat data but there is a note
         if num_of_seats is None and seat_status is None:
             if len(row[seats_column_index][0]) > 0:
-                seat_note = True
+                has_seat_note = True
                 num_of_seats = -1
                 seat_status = ''
                 logging.info(f'Appears to be special seat format or note. Saving as \"Seat Note\" in notes.')
-                notes['Seat Note'] = row[seats_column_index][0]
+                seat_notes['seatCellNote'] = row[seats_column_index][0]
 
         # Get date for flight from table title
         if table.title is None:
@@ -192,7 +195,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         if match is None:
             logging.error(f"Failed to get date from table title.")
             return flights
-        
+
         # Added this functionality to allow for testing with a fixed date
         # which allows for proper testing of year inference functionality
         # of the reformat_date function
@@ -209,43 +212,57 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
         # Check each of the three cells for extra notes
         # This is any **Notes** or (Notes) when they accompany the data
-        extra_roll_call_notes = extract_notes(roll_call_cell_text)
-        extra_dest_notes = extract_notes(dest_cell_text)
-        extra_seat_notes = extract_notes(seats_cell_text)
+        extra_roll_call_notes = extract_notes(roll_call_cell[0])
+        extra_dest_notes = extract_notes(dest_cell[0])
+        extra_seat_notes = extract_notes(seats_cell[0])
 
         # Add extra notes to notes dict
         if extra_roll_call_notes:
             logging.info('Found extra roll call notes.')
-            notes['Extra Roll Call Notes'] = extra_roll_call_notes
-            roll_call_note = True
+            roll_call_notes['markedRollCallCellNotes'] = extra_roll_call_notes
+            has_roll_call_note = True
         
         if extra_dest_notes:
             logging.info('Found extra destination notes.')
-            notes['Extra Destination Notes'] = extra_dest_notes
-            dest_note = True
+            dest_notes['markedDestinationCellNotes'] = extra_dest_notes
+            has_dest_note = True
         
         if extra_seat_notes:
             logging.info('Found extra seat notes.')
-            notes['Extra Seat Notes'] = extra_seat_notes
-            seat_note = True
+            seat_notes['markedSeatCellNotes'] = extra_seat_notes
+            has_seat_note = True
+            
+        # Build notes for flight
+        if has_roll_call_note:
+            notes['rollCallNotes'] = roll_call_notes
 
-        # Check if any notes were added for the flight
-        if len(notes) == 0:
-            notes = None
-        else:
-            notes = json.dumps(notes)
+        if has_dest_note:
+            notes['destinationNotes'] = dest_notes
+        
+        if has_seat_note:
+            notes['seatNotes'] = seat_notes
+        
+        # Add table footer to notes if it exists
+        if table.footer is not None and table.footer != '':
+            notes['footnote'] = table.footer
 
-        # TODO: Check if the flight is a Patriot Express flight
+        # Add extra columns as notes
+        if has_note_columns:
+            logging.info(f"Adding extra columns as notes.")
+            extra_column_notes = convert_note_column_to_notes(table, row_index, note_column_indices)
+            notes['extraColumnNotes'] = extra_column_notes
+
+        # Check if the flight is a Patriot Express flight
         patriot_express = False
-        row_text_string = f'{dest_cell_text} {roll_call_cell_text} {seats_cell_text}'
+        row_text_string = f'{dest_cell[0]} {roll_call_cell[0]} {seats_cell[0]}'
         if find_patriot_express(row_text_string):
             logging.info(f'Found Patriot Express flight.')
             patriot_express = True
 
         # Create flight object
         flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, 
-                        num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=roll_call_note, 
-                        seat_note=seat_note, destination_note=dest_note, patriot_express=patriot_express)
+                        num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=has_roll_call_note, 
+                        seat_note=has_seat_note, destination_note=has_dest_note, patriot_express=patriot_express)
 
         flights.append(flight)
     
