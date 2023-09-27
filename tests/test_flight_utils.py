@@ -2,6 +2,9 @@ import unittest
 import sys
 sys.path.append("..")
 
+# Tested function imports
+from flight_utils import find_patriot_express
+
 class TestNoteExtractionUtils(unittest.TestCase):
 
     def test_extract_asterisk_note(self):
@@ -225,6 +228,38 @@ class TestCellParsingUtils(unittest.TestCase):
             with self.subTest(input=input_data, expected_output=expected_output):
                 result = parse_destination(input_data)
                 self.assertEqual(result, expected_output, f"For {input_data}, expected {expected_output} but got {result}")
+
+class TestFindPatriotExpress(unittest.TestCase):
+    
+    def test_all_lower(self):
+        self.assertTrue(find_patriot_express("patriotexpress"))
+        
+    def test_mixed_case(self):
+        self.assertTrue(find_patriot_express("PatriotExpress"))
+        
+    def test_extra_spaces(self):
+        self.assertTrue(find_patriot_express(" patriot   express "))
+        
+    def test_embedded_in_text(self):
+        self.assertTrue(find_patriot_express("This includes patriot express!"))
+        
+    def test_with_numbers(self):
+        self.assertTrue(find_patriot_express("patriotexpress1"))
+        
+    def test_empty_string(self):
+        self.assertFalse(find_patriot_express(""))
+        
+    def test_incorrect_spelling(self):
+        self.assertFalse(find_patriot_express("patrio express"))
+        
+    def test_missing_part(self):
+        self.assertFalse(find_patriot_express("patriot"))
+        
+    def test_case_sensitive(self):
+        self.assertTrue(find_patriot_express("PATRIOTEXPRESS"))
+        
+    def test_non_string_input(self):
+        self.assertFalse(find_patriot_express(123456))
 
 if __name__ == '__main__':
     unittest.main()

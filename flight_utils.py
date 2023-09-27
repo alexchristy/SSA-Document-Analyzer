@@ -9,6 +9,24 @@ from cell_parsing_utils import parse_rollcall_time, parse_seat_data, ocr_correct
 from table_utils import get_roll_call_column_index, get_destination_column_index, get_seats_column_index, convert_note_column_to_notes
 from date_utils import create_datetime_from_str, reformat_date
 from note_extract_utils import extract_notes
+import re
+
+def find_patriot_express(input_str):
+    try:
+        # Remove all white spaces from the input string
+        sanitized_str = ''.join(input_str.split()).lower()
+        
+        # Regular expression pattern to find "patriotexpress"
+        pattern = re.compile(r'patriotexpress')
+        
+        # Search for the pattern in the sanitized string
+        match = pattern.search(sanitized_str)
+        
+        return bool(match)
+    except Exception as e:
+        # Robust error handling
+        logging.info(f"An error occurred in find_patriot_express: {e}")
+        return False
 
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
@@ -109,6 +127,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         # Special flight data variables
         roll_call_note = False
         seat_note = False
+        dest_note = False
         notes = {}
 
         # Skip header row
@@ -198,14 +217,17 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         if extra_roll_call_notes:
             logging.info('Found extra roll call notes.')
             notes['Extra Roll Call Notes'] = extra_roll_call_notes
+            roll_call_note = True
         
         if extra_dest_notes:
             logging.info('Found extra destination notes.')
             notes['Extra Destination Notes'] = extra_dest_notes
+            dest_note = True
         
         if extra_seat_notes:
             logging.info('Found extra seat notes.')
             notes['Extra Seat Notes'] = extra_seat_notes
+            seat_note = True
 
         # Check if any notes were added for the flight
         if len(notes) == 0:
@@ -214,9 +236,16 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
             notes = json.dumps(notes)
 
         # TODO: Check if the flight is a Patriot Express flight
+        patriot_express = False
+        row_text_string = f'{dest_cell_text} {roll_call_cell_text} {seats_cell_text}'
+        if find_patriot_express(row_text_string):
+            logging.info(f'Found Patriot Express flight.')
+            patriot_express = True
 
         # Create flight object
-        flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=roll_call_note, seat_note=seat_note)
+        flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, 
+                        num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=roll_call_note, 
+                        seat_note=seat_note, destination_note=dest_note, patriot_express=patriot_express)
 
         flights.append(flight)
     
