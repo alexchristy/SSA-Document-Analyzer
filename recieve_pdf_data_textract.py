@@ -281,7 +281,7 @@ def lambda_handler(event, context):
     # # Reprocess tables with low confidence rows
     # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
 
-    table_pkl_path = 'tests/table-objects/hickam_1_72hr_table-1.pkl'
+    table_pkl_path = 'tests/table-objects/hickam_1_72hr_table-3.pkl'
 
     custom_date = '20230910'
 
