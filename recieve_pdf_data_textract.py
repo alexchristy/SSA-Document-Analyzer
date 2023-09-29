@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from bahrain_1_72hr_sns_messages import bahrain_1_72hr_successful_job_sns_message as current_sns_message
-from bahrain_1_72hr_textract_response import bahrain_1_72hr_textract_response as current_textract_response
+from bwi_1_72hr_sns_messages import bwi_1_72hr_successful_job_sns_message as current_sns_message
+from bwi_1_72hr_textract_response import bwi_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -281,7 +281,7 @@ def lambda_handler(event, context):
     # # Reprocess tables with low confidence rows
     # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
 
-    table_pkl_path = 'tests/table-objects/bahrain_1_72hr_table-3.pkl'
+    table_pkl_path = 'tests/table-objects/bwi_1_72hr_table-3.pkl'
 
     custom_date = '20230910'
 
