@@ -40,7 +40,9 @@ class Flight:
             'rollcall_note': self.rollcall_note,
             'seat_note': self.seat_note,
             'destination_note': self.destination_note,
-            'patriot_express': self.patriot_express
+            'patriot_express': self.patriot_express,
+            'creation_time': self.creation_time,
+            'as_string': self.as_string
         }
 
     def pretty_print(self):
@@ -74,7 +76,8 @@ class Flight:
             self.rollcall_note == other.rollcall_note and
             self.seat_note == other.seat_note and
             self.destination_note == other.destination_note and
-            self.patriot_express == other.patriot_express
+            self.patriot_express == other.patriot_express and
+            self.as_string == other.as_string
         )
     
     def to_string(self):
