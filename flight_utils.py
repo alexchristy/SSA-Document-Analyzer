@@ -128,6 +128,10 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
     for row_index, row in enumerate(table.rows):
         logging.info(f"Processing row {row_index}.")
 
+        # Skip first row (headers)
+        if row_index == 0:
+            continue
+
         # Special flight data variables
         has_roll_call_note = False
         roll_call_notes = {}
