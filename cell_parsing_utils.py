@@ -14,14 +14,15 @@ def parse_rollcall_time(time_str: str) -> str:
     Returns:
     - str: A string representing the rollcall time in 24-hour format, or None if invalid.
     """
-
+    
     # If time string is empty or None, log and return None
     if not time_str:
         logging.info("Rollcall time is empty or None.")
         return None
 
-    # Regex to match time in HH:MM or HHMM format
-    match = re.match(r"(\d{1,2}):?(\d{2})", time_str)
+    # Regex to match time in HH:MM or HHMM format within a string
+    match = re.search(r"(\d{1,2}):?(\d{2})", time_str)
+    
     if not match:
         logging.error(f"Failed to parse rollcall time: Invalid format '{time_str}'")
         return None
@@ -50,7 +51,7 @@ def ocr_correction(input_str):
     }
     return ''.join(correction_map.get(char, char) for char in input_str)
 
-def parse_seat_data(seat_data: str) -> Tuple[int, str]:
+def parse_seat_data(seat_data: str):
     """
     Parse seat data from a given string and return the number of seats and seat status.
     
@@ -60,60 +61,41 @@ def parse_seat_data(seat_data: str) -> Tuple[int, str]:
     Returns:
     - tuple: A tuple containing the number of seats (int) and seat status (str).
     """
-
+    
     # Fix special case for '_' to '-'
     seat_data = seat_data.replace('_', '-')
-
-    num_of_seats = -1
-    seat_status = ''
-
-    # Case 0: If seat data is empty, return TDB
+    
+    # Split off any notes in parenthesis
+    seat_data, _ = split_parenthesis(seat_data)
+    
+    # Case 0: If seat data is empty, return None, None
     if seat_data == '':
         logging.info("Seat data is empty.")
         return None, None
 
     # Case 1: Seat data is TBD
-    if seat_data.strip() == 'TBD':
+    if re.search(r'(?i)tbd', seat_data):
         logging.info("Seat data is TBD.")
-        seat_status = 'TBD'
-        num_of_seats = 0
-        return num_of_seats, seat_status
+        return 0, 'TBD'
 
-    # Case 2.5: Special case for '0F' and '0T', case insensitive
-    elif seat_data.upper() == '0F' or seat_data.upper() == '0T':
-        num_of_seats = 0
-        seat_status = seat_data[-1].upper()
-        logging.info(f"Parsed special case '0F' or '0T'. num_of_seats = {num_of_seats}, seat_status = {seat_status}")
-
-    # Case 2: Format is number followed by letter (e.g., 60T)
-    elif seat_data[:-1].isdigit() and len(seat_data[:-1]) > 0 and seat_data[-1].upper() in ['T', 'F']:
-        num_of_seats = int(seat_data[:-1])
-        seat_status = seat_data[-1].upper()
-        logging.info(f"Parsed data in format 'number letter' (60T). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
-
-    # Case 3: Format is letter dash number (e.g., T-60)
-    elif seat_data[0].upper() in ['T', 'F'] and seat_data[1] == '-' and seat_data[2:].isdigit():
-        num_of_seats = int(seat_data[2:])
-        seat_status = seat_data[0].upper()
-        logging.info(f"Parsed data in format 'letter - number' (T-60). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
+    # Case 2: Various other patterns
+    patterns = [
+        r'(?P<num>\d+)(?P<status>[tf])',  # e.g., "60T"
+        r'(?P<status>[tf])-?(?P<num>\d+)',  # e.g., "T-60", "T60"
+        r'(?P<num>\d+)\s*(?P<status>[tf])',  # e.g., "20 T"
+        r'(?P<status>[tf])\.?(?P<num>\d+)'  # e.g., "T.20", "T20"
+    ]
     
-    # Case 4: Format is number space letter (e.g., '20 T')
-    elif len(seat_data.split()) == 2 and seat_data.split()[0].isdigit() and seat_data.split()[1].upper() in ['T', 'F']:
-        num_of_seats = int(seat_data.split()[0])
-        seat_status = seat_data.split()[1].upper()
-        logging.info(f"Parsed data in format 'number space letter' (20 T). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
+    for pattern in patterns:
+        match = re.search(pattern, seat_data, re.IGNORECASE)
+        if match:
+            num_of_seats = int(match.group('num'))
+            seat_status = match.group('status').upper()
+            logging.info(f"Parsed seat data. num_of_seats = {num_of_seats}, seat_status = {seat_status}")
+            return num_of_seats, seat_status
 
-    # Case 5: Format is letter dot number (e.g., 'T.20')
-    elif '.' in seat_data and seat_data[0].upper() in ['T', 'F'] and seat_data[2:].isdigit():
-        num_of_seats = int(seat_data[2:])
-        seat_status = seat_data[0].upper()
-        logging.info(f"Parsed data in format 'letter dot number' (T.20). num_of_seats = {num_of_seats}, seat_status = {seat_status}")
-
-    else:
-        logging.error(f"Failed to parse seat data: Invalid format '{seat_data}'")
-        return None, None
-    
-    return num_of_seats, seat_status
+    logging.error(f"Failed to parse seat data: Invalid format '{seat_data}'")
+    return None, None
 
 def split_parenthesis(text):
     """
