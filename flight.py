@@ -51,9 +51,9 @@ class Flight:
         print(f"{'-' * 40}")
         print(f"Origin Terminal: {self.origin_terminal if self.origin_terminal else 'N/A'}")
         print(f"Destination/s: {self.destinations if self.destinations else 'N/A'}")
-        rollcall_text = "**See note below**" if self.rollcall_note else self.rollcall_time
+        rollcall_text = "**See note below**" if self.rollcall_note and self.rollcall_time is None else self.rollcall_time
         print(f"Roll Call Time: {rollcall_text if rollcall_text else 'N/A'}")
-        seat_status_text = "**See note below**" if self.seat_note else self.seat_status
+        seat_status_text = "**See note below**" if self.seat_note and self.seat_status is None else self.seat_status
         print(f"Number of Seats: {self.num_of_seats if self.num_of_seats is not None else 0}")
         print(f"Seat Status: {seat_status_text if seat_status_text else 'N/A'}")
         print(f"Notes: {self.notes if self.notes else 'N/A'}")
