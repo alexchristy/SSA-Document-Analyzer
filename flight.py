@@ -5,13 +5,12 @@ from datetime import datetime
 
 class Flight:
 
-    def __init__(self, origin_terminal: str, destinations: list, rollcall_time: str, num_of_seats: int, seat_status: str, notes: str, date: str, rollcall_note=False, seat_note=False, destination_note=False, patriot_express=False):
+    def __init__(self, origin_terminal: str, destinations: list, rollcall_time: str, seats: list, notes: str, date: str, rollcall_note=False, seat_note=False, destination_note=False, patriot_express=False):
 
         self.origin_terminal = origin_terminal
         self.destinations = destinations
         self.rollcall_time = rollcall_time
-        self.num_of_seats = num_of_seats
-        self.seat_status = seat_status
+        self.seats = seats
         self.notes = notes
         self.date = date
         self.rollcall_note = rollcall_note
@@ -19,21 +18,19 @@ class Flight:
         self.destination_note = destination_note
         self.patriot_express = patriot_express
         self.creation_time = int(datetime.now().strftime("%Y%m%d%H%M"))
-        self.as_string = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}{self.rollcall_note}{self.seat_note}{self.destination_note}{self.patriot_express}"
+        self.as_string = self.generate_as_string()
 
         self.flight_id = self.generate_flight_id()
 
+    def generate_as_string(self):
+        return f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.seats}{self.notes}{self.date}{self.rollcall_note}{self.seat_note}{self.destination_note}{self.patriot_express}"
 
     def to_dict(self):
-        """
-        Convert the Flight object to a dictionary suitable for Firestore storage.
-        """
         return {
             'origin_terminal': self.origin_terminal,
             'destination_terminal': self.destinations,
             'rollcall_time': self.rollcall_time,
-            'num_of_seats': self.num_of_seats,
-            'seat_status': self.seat_status,
+            'seats': self.seats,
             'notes': self.notes,
             'flight_id': self.flight_id,
             'date': self.date,
@@ -53,9 +50,7 @@ class Flight:
         print(f"Destination/s: {self.destinations if self.destinations else 'N/A'}")
         rollcall_text = "**See note below**" if self.rollcall_note and self.rollcall_time is None else self.rollcall_time
         print(f"Roll Call Time: {rollcall_text if rollcall_text else 'N/A'}")
-        seat_status_text = "**See note below**" if self.seat_note and self.seat_status is None else self.seat_status
-        print(f"Number of Seats: {self.num_of_seats if self.num_of_seats is not None else 0}")
-        print(f"Seat Status: {seat_status_text if seat_status_text else 'N/A'}")
+        print(f"Seats: {self.seats if self.seats else 'N/A'}")
         print(f"Notes: {self.notes if self.notes else 'N/A'}")
         print(f"Date: {self.date if self.date else 'N/A'}")
         print(f"Patriot Express: {self.patriot_express}")
@@ -68,8 +63,7 @@ class Flight:
             self.origin_terminal == other.origin_terminal and
             self.destinations == other.destinations and
             self.rollcall_time == other.rollcall_time and
-            self.num_of_seats == other.num_of_seats and
-            self.seat_status == other.seat_status and
+            self.seats == other.seats and
             self.notes == other.notes and
             self.date == other.date and
             self.flight_id == other.flight_id and
@@ -84,7 +78,6 @@ class Flight:
         return self.as_string
     
     def generate_flight_id(self):
-        self.as_string = f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.num_of_seats}{self.seat_status}{self.notes}{self.date}{self.rollcall_note}{self.seat_note}{self.destination_note}{self.patriot_express}"
         return hashlib.sha256(self.as_string.encode()).hexdigest()
 
     @classmethod

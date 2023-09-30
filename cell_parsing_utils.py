@@ -5,36 +5,43 @@ import json
 from table import Table
 
 def parse_rollcall_time(time_str: str) -> str:
-    """
-    Parse rollcall time from a given string and return it in 24-hour format.
-    
-    Args:
-    - time_str (str): The string containing rollcall time in specific formats.
-    
-    Returns:
-    - str: A string representing the rollcall time in 24-hour format, or None if invalid.
-    """
-    
-    # If time string is empty or None, log and return None
     if not time_str:
         logging.info("Rollcall time is empty or None.")
         return None
 
-    # Regex to match time in HH:MM or HHMM format within a string
-    match = re.search(r"(\d{1,2}):?(\d{2})", time_str)
+    # Regex patterns to exclude unwanted matches
+    exclusion_patterns = [
+        re.compile(r"(?:\s|-)\d{3}(?:\D|$)"),  # exclude " 123" or "-123"
+    ]
     
+    for pattern in exclusion_patterns:
+        match = pattern.search(time_str)
+        if match:
+            logging.info(f"Excluding match due to exclusion pattern: '{match.group()}'")
+            return None
+
+    # Two different regex patterns for valid time formats
+    patterns = [
+        re.compile(r"(?<=\D)(\d{1,2}):?(\d{2})(?=\D|$)"),
+        re.compile(r"^(?:\D)*(\d{1,2}):?(\d{2})(?=\D|$)")
+    ]
+
+    match = None
+    for pattern in patterns:
+        match = pattern.search(time_str)
+        if match:
+            break
+
     if not match:
         logging.error(f"Failed to parse rollcall time: Invalid format '{time_str}'")
         return None
     
     hour, minute = map(int, match.groups())
 
-    # Check for valid time
     if hour > 23 or minute > 59:
         logging.error(f"Failed to parse rollcall time: Invalid time '{time_str}'")
         return None
-    
-    # Format to 24-hour time string
+
     rollcall_time = f"{hour:02d}{minute:02d}"
     logging.info(f"Parsed rollcall time: {rollcall_time}")
     
@@ -53,49 +60,61 @@ def ocr_correction(input_str):
 
 def parse_seat_data(seat_data: str):
     """
-    Parse seat data from a given string and return the number of seats and seat status.
+    Parse seat data from a given string and return a list of tuples containing the number of seats and seat status.
     
     Args:
     - seat_data (str): The string containing seat data in specific formats.
     
     Returns:
-    - tuple: A tuple containing the number of seats (int) and seat status (str).
+    - list: A list of tuples containing the number of seats (int) and seat status (str).
     """
     
     # Fix special case for '_' to '-'
     seat_data = seat_data.replace('_', '-')
     
-    # Split off any notes in parenthesis
+    # Split off any notes in parenthesis (assuming split_parenthesis function is defined)
     seat_data, _ = split_parenthesis(seat_data)
     
-    # Case 0: If seat data is empty, return None, None
+    results = []  # To store the list of (num_of_seats, seat_status)
+    
+    # Case 0: If seat data is empty, return an empty list
     if seat_data == '':
         logging.info("Seat data is empty.")
-        return None, None
-
+        return []
+    
     # Case 1: Seat data is TBD
     if re.search(r'(?i)tbd', seat_data):
         logging.info("Seat data is TBD.")
-        return 0, 'TBD'
-
+        results.append((0, 'TBD'))
+    
     # Case 2: Various other patterns
     patterns = [
-        r'(?P<num>\d+)(?P<status>[tf])',  # e.g., "60T"
-        r'(?P<status>[tf])-?(?P<num>\d+)',  # e.g., "T-60", "T60"
-        r'(?P<num>\d+)\s*(?P<status>[tf])',  # e.g., "20 T"
-        r'(?P<status>[tf])\.?(?P<num>\d+)'  # e.g., "T.20", "T20"
+        r'(?P<num>\d+)(?P<status>[tf])',
+        r'(?P<status>[tf])-?(?P<num>\d+)',
+        r'(?P<num>\d+)\s*(?P<status>[tf])',
+        r'(?P<status>[tf])\.?(?P<num>\d+)'
     ]
     
     for pattern in patterns:
-        match = re.search(pattern, seat_data, re.IGNORECASE)
-        if match:
+        while True:
+            match = re.search(pattern, seat_data, re.IGNORECASE)
+            if not match:
+                break
+            
             num_of_seats = int(match.group('num'))
             seat_status = match.group('status').upper()
-            logging.info(f"Parsed seat data. num_of_seats = {num_of_seats}, seat_status = {seat_status}")
-            return num_of_seats, seat_status
-
-    logging.error(f"Failed to parse seat data: Invalid format '{seat_data}'")
-    return None, None
+            results.append((num_of_seats, seat_status))
+            
+            # Remove the matched part from the original string
+            start, end = match.span()
+            seat_data = seat_data[:start] + seat_data[end:]
+    
+    if results:
+        logging.info(f"Parsed seat data: {results}")
+    else:
+        logging.error(f"Failed to parse seat data: Invalid format '{seat_data}'")
+    
+    return results
 
 def split_parenthesis(text):
     """

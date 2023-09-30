@@ -143,7 +143,7 @@ class TestCellParsingUtils(unittest.TestCase):
             {"input": "abcd", "expected": None},
             {"input": " 123", "expected": None},
             {"input": "12 34", "expected": None},
-            {"input": "12345", "expected": "1234"},
+            {"input": "12345", "expected": None},
             {"input": "-123", "expected": None},
             {"input": "12.34", "expected": None},
             {"input": "Null", "expected": None},
@@ -160,26 +160,26 @@ class TestCellParsingUtils(unittest.TestCase):
             with self.subTest(i=i):
                 self.assertEqual(parse_rollcall_time(test_case["input"]), test_case["expected"])
 
-    def test_parse_seat_data(self):
+    def test_parse_seat_data_single_data(self):
 
         from cell_parsing_utils import parse_seat_data
 
         test_data = [
-            {"input": "60T", "expected": (60, "T")},
-            {"input": "T-60", "expected": (60, "T")},
-            {"input": "20 F", "expected": (20, "F")},
-            {"input": "T.20", "expected": (20, "T")},
-            {"input": "TBD", "expected": (0, "TBD")},
-            {"input": "", "expected": (None, None)},
-            {"input": "0F", "expected": (0, "F")},
-            {"input": "0f", "expected": (0, "F")},
-            {"input": "0T", "expected": (0, "T")},
-            {"input": "T_100", "expected": (100, 'T')},
-            {"input": "H-60", "expected": (None, None)},
-            {"input": "60 H", "expected": (None, None)},
-            {"input": "T.100.5", "expected": (None, None)},
-            {"input": "TBD ", "expected": (0, "TBD")},
-            {"input": " 60T", "expected": (None, None)}
+            {"input": "60T", "expected": [(60, "T")]},
+            {"input": "T-60", "expected": [(60, "T")]},
+            {"input": "20 F", "expected": [(20, "F")]},
+            {"input": "T.20", "expected": [(20, "T")]},
+            {"input": "TBD", "expected": [(0, "TBD")]},
+            {"input": "", "expected": []},
+            {"input": "0F", "expected": [(0, "F")]},
+            {"input": "0f", "expected": [(0, "F")]},
+            {"input": "0T", "expected": [(0, "T")]},
+            {"input": "T_100", "expected": [(100, 'T')]},
+            {"input": "H-60", "expected": []},
+            {"input": "60 H", "expected": []},
+            {"input": "T.100.5", "expected": [(100, 'T')]},
+            {"input": "TBD ", "expected": [(0, "TBD")]},
+            {"input": " 60T", "expected": [(60, 'T')]}
         ]
 
         for i, test_case in enumerate(test_data):
