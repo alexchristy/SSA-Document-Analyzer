@@ -332,6 +332,7 @@ def merge_table_rows(table: Table) -> Table:
     Returns:
         Table: A new table object with merged rows.
     """
+    logging.info(f"Merging table rows...")
 
     try:
         if not table.rows:
@@ -494,7 +495,14 @@ def populate_merged_row_seat_columns(table: Table, merge_groups: List[List[tuple
                 seat_text = ocr_correction(seat_text)
                 seats = parse_seat_data(seat_text)
 
-            # Set empty seat data row to 0T
+                # If there are now seats, update the cell and then skip
+                if seats:
+                    confidence_val = row[seat_column_index][1]
+                    new_seat_cell_tuple = (f'{seats[0][0]}{seats[0][1]}', confidence_val)
+                    row[seat_column_index] = new_seat_cell_tuple
+                    continue
+
+            # No seats found, update cell to 0T
             if not seats:
                 confidence_val = row[seat_column_index][1]
                 new_seat_cell_tuple = ('0T', confidence_val)
