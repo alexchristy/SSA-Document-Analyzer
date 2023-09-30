@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from hickam_1_72hr_sns_messages import hickam_1_72hr_successful_job_sns_message as current_sns_message
-from hickam_1_72hr_textract_response import hickam_1_72hr_textract_response as current_textract_response
+from incirlik_1_72hr_sns_messages import incirlik_1_72hr_successful_job_sns_message as current_sns_message
+from incirlik_1_72hr_textract_response import incirlik_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -281,29 +281,38 @@ def lambda_handler(event, context):
     # # Reprocess tables with low confidence rows
     # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
 
-    table_pkl_path = 'tests/table-objects/hickam_1_72hr_table-3.pkl'
+    table_pkl_path = 'tests/table-objects/hickam_1_72hr_table-1.pkl'
 
     custom_date = '20230910'
 
     table = Table.load_state(table_pkl_path)
 
-    # Create flight objects from table
-    flights = convert_72hr_table_to_flights(table, origin_terminal=origin_terminal, use_fixed_date=True, fixed_date=custom_date)
+    print(table.to_markdown())
 
-    if flights is None:
-        logging.error("Failed to convert table to flights.")
-        return
+    table = merge_table_rows(table)
 
-    flight_obj_name = os.path.basename(table_pkl_path).split('.')[0]
+    print(table.to_markdown())
 
-    i = 1
-    for flight in flights:
-        flight.pretty_print()
+    # Save table state
+    table.save_state('./hickam_1_72hr_table-1-merged.pkl')
 
-        with open(f'{flight_obj_name}_flight-{i}.pkl', 'wb') as file:
-            pickle.dump(flight, file)
+    # # Create flight objects from table
+    # flights = convert_72hr_table_to_flights(table, origin_terminal=origin_terminal, use_fixed_date=True, fixed_date=custom_date)
+
+    # if flights is None:
+    #     logging.error("Failed to convert table to flights.")
+    #     return
+
+    # flight_obj_name = os.path.basename(table_pkl_path).split('.')[0]
+
+    # i = 1
+    # for flight in flights:
+    #     flight.pretty_print()
+
+    #     with open(f'{flight_obj_name}_flight-{i}.pkl', 'wb') as file:
+    #         pickle.dump(flight, file)
         
-        i += 1
+    #     i += 1
         
     return {
         'statusCode': 200,
