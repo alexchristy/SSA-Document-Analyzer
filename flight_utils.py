@@ -64,6 +64,8 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         >>> flights = convert_72hr_table_to_flights(table, origin_terminal)
     """
 
+    logging.info('Converting 72-hour table to flights...')
+
     # Does table have extra columns for notes?
     has_note_columns = False
 
@@ -149,10 +151,10 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         # Parse the cell text
         destinations = parse_destination(dest_cell[0])
         roll_call_time = parse_rollcall_time(roll_call_cell[0])
-        num_of_seats, seat_status = parse_seat_data(seats_cell[0])
+        seats = parse_seat_data(seats_cell[0])
 
         # Skip row if it doesn't have complete data
-        if roll_call_time is None and num_of_seats is None and seat_status is None and destinations is None:
+        if roll_call_time is None and not seats and destinations is None:
             logging.info(f"Skipping row {row_index} due to incomplete data.")
             continue
 
@@ -174,13 +176,13 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
         # Check if the seat data is valid
         # If seat data parsing fails, try correcting common OCR errors
-        if num_of_seats is None and seat_status is None:
-            new_seat_data = ocr_correction(row[seats_column_index][0])
+        if not seats:
+            new_seat_data = ocr_correction(row[seats_cell][0])
             logging.info(f'Atempting to correct OCR errors. New seat data: {new_seat_data}')
-            num_of_seats, seat_status = parse_seat_data(new_seat_data)
+            seats = parse_seat_data(new_seat_data)
 
         # If seat data parsing still fails, there is no seat data but there is a note
-        if num_of_seats is None and seat_status is None:
+        if not seats:
             if len(row[seats_column_index][0]) > 0:
                 has_seat_note = True
                 num_of_seats = -1
@@ -265,7 +267,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
         # Create flight object
         flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, 
-                        num_of_seats=num_of_seats, seat_status=seat_status, notes=notes, date=date, rollcall_note=has_roll_call_note, 
+                        seats=seats, notes=notes, date=date, rollcall_note=has_roll_call_note, 
                         seat_note=has_seat_note, destination_note=has_dest_note, patriot_express=patriot_express)
 
         flights.append(flight)
