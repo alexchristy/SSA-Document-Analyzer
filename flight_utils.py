@@ -28,10 +28,6 @@ def find_patriot_express(input_str):
         logging.info(f"An error occurred in find_patriot_express: {e}")
         return False
 
-# def get_merged_cell_text(table: Table, row_index: int, column_index: int) -> str:
-
-
-
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
     Converts a 72-hour flight schedule table to a list of Flight objects.
