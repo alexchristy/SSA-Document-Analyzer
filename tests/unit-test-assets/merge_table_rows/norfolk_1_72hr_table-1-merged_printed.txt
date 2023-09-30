@@ -1,0 +1,8 @@
+## Table 1 (Page: 2, Confidence: 99.853515625)
+
+DEPARTURES FROM: NORFOLK (NGU) FRIDAY, AUGUST 18 2023 (Confidence: 90.478515625)
+
+| ROLL CALL (94.04296875) | DESTINATION (96.2890625)                                                                                                                                                                        | SEATS (92.822265625) |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| 1930 (32.83386231)      | PROTA,SP/SIGONELLA, IT/BAHRAIN/ DIEGO GARCIA (DELAYED MISSION) *S/A Passengers must have a Spanish residency ID or have a Spanish Passport to make Rota, Spain their destination. (33.61816406) |  (34.56420898)       |
+| 2100 (88.427734375)     | JACKSONVILLE NAS, FL (90.576171875)                                                                                                                                                             | T-60 (87.3046875)    |

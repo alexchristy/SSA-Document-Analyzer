@@ -3,6 +3,9 @@ import logging
 import re
 from typing import List
 from date_utils import check_date_string
+from gpt3_turbo_analysis import GPT3TurboAnalysis
+from cell_parsing_utils import parse_seat_data
+from cell_parsing_utils import ocr_correction
 
 def convert_textract_response_to_tables(json_response):
     """
@@ -317,3 +320,184 @@ def get_roll_call_column_index(table: Table) -> int:
                 return index
     
     return None
+
+def merge_table_rows(table: Table) -> Table:
+    """
+    Merges vertically adjacent rows in a given table that have cells with the same confidence value.
+    The merged cell's confidence value becomes the average of the merged cells, rounded to 8 decimal places.
+
+    Parameters:
+        table (Table): The table object containing rows and columns to be merged.
+
+    Returns:
+        Table: A new table object with merged rows.
+    """
+
+    try:
+        if not table.rows:
+            logging.info("No rows in the table to merge.")
+            return table
+
+        # Get merge groups
+        merge_groups = _get_merge_row_groups(table)
+
+        # Populate merged row seat columns
+        merge_groups = populate_merged_row_seat_columns(table, merge_groups)
+
+        # Merge rows in each group
+        merged_table = _merge_grouped_rows(table, merge_groups)
+
+        return merged_table
+
+    except Exception as e:
+        logging.error(f"An error occurred while merging table rows: {e}")
+        return None
+
+def _get_merge_row_groups(table: Table) -> List[List[tuple]]:
+    """
+    Finds groups of vertically adjacent rows in a given table that have cells with the same confidence value and 
+    groups them together
+
+    Parameters:
+        table (Table): The table object containing rows and columns to be grouped.
+
+    Returns:
+        merge_groups (List[List]): Returns an array of rows grouped together that should be merged.
+    """
+    try:
+        if not table.rows:
+            logging.info("No rows in the table to merge.")
+            return table
+
+        # Initialize a list to keep track of row groups to merge
+        merge_groups = []
+
+        # Iterate through each column to identify merge groups
+        num_columns = len(table.rows[0])
+        for col in range(num_columns):
+            merge_group = []
+            prev_conf = None
+            for idx, row in enumerate(table.rows):
+                cur_conf = row[col][1]
+                if cur_conf == prev_conf:
+                    merge_group.append((idx, row))
+                else:
+                    if len(merge_group) > 1:
+                        merge_groups.append(merge_group)
+                    merge_group = [(idx, row)]
+                prev_conf = cur_conf
+            if len(merge_group) > 1:
+                merge_groups.append(merge_group)
+    
+    except Exception as e:
+        logging.error(f"An error occurred while identifying merge groups: {e}")
+        return None
+
+    return merge_groups
+
+def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
+    """
+    Takes in a table and a list of merge groups and merges the rows in the table based on the merge groups.
+
+    Parameters:
+        table (Table): The table object containing rows and columns to be merged.
+        merge_groups (List[List]): A list of merge groups to be merged.
+
+    Returns:
+        Table: A new table object with merged rows.
+    """
+    
+    try:
+        if not table.rows:
+            logging.info("No rows in the table to merge.")
+            return table
+        
+        num_columns = len(table.rows[0])
+        # Perform row merging for identified merge groups
+        for group in merge_groups:
+            merged_row = [('', 0)] * num_columns
+            first_row_index = group[0][0]
+            
+            for _, row in group:
+                for col in range(num_columns):
+                    merged_text = f"{merged_row[col][0]} {row[col][0]}".strip()
+                    merged_conf = (merged_row[col][1] + row[col][1]) / 2
+                    # Round to 8 decimal places
+                    merged_conf = round(merged_conf, 8)
+                    merged_row[col] = (merged_text, merged_conf)
+
+            # Insert the merged row back to its original position
+            table.rows[first_row_index] = merged_row
+
+            # Remove the merged rows from the original table, except for the first one which we've replaced
+            for idx, _ in group[1:]:
+                table.rows[idx] = None
+
+        # Remove None rows (which are placeholders for the merged rows)
+        table.rows = [row for row in table.rows if row is not None]
+
+        return table
+
+    except Exception as e:
+        logging.error(f"An error occurred while merging table rows: {e}")
+        return None
+    
+def populate_merged_row_seat_columns(table: Table, merge_groups: List[List[tuple]]) -> List[List[tuple]]:
+    """
+    This function takes in a list of merge groups and populates the seat data for rows that will be merged only
+    if they have multiple seat data points. It is assumed that if a row has multiple seat data points, then the
+    table is following the Kadena organization. See kadena_1_72hr tables 1 and 2 for examples.
+
+    Parameters:
+        table (Table): The table object containing rows and columns to be merged.
+        merge_groups (List[List]): A list of merge groups to be merged.
+
+    Returns:
+        merge_groups (List[List]): Returns an array of rows grouped together that should be merged.
+    """
+
+    gpt_analyzer = GPT3TurboAnalysis()
+
+    dest_column_index = get_destination_column_index(table)
+    seat_column_index = get_seats_column_index(table)
+
+    for group in merge_groups:
+
+        # Search to see if there are two different
+        # seat data points in the grouped rows
+        seat_cell_text_data = set()
+        for _, row in group:
+            seat_text = row[seat_column_index][0]
+            # If row has seat data, add it to the list
+            if seat_text.strip():
+                seat_cell_text_data.add(seat_text)
+
+        # If there is more than one seat data, using Kadena organization
+        if len(seat_cell_text_data) <= 1:
+            continue
+
+        # If there is more than one seat data, using Kadena organization
+        for _, row in group:
+
+            seat_text = row[seat_column_index][0]
+            dest_text = row[dest_column_index][0]
+            dest_analyzed = gpt_analyzer.get_destination_analysis(dest_text)
+
+            # Not a destination row skip
+            if dest_analyzed == 'None':
+                continue
+
+            seats = parse_seat_data(seat_text)
+
+            # Correct any OCR errors
+            if not seats:
+                seat_text = ocr_correction(seat_text)
+                seats = parse_seat_data(seat_text)
+
+            # Set empty seat data row to 0T
+            if not seats:
+                confidence_val = row[seat_column_index][1]
+                new_seat_cell_tuple = ('0T', confidence_val)
+                row[seat_column_index] = new_seat_cell_tuple
+
+    return merge_groups

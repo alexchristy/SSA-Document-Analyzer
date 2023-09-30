@@ -1,0 +1,7 @@
+## Table 3 (Page: 3, Confidence: 99.755859375)
+
+DEPARTURES FROM: Kadena AB, Japan Sunday, August 20, 2023 (Confidence: 99.0234375)
+
+| ROLL CALL (91.50390625) | DESTINATION (96.435546875)                                                                                                                                 | SEATS (90.72265625)      |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| 1120 (49.09973145)      | *PATRIOT EXPRESS* Andersen AFB, Guam Ted Stevens INTL., AK Seattle Tacoma INTL., WA Check In Starts: 20 Aug @ 0820 Doors Close: 20 Aug @ 1120 (41.2109375) | 29T OF 70T (38.76953125) |

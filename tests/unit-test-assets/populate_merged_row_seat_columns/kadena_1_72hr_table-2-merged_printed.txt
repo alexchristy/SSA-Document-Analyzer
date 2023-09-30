@@ -1,0 +1,9 @@
+## Table 2 (Page: 2, Confidence: 99.853515625)
+
+DEPARTURES FROM: Kadena AB, Japan Saturday, August 19, 2023 (Confidence: 99.0234375)
+
+| ROLL CALL (93.896484375) | DESTINATION (97.119140625)                                                                                                                                                           | SEATS (92.87109375)       |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| 0650 (40.94009399)       | *PATRIOT EXPRESS* Iwakuni MCAS, Japan Yokota AB, Japan Seattle Tacoma INTL., WA Early Bird: 18 Aug 0900-1400 Check In Starts: 19 Aug @ 0350 Doors Close: 19 Aug @ 0650 (47.30987549) | 40T 37T 20T (45.21179199) |
+| 0700 (83.642578125)      | Iwakuni MCAS, Japan (86.5234375)                                                                                                                                                     | 53T (82.71484375)         |
+| 0740 (88.76953125)       | Yokota AB, Japan (91.796875)                                                                                                                                                         | 10T (87.744140625)        |

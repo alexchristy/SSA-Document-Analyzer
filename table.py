@@ -133,6 +133,30 @@ class Table:
 
         return cell_text
 
+    def __eq__(self, other):
+        if not isinstance(other, Table):
+            return False
+
+        try:
+            # Get all attributes as dictionaries
+            attrs1 = vars(self)
+            attrs2 = vars(other)
+
+            # Check if both objects have the same set of attributes
+            if set(attrs1.keys()) != set(attrs2.keys()):
+                return False
+
+            # Check if the values of all attributes are equal
+            for attr, value1 in attrs1.items():
+                value2 = attrs2.get(attr)
+                if value1 != value2:
+                    return False
+
+            return True
+
+        except Exception as e:
+            logging.error(f"An error occurred while comparing tables: {e}")
+            return False
 
     @classmethod
     def load_state(cls, filename="table_state.pkl") -> "Table":
