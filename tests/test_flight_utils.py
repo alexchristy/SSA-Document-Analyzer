@@ -165,21 +165,45 @@ class TestCellParsingUtils(unittest.TestCase):
         from cell_parsing_utils import parse_seat_data
 
         test_data = [
-            {"input": "60T", "expected": [(60, "T")]},
-            {"input": "T-60", "expected": [(60, "T")]},
-            {"input": "20 F", "expected": [(20, "F")]},
-            {"input": "T.20", "expected": [(20, "T")]},
-            {"input": "TBD", "expected": [(0, "TBD")]},
+            {"input": "60T", "expected": [[60, "T"]]},
+            {"input": "T-60", "expected": [[60, "T"]]},
+            {"input": "20 F", "expected": [[20, "F"]]},
+            {"input": "T.20", "expected": [[20, "T"]]},
+            {"input": "TBD", "expected": [[0, "TBD"]]},
             {"input": "", "expected": []},
-            {"input": "0F", "expected": [(0, "F")]},
-            {"input": "0f", "expected": [(0, "F")]},
-            {"input": "0T", "expected": [(0, "T")]},
-            {"input": "T_100", "expected": [(100, 'T')]},
+            {"input": "0F", "expected": [[0, "F"]]},
+            {"input": "0f", "expected": [[0, "F"]]},
+            {"input": "0T", "expected": [[0, "T"]]},
+            {"input": "T_100", "expected": [[100, 'T']]},
             {"input": "H-60", "expected": []},
             {"input": "60 H", "expected": []},
-            {"input": "T.100.5", "expected": [(100, 'T')]},
-            {"input": "TBD ", "expected": [(0, "TBD")]},
-            {"input": " 60T", "expected": [(60, 'T')]}
+            {"input": "T.100.5", "expected": [[100, 'T']]},
+            {"input": "TBD ", "expected": [[0, "TBD"]]},
+            {"input": " 60T", "expected": [[60, 'T']]}
+        ]
+
+        for i, test_case in enumerate(test_data):
+            with self.subTest(i=i):
+                self.assertEqual(parse_seat_data(test_case["input"]), test_case["expected"])
+
+    def test_parse_seat_data_multiple_data(self):
+
+        from cell_parsing_utils import parse_seat_data
+
+        test_data = [
+            {"input": "60T 20F", "expected": [[60, "T"], [20, "F"]]},
+            {"input": "20F 60T", "expected": [[20, "F"], [60, "T"]]},
+            {"input": "T-60 20F", "expected": [[60, "T"], [20, "F"]]},
+            {"input": "20F T-60", "expected": [[20, "F"], [60, "T"]]},
+            {"input": "T.60 20F", "expected": [[60, "T"], [20, "F"]]},
+            {"input": "20F T.60", "expected": [[20, "F"], [60, "T"]]},
+            {"input": "T-60 F.20", "expected": [[60, "T"], [20, "F"]]},
+            {"input": "F.20 T-60", "expected": [[20, "F"], [60, "T"]]},
+            {"input": "T.60 T.1 F.20", "expected": [[60, "T"], [1, 'T'], [20, "F"]]},
+            {"input": "T.60 T.1 F.20 T.100", "expected": [[60, "T"], [1, 'T'], [20, "F"], [100, 'T']]},
+            {"input": "T-60 F20 T.15 F-10 T30 F.5 T-1 F1", "expected": [[60, "T"], [20, "F"], [15, "T"], [10, "F"], [30, "T"], [5, "F"], [1, "T"], [1, "F"]]},
+            {"input": "T-60 F20 T.15 F-10 T30 F.5 T-1 F1 T.99", "expected": [[60, "T"], [20, "F"], [15, "T"], [10, "F"], [30, "T"], [5, "F"], [1, "T"], [1, "F"], [99, "T"]]},
+            {"input": "T-60 F20 T.15 F-10 T30 F.5 T-1 F1 T.99 F-2", "expected": [[60, "T"], [20, "F"], [15, "T"], [10, "F"], [30, "T"], [5, "F"], [1, "T"], [1, "F"], [99, "T"], [2, "F"]]}
         ]
 
         for i, test_case in enumerate(test_data):

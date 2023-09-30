@@ -72,10 +72,8 @@ def parse_seat_data(seat_data: str):
     # Fix special case for '_' to '-'
     seat_data = seat_data.replace('_', '-')
     
-    # Split off any notes in parenthesis (assuming split_parenthesis function is defined)
-    seat_data, _ = split_parenthesis(seat_data)
-    
-    results = []  # To store the list of (num_of_seats, seat_status)
+    # Initialize list to store results
+    results = []
     
     # Case 0: If seat data is empty, return an empty list
     if seat_data == '':
@@ -85,29 +83,16 @@ def parse_seat_data(seat_data: str):
     # Case 1: Seat data is TBD
     if re.search(r'(?i)tbd', seat_data):
         logging.info("Seat data is TBD.")
-        results.append((0, 'TBD'))
+        return [[0, 'TBD']]
     
-    # Case 2: Various other patterns
-    patterns = [
-        r'(?P<num>\d+)(?P<status>[tf])',
-        r'(?P<status>[tf])-?(?P<num>\d+)',
-        r'(?P<num>\d+)\s*(?P<status>[tf])',
-        r'(?P<status>[tf])\.?(?P<num>\d+)'
-    ]
+    # Single pattern to cover all cases
+    combined_pattern = r'(?P<num>\d+)(?P<status>[tf])|(?P<status1>[tf])-?(?P<num1>\d+)|(?P<num2>\d+)\s*(?P<status2>[tf])|(?P<status3>[tf])\.?(?P<num3>\d+)'
     
-    for pattern in patterns:
-        while True:
-            match = re.search(pattern, seat_data, re.IGNORECASE)
-            if not match:
-                break
-            
-            num_of_seats = int(match.group('num'))
-            seat_status = match.group('status').upper()
-            results.append((num_of_seats, seat_status))
-            
-            # Remove the matched part from the original string
-            start, end = match.span()
-            seat_data = seat_data[:start] + seat_data[end:]
+    # Use finditer to find all matches while maintaining their order
+    for match in re.finditer(combined_pattern, seat_data, re.IGNORECASE):
+        num_of_seats = int(match.group('num') or match.group('num1') or match.group('num2') or match.group('num3'))
+        seat_status = (match.group('status') or match.group('status1') or match.group('status2') or match.group('status3')).upper()
+        results.append([num_of_seats, seat_status])
     
     if results:
         logging.info(f"Parsed seat data: {results}")
