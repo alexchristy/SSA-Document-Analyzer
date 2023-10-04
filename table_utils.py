@@ -490,18 +490,6 @@ def populate_merged_row_seat_columns(table: Table, merge_groups: List[List[tuple
 
             seats = parse_seat_data(seat_text)
 
-            # Correct any OCR errors
-            if not seats:
-                seat_text = ocr_correction(seat_text)
-                seats = parse_seat_data(seat_text)
-
-                # If there are now seats, update the cell and then skip
-                if seats:
-                    confidence_val = row[seat_column_index][1]
-                    new_seat_cell_tuple = (f'{seats[0][0]}{seats[0][1]}', confidence_val)
-                    row[seat_column_index] = new_seat_cell_tuple
-                    continue
-
             # No seats found, update cell to 0T
             if not seats:
                 confidence_val = row[seat_column_index][1]
