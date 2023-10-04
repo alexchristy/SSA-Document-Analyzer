@@ -47,6 +47,98 @@ def parse_rollcall_time(time_str: str) -> str:
     
     return rollcall_time
 
+import re
+import itertools
+import logging
+from collections import Counter
+
+
+def ocr_combo_correction(input_str, correction_map):
+    # Special case: replace 'TDB' with 'TBD'
+    input_str = input_str.replace('TDB', 'TBD')
+    possibilities = []
+    for i, char in enumerate(input_str):
+        # Special case: replace '8' if it's between 'T' and 'D'
+        if char == '8' and i > 0 and i < len(input_str) - 1:
+            prev_char = input_str[i-1].upper()
+            next_char = input_str[i+1].upper()
+            if prev_char == 'T' and next_char == 'D':
+                possibilities.append(['B'])
+                continue
+        # Special case: keep 'B' if it's between 'T' and 'D'
+        elif char.upper() == 'B' and i > 0 and i < len(input_str) - 1:
+            prev_char = input_str[i-1].upper()
+            next_char = input_str[i+1].upper()
+            if prev_char == 'T' and next_char == 'D':
+                possibilities.append([char])
+                continue
+        # General case
+        possibilities.append([correction_map.get(char, char), char])
+        
+    return ["".join(p) for p in itertools.product(*possibilities)]
+
+def parse_seat_data(seat_data: str):
+    correction_map = {
+        'O': '0',
+        'I': '1',
+        'l': '1',
+        'S': '5',
+        'Z': '2',
+        'B': '8'
+    }
+    
+    seat_data = seat_data.replace('_', '-')
+    format_freq = Counter()
+
+    combined_pattern = r'(?P<num>\d+)(?P<status>[tf])|(?P<status1>[tf])-?(?P<num1>\d+)|(?P<num2>\d+)\s*(?P<status2>[tf])|(?P<status3>[tf])\.?(?P<num3>\d+)'
+
+    all_results = []
+
+    def try_parsing(corrected_str):
+        nonlocal all_results, format_freq
+        results = []
+        index = 0
+        while True:
+            tbd_pos = corrected_str.upper().find("TBD", index)
+            if tbd_pos == -1:
+                break
+            results.append({"data": [0, "TBD"], "format": "TBD", "index": tbd_pos})
+            format_freq["TBD"] += 1
+            index = tbd_pos + 3
+
+        for match in re.finditer(combined_pattern, corrected_str, re.IGNORECASE):
+            num_of_seats = int(match.group('num') or match.group('num1') or match.group('num2') or match.group('num3'))
+            seat_status = (match.group('status') or match.group('status1') or match.group('status2') or match.group('status3')).upper()
+            fmt = match.lastgroup
+            index = match.start()
+            format_freq[fmt] += 1
+            results.append({"data": [num_of_seats, seat_status], "format": fmt, "index": index})
+        
+        results.sort(key=lambda x: x['index'])  # Sort by index to preserve original order
+        all_results.append(results)
+
+    corrected_versions = ocr_combo_correction(seat_data, correction_map)[:50]  # Limit to the first 50 versions for performance
+    for corrected_str in corrected_versions:
+        try_parsing(corrected_str)
+
+    most_frequent_format = format_freq.most_common(1)[0][0] if format_freq else None
+    
+    # Choose the most frequent format for the result
+    if most_frequent_format:
+        final_results = next((r for r in all_results if r[0]['format'] == most_frequent_format), all_results[0])
+    else:
+        final_results = all_results[0]
+
+    # Deduplicate results, but keep all "TBD"
+    final_results = [list(x['data']) for i, x in enumerate(final_results) if x['data'][1] == "TBD" or all(x['data'] != y['data'] for y in final_results[:i])]
+
+    if final_results:
+        logging.info(f"Parsed seat data: {final_results}")
+    else:
+        logging.error(f"Failed to parse seat data: Invalid format '{seat_data}'")
+
+    return final_results
+
 def ocr_correction(input_str):
     correction_map = {
         'O': '0',
@@ -57,49 +149,6 @@ def ocr_correction(input_str):
         'B': '8'
     }
     return ''.join(correction_map.get(char, char) for char in input_str)
-
-def parse_seat_data(seat_data: str):
-    """
-    Parse seat data from a given string and return a list of tuples containing the number of seats and seat status.
-    
-    Args:
-    - seat_data (str): The string containing seat data in specific formats.
-    
-    Returns:
-    - list: A list of tuples containing the number of seats (int) and seat status (str).
-    """
-    
-    # Fix special case for '_' to '-'
-    seat_data = seat_data.replace('_', '-')
-    
-    # Initialize list to store results
-    results = []
-    
-    # Case 0: If seat data is empty, return an empty list
-    if seat_data == '':
-        logging.info("Seat data is empty.")
-        return []
-    
-    # Case 1: Seat data is TBD
-    if re.search(r'(?i)tbd', seat_data):
-        logging.info("Seat data is TBD.")
-        return [[0, 'TBD']]
-    
-    # Single pattern to cover all cases
-    combined_pattern = r'(?P<num>\d+)(?P<status>[tf])|(?P<status1>[tf])-?(?P<num1>\d+)|(?P<num2>\d+)\s*(?P<status2>[tf])|(?P<status3>[tf])\.?(?P<num3>\d+)'
-    
-    # Use finditer to find all matches while maintaining their order
-    for match in re.finditer(combined_pattern, seat_data, re.IGNORECASE):
-        num_of_seats = int(match.group('num') or match.group('num1') or match.group('num2') or match.group('num3'))
-        seat_status = (match.group('status') or match.group('status1') or match.group('status2') or match.group('status3')).upper()
-        results.append([num_of_seats, seat_status])
-    
-    if results:
-        logging.info(f"Parsed seat data: {results}")
-    else:
-        logging.error(f"Failed to parse seat data: Invalid format '{seat_data}'")
-    
-    return results
 
 def split_parenthesis(text):
     """

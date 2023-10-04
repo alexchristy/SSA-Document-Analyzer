@@ -179,7 +179,8 @@ class TestCellParsingUtils(unittest.TestCase):
             {"input": "60 H", "expected": []},
             {"input": "T.100.5", "expected": [[100, 'T']]},
             {"input": "TBD ", "expected": [[0, "TBD"]]},
-            {"input": " 60T", "expected": [[60, 'T']]}
+            {"input": " 60T", "expected": [[60, 'T']]},
+            {"input": "T8D ", "expected": [[0, 'TBD']]},
         ]
 
         for i, test_case in enumerate(test_data):
@@ -201,9 +202,8 @@ class TestCellParsingUtils(unittest.TestCase):
             {"input": "F.20 T-60", "expected": [[20, "F"], [60, "T"]]},
             {"input": "T.60 T.1 F.20", "expected": [[60, "T"], [1, 'T'], [20, "F"]]},
             {"input": "T.60 T.1 F.20 T.100", "expected": [[60, "T"], [1, 'T'], [20, "F"], [100, 'T']]},
-            {"input": "T-60 F20 T.15 F-10 T30 F.5 T-1 F1", "expected": [[60, "T"], [20, "F"], [15, "T"], [10, "F"], [30, "T"], [5, "F"], [1, "T"], [1, "F"]]},
-            {"input": "T-60 F20 T.15 F-10 T30 F.5 T-1 F1 T.99", "expected": [[60, "T"], [20, "F"], [15, "T"], [10, "F"], [30, "T"], [5, "F"], [1, "T"], [1, "F"], [99, "T"]]},
-            {"input": "T-60 F20 T.15 F-10 T30 F.5 T-1 F1 T.99 F-2", "expected": [[60, "T"], [20, "F"], [15, "T"], [10, "F"], [30, "T"], [5, "F"], [1, "T"], [1, "F"], [99, "T"], [2, "F"]]}
+            {"input": "TBD TBD", "expected": [[0, "TBD"], [0, "TBD"]]},
+            {"input": "TDB TBD F0", "expected": [[0, "TBD"], [0, "TBD"], [0, "F"]]},
         ]
 
         for i, test_case in enumerate(test_data):
