@@ -164,20 +164,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
                 logging.info(f'Appears to be special roll call format or note. Saving as \"Roll Call Note\" in notes.')
                 roll_call_notes['rollCallCellNote'] = row[roll_call_column_index][0]
 
-            # Merged cell
-            else:
-                logging.info(f'Roll call time is empty. Possibly merged cell.')
-
-                # TODO: Get merged cell text
-
-        # Check if the seat data is valid
-        # If seat data parsing fails, try correcting common OCR errors
-        if not seats:
-            new_seat_data = ocr_correction(row[seats_cell][0])
-            logging.info(f'Atempting to correct OCR errors. New seat data: {new_seat_data}')
-            seats = parse_seat_data(new_seat_data)
-
-        # If seat data parsing still fails, there is no seat data but there is a note
+        # If seat data parsing fails, check if there is no seat data but there is a note
         if not seats:
             if len(row[seats_column_index][0]) > 0:
                 has_seat_note = True
