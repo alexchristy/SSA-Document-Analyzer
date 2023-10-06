@@ -322,6 +322,17 @@ class TestTextractResponseParsing(unittest.TestCase):
 
         self.assertEqual(table_string_hash, 'a5489385b655d5016e1bc5c0c50913aa0e700cd45525d257e5327ae91594c984')
 
+    def test_macdill_2_72hr(self):
+
+        # Import test data
+        from macdill_2_72hr_sns_messages import macdill_2_72hr_successful_job_sns_message as sns_message
+        from macdill_2_72hr_textract_response import macdill_2_72hr_textract_response as textract_response
+
+        table_string = lambda_test_handler(sns_message,textract_response)
+        table_string_hash = hashlib.sha256(table_string.encode()).hexdigest()
+
+        self.assertEqual(table_string_hash,'58734e54223c7c1f00d07359c3d3c5a6b3425e838f0cf4123db3065f85c2648c')
+
     def test_mcconnell_1_72hr(self):
 
         # Import test data
