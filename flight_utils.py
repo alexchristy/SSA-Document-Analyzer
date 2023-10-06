@@ -29,29 +29,29 @@ def find_patriot_express(input_str):
         logging.info(f"An error occurred in find_patriot_express: {e}")
         return False
 
-def search_dict_case_insensitive(dictionary: Dict[str, Any], search_key: Any) -> str:
+def search_dict_case_insensitive_recursive(dictionary: Dict[str, Any], search_key: str) -> str:
     """
-    Searches for a key in a dictionary in a case-insensitive manner.
+    Searches for a key in a dictionary in a case-insensitive and recursive manner.
 
     Parameters:
-        dictionary (Dict[Any, Any]): The dictionary to search.
-        search_key (Any): The key to search for.
+        dictionary (Dict[str, Any]): The dictionary to search.
+        search_key (str): The key to search for.
 
     Returns:
-        Any: The value corresponding to the found key.
-
-    Raises:
-        KeyError: If the key is not found in the dictionary.
+        str: The value corresponding to the found key, or an empty string if not found.
     """
-    try:
-        # Convert keys to lowercase and match with the lowercase search_key
-        found_value = next(value for key, value in dictionary.items() if key.lower() == search_key.lower())
-        logging.info(f"Key '{search_key}' found in dictionary. Corresponding value: {found_value}")
-        return found_value
-    except StopIteration:
-        # Log and raise error if key not found
-        logging.error(f"Key '{search_key}' not found in dictionary.")
-        return ""
+
+    for key, value in dictionary.items():
+        if key.lower() == search_key.lower():
+            logging.info(f"Key '{search_key}' found in dictionary. Corresponding value: {value}")
+            return value
+        if isinstance(value, dict):
+            found_value = search_dict_case_insensitive_recursive(value, search_key)
+            if found_value != "":
+                return found_value
+
+    logging.error(f"Key '{search_key}' not found in dictionary.")
+    return ""
 
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
@@ -247,32 +247,29 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
         # Check if the table is in the macdill format
         # See macdill_1_72hr_output_tablefied.txt in tests/pdf-table-textract-output folder for example
-        date_key = search_dict_case_insensitive(notes, 'date')
-        if date_key:
+        date_string = search_dict_case_insensitive_recursive(notes, 'date')
+        if date_string:
             logging.info(f"Table is in macdill format.")
 
             # Check if date is a valid date string
-            match = check_date_string(notes[date_key], return_match=True)
-            if match is None:
+            match = check_date_string(date_string, return_match=True)
+            if not match:
                 logging.error(f"Failed to get date from table title. Skipping row...")
                 return flights
 
-            # Remove note since it is now in the date field
-            notes.pop(date_key)
+        # Standard format
+        else:
+            # Get date for flight from table title
+            if table.title is None:
+                logging.error(f"Table title is empty. Skipping row...")
+                return flights
+            
+            # Check there is a valid date in the table title
+            match = check_date_string(table.title, return_match=True)
 
-            date = reformat_date(match, datetime.now())
-
-        # Get date for flight from table title
-        if table.title is None:
-            logging.error(f"Table title is empty. Skipping row...")
-            return flights
-        
-        # Check there is a valid date in the table title
-        match = check_date_string(table.title, return_match=True)
-
-        if match is None:
-            logging.error(f"Failed to get date from table title. Skipping row...")
-            return flights
+            if match is None:
+                logging.error(f"Failed to get date from table title. Skipping row...")
+                return flights
 
         # Added this functionality to allow for testing with a fixed date
         # which allows for proper testing of year inference functionality
