@@ -10,6 +10,7 @@ from table_utils import get_roll_call_column_index, get_destination_column_index
 from date_utils import create_datetime_from_str, reformat_date
 from note_extract_utils import extract_notes
 import re
+from typing import Any, Dict
 
 def find_patriot_express(input_str):
     try:
@@ -27,6 +28,30 @@ def find_patriot_express(input_str):
         # Robust error handling
         logging.info(f"An error occurred in find_patriot_express: {e}")
         return False
+
+def search_dict_case_insensitive(dictionary: Dict[str, Any], search_key: Any) -> str:
+    """
+    Searches for a key in a dictionary in a case-insensitive manner.
+
+    Parameters:
+        dictionary (Dict[Any, Any]): The dictionary to search.
+        search_key (Any): The key to search for.
+
+    Returns:
+        Any: The value corresponding to the found key.
+
+    Raises:
+        KeyError: If the key is not found in the dictionary.
+    """
+    try:
+        # Convert keys to lowercase and match with the lowercase search_key
+        found_value = next(value for key, value in dictionary.items() if key.lower() == search_key.lower())
+        logging.info(f"Key '{search_key}' found in dictionary. Corresponding value: {found_value}")
+        return found_value
+    except StopIteration:
+        # Log and raise error if key not found
+        logging.error(f"Key '{search_key}' not found in dictionary.")
+        return ""
 
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
@@ -168,36 +193,8 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         if not seats:
             if len(row[seats_column_index][0]) > 0:
                 has_seat_note = True
-                num_of_seats = -1
-                seat_status = ''
                 logging.info(f'Appears to be special seat format or note. Saving as \"Seat Note\" in notes.')
                 seat_notes['seatCellNote'] = row[seats_column_index][0]
-
-        # Get date for flight from table title
-        if table.title is None:
-            logging.error(f"Table title is empty.")
-            return flights
-        
-        # Check there is a valid date in the table title
-        match = check_date_string(table.title, return_match=True)
-
-        if match is None:
-            logging.error(f"Failed to get date from table title.")
-            return flights
-
-        # Added this functionality to allow for testing with a fixed date
-        # which allows for proper testing of year inference functionality
-        # of the reformat_date function
-        if use_fixed_date:
-            logging.info(f"Using fixed date: {fixed_date}")
-            if fixed_date is None:
-                logging.error(f"Fixed date is empty.")
-                return flights
-
-            custom_date = create_datetime_from_str(fixed_date)
-            date = reformat_date(match, custom_date)
-        else:
-            date = reformat_date(match, datetime.now())
 
         # Check each of the three cells for extra notes
         # This is any **Notes** or (Notes) when they accompany the data
@@ -247,6 +244,49 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         if find_patriot_express(row_text_string):
             logging.info(f'Found Patriot Express flight.')
             patriot_express = True
+
+        # Check if the table is in the macdill format
+        # See macdill_1_72hr_output_tablefied.txt in tests/pdf-table-textract-output folder for example
+        date_key = search_dict_case_insensitive(notes, 'date')
+        if date_key:
+            logging.info(f"Table is in macdill format.")
+
+            # Check if date is a valid date string
+            match = check_date_string(notes[date_key], return_match=True)
+            if match is None:
+                logging.error(f"Failed to get date from table title. Skipping row...")
+                return flights
+
+            # Remove note since it is now in the date field
+            notes.pop(date_key)
+
+            date = reformat_date(match, datetime.now())
+
+        # Get date for flight from table title
+        if table.title is None:
+            logging.error(f"Table title is empty. Skipping row...")
+            return flights
+        
+        # Check there is a valid date in the table title
+        match = check_date_string(table.title, return_match=True)
+
+        if match is None:
+            logging.error(f"Failed to get date from table title. Skipping row...")
+            return flights
+
+        # Added this functionality to allow for testing with a fixed date
+        # which allows for proper testing of year inference functionality
+        # of the reformat_date function
+        if use_fixed_date:
+            logging.info(f"Using fixed date: {fixed_date}")
+            if fixed_date is None:
+                logging.error(f"Fixed date is empty.")
+                return flights
+
+            custom_date = create_datetime_from_str(fixed_date)
+            date = reformat_date(match, custom_date)
+        else:
+            date = reformat_date(match, datetime.now())
 
         # Create flight object
         flight = Flight(origin_terminal=origin_terminal, destinations=destinations, rollcall_time=roll_call_time, 
