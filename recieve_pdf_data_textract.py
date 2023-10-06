@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from incirlik_1_72hr_sns_messages import incirlik_1_72hr_successful_job_sns_message as current_sns_message
-from incirlik_1_72hr_textract_response import incirlik_1_72hr_textract_response as current_textract_response
+from macdill_2_72hr_sns_messages import macdill_2_72hr_successful_job_sns_message as current_sns_message
+from macdill_2_72hr_textract_response import macdill_2_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -265,7 +265,7 @@ def lambda_handler(event, context):
     # tables = gen_tables_from_textract_response(response)
 
     # # List to hold tables needing reprocessing
-    # tables_to_reprocess = []Seat Status: T
+    # tables_to_reprocess = []
 
     # # Iterate through tables to find low confidence rows
     # for table in tables:
@@ -281,38 +281,37 @@ def lambda_handler(event, context):
     # # Reprocess tables with low confidence rows
     # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
 
-    table_pkl_path = 'tests/table-objects/hickam_1_72hr_table-1.pkl'
+    # for table in tables:
+
+    #     print(table.to_markdown())
+    #     print("\n\n\n")
+    #     print(hashlib.sha256(table.to_markdown().encode()).hexdigest())
+        
+    table_pkl_path = 'tests/table-objects/macdill_2_72hr_table-1.pkl'
 
     custom_date = '20230910'
 
     table = Table.load_state(table_pkl_path)
 
-    print(table.to_markdown())
-
     table = merge_table_rows(table)
 
-    print(table.to_markdown())
+    # Create flight objects from table
+    flights = convert_72hr_table_to_flights(table, origin_terminal=origin_terminal, use_fixed_date=True, fixed_date=custom_date)
 
-    # Save table state
-    table.save_state('./hickam_1_72hr_table-1-merged.pkl')
+    if flights is None:
+        logging.error("Failed to convert table to flights.")
+        return
 
-    # # Create flight objects from table
-    # flights = convert_72hr_table_to_flights(table, origin_terminal=origin_terminal, use_fixed_date=True, fixed_date=custom_date)
+    flight_obj_name = os.path.basename(table_pkl_path).split('.')[0]
 
-    # if flights is None:
-    #     logging.error("Failed to convert table to flights.")
-    #     return
+    i = 1
+    for flight in flights:
+        flight.pretty_print()
 
-    # flight_obj_name = os.path.basename(table_pkl_path).split('.')[0]
-
-    # i = 1
-    # for flight in flights:
-    #     flight.pretty_print()
-
-    #     with open(f'{flight_obj_name}_flight-{i}.pkl', 'wb') as file:
-    #         pickle.dump(flight, file)
+        with open(f'{flight_obj_name}_flight-{i}.pkl', 'wb') as file:
+            pickle.dump(flight, file)
         
-    #     i += 1
+        i += 1
         
     return {
         'statusCode': 200,
