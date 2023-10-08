@@ -58,21 +58,14 @@ class Flight:
 
     def __eq__(self, other):
         if not isinstance(other, Flight):
-            return False
-        return (
-            self.origin_terminal == other.origin_terminal and
-            self.destinations == other.destinations and
-            self.rollcall_time == other.rollcall_time and
-            self.seats == other.seats and
-            self.notes == other.notes and
-            self.date == other.date and
-            self.flight_id == other.flight_id and
-            self.rollcall_note == other.rollcall_note and
-            self.seat_note == other.seat_note and
-            self.destination_note == other.destination_note and
-            self.patriot_express == other.patriot_express and
-            self.as_string == other.as_string
-        )
+            return False, "Other object is not an instance of Flight"
+        differences = []
+        for attr in ['origin_terminal', 'destinations', 'rollcall_time', 'seats', 'notes', 'date', 'flight_id', 
+                     'rollcall_note', 'seat_note', 'destination_note', 'patriot_express', 'as_string']:
+            self_value, other_value = getattr(self, attr), getattr(other, attr)
+            if self_value != other_value:
+                differences.append(f"{attr}: {self_value} != {other_value}")
+        return (len(differences) == 0, ", ".join(differences))
     
     def to_string(self):
         return self.as_string
