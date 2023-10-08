@@ -705,6 +705,7 @@ class TestTableToFlights(unittest.TestCase):
 
     def test_kadena_1_72hr(self):
 
+
         origin_terminal = 'Kadena AB Passenger Terminal'
 
         # Load tables
@@ -758,3 +759,34 @@ class TestTableToFlights(unittest.TestCase):
         # Table 3
         for i, flight in enumerate(table3_converted_flights):
             self.assertEqual(flight, table3_flights[i])
+
+    def test_macdill_2_72hr(self):
+
+        origin_terminal = 'MacDill AFB Air Transportation Function'
+
+        # Load tables
+        table1 = Table.load_state("tests/table-objects/macdill_2_72hr_table-1.pkl")
+
+        # Load known good flights
+        table1_flights = []
+
+        # Table 1
+        table1_flights.append(Flight.load_state("tests/flight-objects/macdill_2_72hr_table-1_flight-1.pkl"))
+        table1_flights.append(Flight.load_state("tests/flight-objects/macdill_2_72hr_table-1_flight-2.pkl"))
+
+        # Use ThreadPoolExecutor to run conversions in parallel
+        with ThreadPoolExecutor() as executor:
+            fixed_date = "20230910"
+            futures = { 
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, False, fixed_date)
+            }
+
+            table1_converted_flights = futures['table1'].result()
+
+        # Check that the flights are the same
+        self.assertEqual(len(table1_converted_flights), len(table1_flights))
+
+        # Check that the converted flights are the same as the known good flights:
+        # Table 1
+        for i, flight in enumerate(table1_converted_flights):
+            self.assertEqual(flight, table1_flights[i])
