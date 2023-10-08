@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from bahrain_1_72hr_sns_messages import bahrain_1_72hr_successful_job_sns_message as current_sns_message
-from bahrain_1_72hr_textract_response import bahrain_1_72hr_textract_response as current_textract_response
+from charleston_1_72hr_sns_messages import charleston_1_72hr_successful_job_sns_message as current_sns_message
+from charleston_1_72hr_textract_response import charleston_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -287,7 +287,7 @@ def lambda_handler(event, context):
     #     print("\n\n\n")
     #     print(hashlib.sha256(table.to_markdown().encode()).hexdigest())
         
-    table_pkl_path = 'tests/table-objects/bahrain_1_72hr_table-3.pkl'
+    table_pkl_path = 'tests/table-objects/charleston_1_72hr_table-3.pkl'
 
     custom_date = '20230910'
 
