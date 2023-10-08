@@ -1,8 +1,7 @@
 from datetime import datetime
 import logging
-from typing import List
+from typing import List, Tuple
 from table import Table
-import json
 from flight import Flight
 from date_utils import check_date_string
 from cell_parsing_utils import parse_rollcall_time, parse_seat_data, ocr_correction, parse_destination
@@ -29,7 +28,8 @@ def find_patriot_express(input_str):
         logging.info(f"An error occurred in find_patriot_express: {e}")
         return False
 
-def search_dict_case_insensitive_recursive(dictionary: Dict[str, Any], search_key: str) -> str:
+
+def search_key_recursive_dict(dictionary: Dict[str, Any], search_key: str) -> Tuple[str, str]:
     """
     Searches for a key in a dictionary in a case-insensitive and recursive manner.
 
@@ -38,20 +38,55 @@ def search_dict_case_insensitive_recursive(dictionary: Dict[str, Any], search_ke
         search_key (str): The key to search for.
 
     Returns:
-        str: The value corresponding to the found key, or an empty string if not found.
+        Tuple[str, str]: A tuple containing the found key and its corresponding value, 
+                         or two empty strings if not found.
     """
 
     for key, value in dictionary.items():
         if key.lower() == search_key.lower():
             logging.info(f"Key '{search_key}' found in dictionary. Corresponding value: {value}")
-            return value
+            return key, value
         if isinstance(value, dict):
-            found_value = search_dict_case_insensitive_recursive(value, search_key)
-            if found_value != "":
-                return found_value
+            found_key, found_value = search_key_recursive_dict(value, search_key)
+            if found_key != "":
+                return found_key, found_value
 
     logging.error(f"Key '{search_key}' not found in dictionary.")
-    return ""
+    return "", ""
+
+def recursively_remove_keys(data: Dict, keys_to_remove: List[str]) -> Dict:
+    if not isinstance(data, dict):
+        raise ValueError("Input data must be a dictionary")
+
+    if not isinstance(keys_to_remove, list):
+        raise ValueError("keys_to_remove must be a list")
+
+    to_remove = [k for k in data if k in keys_to_remove or (isinstance(data[k], dict) and not data[k])]
+    for k in to_remove:
+        del data[k]
+
+    for k, v in data.items():
+        if isinstance(v, dict):
+            recursively_remove_keys(v, keys_to_remove)
+
+    return data
+
+def prune_empty_values(dictionary):
+    """
+    Removes keys with empty values from a dictionary recursively.
+
+    Parameters:
+        dictionary (dict): The dictionary to prune.
+
+    Returns:
+        dict: The pruned dictionary.
+    """
+    if not isinstance(dictionary, dict):
+        raise ValueError("Input data must be a dictionary")
+
+    to_prune = {k: prune_empty_values(v) if isinstance(v, dict) else v for k, v in dictionary.items()}
+    return {k: v for k, v in to_prune.items() if v or v == 0}
+
 
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
@@ -95,22 +130,22 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
     # Check if table is empty
     if table is None:
-        logging.error(f"Table is empty.")
+        logging.error(f"Table is empty. Exiting..")
         return flights
     
     # Check that there are rows in table
     if table.rows is None:
-        logging.error(f"There are no rows in the table.")
+        logging.error(f"There are no rows in the table. Exiting...")
         return flights
 
     # Check there are columns in table
     if table.get_num_of_columns() == 0:
-        logging.error(f"There are no columns in the table.")
+        logging.error(f"There are no columns in the table. Exiting...")
         return flights
     
     # Check that there are at least 3 columns in table
     if table.get_num_of_columns() < 3:
-        logging.error(f"There are not enough columns in the table. Only {table.get_num_of_columns()} columns found.")
+        logging.error(f"There are not enough columns in the table. Only {table.get_num_of_columns()} columns found. Expected at least 3. Exiting...")
         return flights
     
     # Get column indices
@@ -119,15 +154,15 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
     seats_column_index = get_seats_column_index(table)
 
     if roll_call_column_index is None:
-        logging.error(f"Failed to get roll call column index. Skipping table.")
+        logging.error(f"Failed to get roll call column index. Exiting...")
         return flights
 
     if destination_column_index is None:
-        logging.error(f"Failed to get destination column index. Skipping table.")
+        logging.error(f"Failed to get destination column index. Exiting...")
         return flights
 
     if seats_column_index is None:
-        logging.error(f"Failed to get seats column index. Skipping table.")
+        logging.error(f"Failed to get seats column index. Exiting...")
         return flights
 
     # Create list of note column indices if there are more than 3 columns
@@ -144,7 +179,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
     # Check origin terminal
     if origin_terminal is None:
-        logging.error(f"Origin terminal is empty.")
+        logging.error(f"Origin terminal is empty. Exinting...")
         return flights
 
     # Iterate through each row
@@ -238,6 +273,9 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
             extra_column_notes = convert_note_column_to_notes(table, row_index, note_column_indices)
             notes['extraColumnNotes'] = extra_column_notes
 
+        # Remove empty keys from notes
+        notes = recursively_remove_keys(notes, [''])
+
         # Check if the flight is a Patriot Express flight
         patriot_express = False
         row_text_string = f'{dest_cell[0]} {roll_call_cell[0]} {seats_cell[0]}'
@@ -247,29 +285,36 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
         # Check if the table is in the macdill format
         # See macdill_1_72hr_output_tablefied.txt in tests/pdf-table-textract-output folder for example
-        date_string = search_dict_case_insensitive_recursive(notes, 'date')
-        if date_string:
+        date_key, date_string = search_key_recursive_dict(notes, 'date')
+        if date_key and date_string:
             logging.info(f"Table is in macdill format.")
 
             # Check if date is a valid date string
             match = check_date_string(date_string, return_match=True)
+
+            # Remove key from notes
+            notes = recursively_remove_keys(notes, [date_key])
+
             if not match:
                 logging.error(f"Failed to get date from table title. Skipping row...")
-                return flights
+                continue
 
         # Standard format
         else:
             # Get date for flight from table title
             if table.title is None:
                 logging.error(f"Table title is empty. Skipping row...")
-                return flights
+                continue
             
             # Check there is a valid date in the table title
             match = check_date_string(table.title, return_match=True)
 
             if match is None:
                 logging.error(f"Failed to get date from table title. Skipping row...")
-                return flights
+                continue
+
+        # Remove keys from notes that have empty values
+        notes = prune_empty_values(notes)
 
         # Added this functionality to allow for testing with a fixed date
         # which allows for proper testing of year inference functionality
@@ -277,7 +322,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         if use_fixed_date:
             logging.info(f"Using fixed date: {fixed_date}")
             if fixed_date is None:
-                logging.error(f"Fixed date is empty.")
+                logging.error(f"Fixed date is empty. Exiting...")
                 return flights
 
             custom_date = create_datetime_from_str(fixed_date)
