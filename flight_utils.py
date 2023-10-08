@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import List, Tuple
+from typing import List, OrderedDict, Tuple
 from table import Table
 from flight import Flight
 from date_utils import check_date_string
@@ -87,6 +87,32 @@ def prune_empty_values(dictionary):
     to_prune = {k: prune_empty_values(v) if isinstance(v, dict) else v for k, v in dictionary.items()}
     return {k: v for k, v in to_prune.items() if v or v == 0}
 
+def sort_nested_dict(d: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Sorts a nested dictionary and its contents alphabetically.
+    
+    Parameters:
+        d (Dict[str, Any]): The dictionary to sort.
+        
+    Returns:
+        Dict[str, Any]: The sorted dictionary.
+    """
+    result = {}
+    for key, value in sorted(d.items(), key=lambda x: str(x[0])):
+        if isinstance(value, dict):
+            logging.info(f'Sorting nested dictionary for key: {key}')
+            result[key] = sort_nested_dict(value)
+        elif isinstance(value, list):
+            # Sort lists if the values are strings or other sortable types
+            logging.info(f'Sorting list for key: {key}')
+            try:
+                result[key] = sorted(value)
+            except TypeError:
+                # If values within the list are unsortable, leave the list as is
+                result[key] = value
+        else:
+            result[key] = value
+    return result
 
 def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_date=False, fixed_date=None) -> List[Flight]:
     """
@@ -315,6 +341,7 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
 
         # Remove keys from notes that have empty values
         notes = prune_empty_values(notes)
+        notes = sort_nested_dict(notes)
 
         # Added this functionality to allow for testing with a fixed date
         # which allows for proper testing of year inference functionality
