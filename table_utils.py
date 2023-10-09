@@ -433,12 +433,14 @@ def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
                 continue
 
             # Do not merge rows that have different number of destinations and seats if there is more than one seat data
+            # Number of seat data points can be 1 as that one point would be applicable to all destinations for the flight or
+            # number of seat data points can be 0 which we will interpret as TDB (to be determined) when we store the data
             seat_col_index = get_seats_column_index(table)
             dest_col_index = get_destination_column_index(table)
             dests = parse_destination(merged_row[dest_col_index][0])
             seats = parse_seat_data(merged_row[seat_col_index][0])
 
-            if not ((len(dests) == len(seats)) or len(seats) == 1) :
+            if not ((len(dests) == len(seats)) or len(seats) == 1 or len(seats) == 0) :
                 logging.info(f'Skipping merging rows {first_row_index} to {group[-1][0]} because they have different number of destinations and seats.')
                 continue
 
