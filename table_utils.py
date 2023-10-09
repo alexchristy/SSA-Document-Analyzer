@@ -4,8 +4,7 @@ import re
 from typing import List
 from date_utils import check_date_string
 from gpt3_turbo_analysis import GPT3TurboAnalysis
-from cell_parsing_utils import parse_seat_data
-from cell_parsing_utils import ocr_correction
+from cell_parsing_utils import parse_seat_data, has_multiple_rollcall_times, parse_destination
 
 def convert_textract_response_to_tables(json_response):
     """
@@ -426,6 +425,22 @@ def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
                     # Round to 8 decimal places
                     merged_conf = round(merged_conf, 8)
                     merged_row[col] = (merged_text, merged_conf)
+
+            # Do not merge rows that have multiple roll call times
+            roll_call_col_index = get_roll_call_column_index(table)
+            if has_multiple_rollcall_times(merged_row[roll_call_col_index][0]):
+                logging.info(f'Skipping merging rows {first_row_index} to {group[-1][0]} because they have multiple roll call times.')
+                continue
+
+            # Do not merge rows that have different number of destinations and seats if there is more than one seat data
+            seat_col_index = get_seats_column_index(table)
+            dest_col_index = get_destination_column_index(table)
+            dests = parse_destination(merged_row[dest_col_index][0])
+            seats = parse_seat_data(merged_row[seat_col_index][0])
+
+            if not ((len(dests) == len(seats)) or len(seats) == 1) :
+                logging.info(f'Skipping merging rows {first_row_index} to {group[-1][0]} because they have different number of destinations and seats.')
+                continue
 
             # Insert the merged row back to its original position
             table.rows[first_row_index] = merged_row
