@@ -1,10 +1,10 @@
 import re
 import logging
-from typing import Tuple
 import json
-from table import Table
+import itertools
+from collections import Counter
 
-def parse_rollcall_time(time_str: str) -> str:
+def parse_rollcall_time(time_str: str) -> str|None:
     if not time_str:
         logging.info("Rollcall time is empty or None.")
         return None
@@ -47,11 +47,18 @@ def parse_rollcall_time(time_str: str) -> str:
     
     return rollcall_time
 
-import re
-import itertools
-import logging
-from collections import Counter
+def has_multiple_rollcall_times(time_str: str) -> bool:
+    count = 0
+    while time_str.strip():  # Skip empty or white-space only strings
+        parsed_time = parse_rollcall_time(time_str)
+        if parsed_time:
+            count += 1
+            # Remove the parsed time and strip whitespace
+            time_str = time_str.replace(parsed_time, "", 1).strip()
+        else:
+            break
 
+    return count > 1
 
 def ocr_combo_correction(input_str, correction_map):
     # Special case: replace 'TDB' with 'TBD'
