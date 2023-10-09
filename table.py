@@ -135,6 +135,7 @@ class Table:
 
     def __eq__(self, other):
         if not isinstance(other, Table):
+            logging.info("The other object is not an instance of Table.")
             return False
 
         try:
@@ -144,19 +145,25 @@ class Table:
 
             # Check if both objects have the same set of attributes
             if set(attrs1.keys()) != set(attrs2.keys()):
+                logging.info(f"Different sets of attributes. Self: {set(attrs1.keys())}, Other: {set(attrs2.keys())}")
                 return False
+
+            # Initialize a flag to keep track of equality
+            are_equal = True
 
             # Check if the values of all attributes are equal
             for attr, value1 in attrs1.items():
                 value2 = attrs2.get(attr)
                 if value1 != value2:
-                    return False
+                    logging.info(f"Different values for attribute '{attr}'. Self: {value1}, Other: {value2}")
+                    are_equal = False  # Set flag to false if any attribute is different
 
-            return True
+            return are_equal
 
         except Exception as e:
             logging.error(f"An error occurred while comparing tables: {e}")
             return False
+
 
     @classmethod
     def load_state(cls, filename="table_state.pkl") -> "Table":
