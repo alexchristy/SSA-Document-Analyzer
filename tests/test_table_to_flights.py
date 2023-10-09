@@ -1,7 +1,6 @@
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 import sys
-import time
 
 # For Table class
 sys.path.append("..")
