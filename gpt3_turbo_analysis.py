@@ -62,7 +62,8 @@ class GPT3TurboAnalysis:
 
                 return response['choices'][0]['message']['content']
 
-            except openai.Error as e:  # Adjust this to match the actual exception class
+            except openai.OpenAIError as e:
+
                 if 'The server is overloaded or not ready yet' in str(e):  # Adjust this to match the actual error message
                     logging.warning(f"Server is overloaded. Attempt {attempt}/{num_attempts}. Retrying in {delay} seconds.")
                     time.sleep(delay)
