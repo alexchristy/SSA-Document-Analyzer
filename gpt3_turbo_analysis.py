@@ -1,6 +1,7 @@
 import os
 import openai
 import logging
+import time
 
 class GPT3TurboAnalysis:
     def __init__(self, api_key=None):
@@ -32,29 +33,48 @@ class GPT3TurboAnalysis:
             logging.warning("Empty destination data string provided.")
             return None
 
-        try:
-            # Formatting the request string for GPT-3
-            request_content_str =  f"This string comes from a table. The cell it comes from lists the destinations for a flight. List the destinations you find as a python list and correct any typos in the destinations so they are real places. Return None if the string contains MORE than JUST destinations looking at the entire context of the string to see if it's a note or additional information. We are working with military bases so the destinations might include references to bases and naval stations. If a destination string mentions an AB or AFB or NS or NAS and INTL or another version of the word international those are two different destinations. Destinations can be surrounded by the characters such as \"*\" \"-\" and \"_\" and are commonly used alone or together to seperate destinations. The same destination might show up more than once.\nExample 1: \"*S/A Passengers must have a Spanish residency ID or have a Spanish Passport to make Rota, Spain their destination.\" -> None\nExample 2: \"DIEGO GARCIA (DELAYED MISSION)\" -> [\"DIEGO GARCIA\"]\nExample 3: \"BAHRAIN *** ( Patriot Express )\" -> [\"BAHRAIN\"]\nExample 4: \"PROTA,SP/SIGONELLA, IT/BAHRAIN/\" -> [\"ROTA, SP\", \"SIGONELLA, IT\", \"BAHRAIN\"]\nExample 5: \"Rota,SP is not available to all passengers\" -> None\nExample 6: \"JOINT BASE ANDREWS, MD\" -> [\"JOINT BASE ANDREWS, MD\"]\nExample 7: \"PRINCE SULTAN AB- TAIF INTL\" -> [\"PRINCE SULTAN AB\", \"TAIF INTL\"]\nExample 8: \"ALI AL SALEM AB - **RUMIL** ALI AL SALEM AB\" -> [\"ALI AL SALEM AB\", \"RUMIL\", \"ALI AL SALEM AB\"]\nString: \"{destination_data}\""
+        # Number of attempts to make
+        num_attempts = 5
 
-            # Making the API request
-            response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": request_content_str
-                    }
-                ],
-                temperature=0,
-                max_tokens=256,
-                top_p=1,
-                frequency_penalty=0,
-                presence_penalty=0
-            )
-            
-            # Extract and return the content from the GPT-3 response
-            return response['choices'][0]['message']['content']
-        
-        except Exception as e:
-            logging.error(f"An error occurred: {e}")
-            return None
+        # Initial delay in seconds
+        delay = 1
+
+        for attempt in range(1, num_attempts + 1):
+            try:
+                # Formatting the request string for GPT-3
+                request_content_str =  f"This string comes from a table. The cell it comes from lists the destinations for a flight. List the destinations you find as a python list and correct any typos in the destinations so they are real places. Return None if the string contains MORE than JUST destinations looking at the entire context of the string to see if it's a note or additional information. We are working with military bases so the destinations might include references to bases and naval stations. If a destination string mentions an AB or AFB or NS or NAS and INTL or another version of the word international those are two different destinations. Destinations can be surrounded by the characters such as \"*\" \"-\" and \"_\" and are commonly used alone or together to seperate destinations. The same destination might show up more than once.\nExample 1: \"*S/A Passengers must have a Spanish residency ID or have a Spanish Passport to make Rota, Spain their destination.\" -> None\nExample 2: \"DIEGO GARCIA (DELAYED MISSION)\" -> [\"DIEGO GARCIA\"]\nExample 3: \"BAHRAIN *** ( Patriot Express )\" -> [\"BAHRAIN\"]\nExample 4: \"PROTA,SP/SIGONELLA, IT/BAHRAIN/\" -> [\"ROTA, SP\", \"SIGONELLA, IT\", \"BAHRAIN\"]\nExample 5: \"Rota,SP is not available to all passengers\" -> None\nExample 6: \"JOINT BASE ANDREWS, MD\" -> [\"JOINT BASE ANDREWS, MD\"]\nExample 7: \"PRINCE SULTAN AB- TAIF INTL\" -> [\"PRINCE SULTAN AB\", \"TAIF INTL\"]\nExample 8: \"ALI AL SALEM AB - **RUMIL** ALI AL SALEM AB\" -> [\"ALI AL SALEM AB\", \"RUMIL\", \"ALI AL SALEM AB\"]\nString: \"{destination_data}\""
+
+                # Making the API request
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": request_content_str
+                        }
+                    ],
+                    temperature=0,
+                    max_tokens=256,
+                    top_p=1,
+                    frequency_penalty=0,
+                    presence_penalty=0
+                )
+
+                return response['choices'][0]['message']['content']
+
+            except openai.Error as e:  # Adjust this to match the actual exception class
+                if 'The server is overloaded or not ready yet' in str(e):  # Adjust this to match the actual error message
+                    logging.warning(f"Server is overloaded. Attempt {attempt}/{num_attempts}. Retrying in {delay} seconds.")
+                    time.sleep(delay)
+                    delay *= 2  # Double the delay for the next attempt
+                    if delay > 10:  # Cap the delay to 5 seconds
+                        delay = 10
+                else:
+                    logging.error(f"GPT3 Destination Analysis error: {e}")
+                    return None
+            except Exception as e:
+                logging.error(f"An unexpected error occurred: {e}")
+                return None
+
+        logging.error("Max retry attempts reached. Server is still overloaded.")
+        return None
