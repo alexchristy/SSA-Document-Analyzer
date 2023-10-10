@@ -777,7 +777,7 @@ class TestTableToFlights(unittest.TestCase):
         with ThreadPoolExecutor() as executor:
             fixed_date = "20230910"
             futures = { 
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, False, fixed_date)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
