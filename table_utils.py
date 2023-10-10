@@ -445,6 +445,10 @@ def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
             dests = parse_destination(merged_row[dest_col_index][0])
             seats = parse_seat_data(merged_row[seat_col_index][0])
 
+            # Do not merge row with no destinations
+            if dests is None:
+                continue
+
             if not ((len(dests) == len(seats)) or len(seats) == 1 or len(seats) == 0) :
                 logging.info(f'Skipping merging rows {first_row_index} to {group[-1][0]} because they have different number of destinations and seats.')
                 continue
