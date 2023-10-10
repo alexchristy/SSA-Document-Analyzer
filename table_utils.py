@@ -341,6 +341,11 @@ def merge_table_rows(table: Table) -> Table:
         # Get merge groups
         merge_groups = _get_merge_row_groups(table)
 
+        # If there are no merge groups, return the original table
+        if not merge_groups:
+            logging.info("No merge groups found.")
+            return table
+
         # Populate merged row seat columns
         merge_groups = populate_merged_row_seat_columns(table, merge_groups)
 
@@ -509,6 +514,7 @@ def populate_merged_row_seat_columns(table: Table, merge_groups: List[List[tuple
 
             # No seats found, update cell to 0T
             if not seats:
+                logging.info(f'No seats found in row {row} in table using Kadena organizaton. Updating cell to 0T.')
                 confidence_val = row[seat_column_index][1]
                 new_seat_cell_tuple = ('0T', confidence_val)
                 row[seat_column_index] = new_seat_cell_tuple
