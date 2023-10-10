@@ -4,8 +4,8 @@ from typing import List, OrderedDict, Tuple
 from table import Table
 from flight import Flight
 from date_utils import check_date_string
-from cell_parsing_utils import parse_rollcall_time, parse_seat_data, ocr_correction, parse_destination
-from table_utils import get_roll_call_column_index, get_destination_column_index, get_seats_column_index, convert_note_column_to_notes
+from cell_parsing_utils import parse_rollcall_time, parse_seat_data, parse_destination
+from table_utils import get_roll_call_column_index, get_destination_column_index, get_seats_column_index, convert_note_column_to_notes, merge_table_rows
 from date_utils import create_datetime_from_str, reformat_date
 from note_extract_utils import extract_notes
 import re
@@ -207,6 +207,9 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
     if origin_terminal is None:
         logging.error(f"Origin terminal is empty. Exinting...")
         return flights
+
+    # Merge rows in table as needed
+    table = merge_table_rows(table)
 
     # Iterate through each row
     for row_index, row in enumerate(table.rows):
