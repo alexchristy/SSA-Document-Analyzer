@@ -3,7 +3,7 @@ from concurrent.futures import ThreadPoolExecutor
 import sys
 
 # For Table class
-sys.path.append("..")
+sys.path.append("../")
 from table import Table
 from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
@@ -549,9 +549,9 @@ class TestTableToFlights(unittest.TestCase):
         with ThreadPoolExecutor() as executor:
             fixed_date = "20230910"
             futures = {
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, False, fixed_date),
-                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, False, fixed_date),
-                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, False, fixed_date)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
@@ -609,9 +609,9 @@ class TestTableToFlights(unittest.TestCase):
         with ThreadPoolExecutor() as executor:
             fixed_date = "20230910"
             futures = { 
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, False, fixed_date),
-                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, False, fixed_date),
-                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, False, fixed_date)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
@@ -732,9 +732,9 @@ class TestTableToFlights(unittest.TestCase):
         with ThreadPoolExecutor() as executor:
             fixed_date = "20230910"
             futures = { 
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, False, fixed_date),
-                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, False, fixed_date),
-                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, False, fixed_date)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
