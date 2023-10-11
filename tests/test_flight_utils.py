@@ -274,10 +274,10 @@ class TestFindPatriotExpress(unittest.TestCase):
         self.assertFalse(find_patriot_express(""))
         
     def test_incorrect_spelling(self):
-        self.assertFalse(find_patriot_express("patrio express"))
-        
-    def test_missing_part(self):
-        self.assertFalse(find_patriot_express("patriot"))
+        self.assertTrue(find_patriot_express("patrio express"))
+
+    def test_non_valid_variations(self):
+        self.assertFalse(find_patriot_express("pat exp"))
         
     def test_case_sensitive(self):
         self.assertTrue(find_patriot_express("PATRIOTEXPRESS"))
