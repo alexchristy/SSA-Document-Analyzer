@@ -298,8 +298,6 @@ def lambda_handler(event, context):
 
     table = Table.load_state(table_pkl_path)
 
-    # table = merge_table_rows(table)
-
     # Create flight objects from table
     flights = convert_72hr_table_to_flights(table, origin_terminal=origin_terminal, use_fixed_date=True, fixed_date=custom_date)
 
