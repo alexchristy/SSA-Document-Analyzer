@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from pope_1_72hr_sns_messages import pope_1_72hr_successful_job_sns_message as current_sns_message
-from pope_1_72hr_textract_response import pope_1_72hr_textract_response as current_textract_response
+from ramstein_1_72hr_sns_messages import ramstein_1_72hr_successful_job_sns_message as current_sns_message
+from ramstein_1_72hr_textract_response import ramstein_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -292,7 +292,7 @@ def lambda_handler(event, context):
     #     Table.save_state(table, f'table-{idx}.pkl')
     # print(hashlib.sha256(table_str.encode()).hexdigest())
         
-    table_pkl_path = 'tests/table-objects/pope_1_72hr_table-3.pkl'
+    table_pkl_path = 'tests/table-objects/ramstein_1_72hr_table-4.pkl'
 
     custom_date = '20230910'
 
