@@ -260,6 +260,12 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
                 logging.info(f'Appears to be special seat format or note. Saving as \"Seat Note\" in notes.')
                 seat_notes['seatCellNote'] = row[seats_column_index][0]
 
+        # Check if there was no seat data and no note
+        # If flight is valid but has no seat data, set seats to [0, 'TBD']
+        if not seats and not has_seat_note:
+            logging.info(f"Row {row_index} has no seat data. Setting seats to [0, 'TBD'].")
+            seats.append([0, 'TBD'])
+
         # Check each of the three cells for extra notes
         # This is any **Notes** or (Notes) when they accompany the data
         extra_roll_call_notes = extract_notes(roll_call_cell[0])
