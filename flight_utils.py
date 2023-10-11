@@ -10,6 +10,7 @@ from date_utils import create_datetime_from_str, reformat_date
 from note_extract_utils import extract_notes
 import re
 from typing import Any, Dict
+from fuzzywuzzy import fuzz
 
 def find_patriot_express(input_str):
     try:
@@ -22,7 +23,13 @@ def find_patriot_express(input_str):
         # Search for the pattern in the sanitized string
         match = pattern.search(sanitized_str)
         
-        return bool(match)
+        # Use fuzzy string matching if no exact match is found
+        if not match:
+            threshold = 80  # Similarity threshold (0-100)
+            similarity = fuzz.partial_ratio("patriotexpress", sanitized_str)
+            return similarity >= threshold
+        
+        return True
     except Exception as e:
         # Robust error handling
         logging.info(f"An error occurred in find_patriot_express: {e}")
