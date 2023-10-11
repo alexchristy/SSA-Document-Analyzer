@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from mcchord_1_72hr_sns_messages import mcchord_1_72hr_successful_job_sns_message as current_sns_message
-from mcchord_1_72hr_textract_response import mcchord_1_72hr_textract_response as current_textract_response
+from mcconnell_2_72hr_sns_messages import mcconnell_2_72hr_successful_job_sns_message as current_sns_message
+from mcconnell_2_72hr_textract_response import mcconnell_2_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -260,6 +260,8 @@ def lambda_handler(event, context):
     if status != 'SUCCEEDED':
         raise("Job did not succeed.")
 
+    # import hashlib
+
     # response = context # textract_client.get_document_analysis(JobId=job_id)
 
     # tables = gen_tables_from_textract_response(response)
@@ -281,13 +283,16 @@ def lambda_handler(event, context):
     # # Reprocess tables with low confidence rows
     # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
 
-    # for table in tables:
+    # table_str = ""
+    # for idx, table in enumerate(tables):
 
     #     print(table.to_markdown())
+    #     table_str += table.to_markdown()
     #     print("\n\n\n")
-    #     print(hashlib.sha256(table.to_markdown().encode()).hexdigest())
+    #     Table.save_state(table, f'table-{idx}.pkl')
+    # print(hashlib.sha256(table_str.encode()).hexdigest())
         
-    table_pkl_path = 'tests/table-objects/mcchord_1_72hr_table-4.pkl'
+    table_pkl_path = 'tests/table-objects/mcconnell_2_72hr_table-2cl.pkl'
 
     custom_date = '20230910'
 
