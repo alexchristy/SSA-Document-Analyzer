@@ -48,13 +48,21 @@ def parse_rollcall_time(time_str: str) -> str|None:
     return rollcall_time
 
 def has_multiple_rollcall_times(time_str: str) -> bool:
+    logging.info(f"Checking if '{time_str}' has multiple rollcall times")
     count = 0
     while time_str.strip():  # Skip empty or white-space only strings
         parsed_time = parse_rollcall_time(time_str)
         if parsed_time:
             count += 1
-            # Remove the parsed time and strip whitespace
+            # Remove the parsed time and strip 
+            old_time_str = time_str
             time_str = time_str.replace(parsed_time, "", 1).strip()
+
+            if old_time_str == time_str:
+                logging.error(f"Failed to remove parsed time '{parsed_time}' from '{time_str}'")
+                
+                # Try 'HH:MM' format
+                time_str = time_str.replace(f"{parsed_time[:2]}:{parsed_time[2:]}", "", 1).strip()
         else:
             break
 
