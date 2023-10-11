@@ -20,8 +20,8 @@ import sys
 sys.path.append("./tests/textract-responses")
 sys.path.append("./tests/sns-event-messages")
 
-from mcconnell_2_72hr_sns_messages import mcconnell_2_72hr_successful_job_sns_message as current_sns_message
-from mcconnell_2_72hr_textract_response import mcconnell_2_72hr_textract_response as current_textract_response
+from mcguire_1_72hr_sns_messages import mcguire_1_72hr_successful_job_sns_message as current_sns_message
+from mcguire_1_72hr_textract_response import mcguire_1_72hr_textract_response as current_textract_response
 
 def initialize_clients():
     # Set environment variables
@@ -292,7 +292,7 @@ def lambda_handler(event, context):
     #     Table.save_state(table, f'table-{idx}.pkl')
     # print(hashlib.sha256(table_str.encode()).hexdigest())
         
-    table_pkl_path = 'tests/table-objects/mcconnell_2_72hr_table-2cl.pkl'
+    table_pkl_path = 'tests/table-objects/mcguire_1_72hr_table-3.pkl'
 
     custom_date = '20230910'
 
