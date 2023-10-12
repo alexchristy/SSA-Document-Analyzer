@@ -1381,4 +1381,45 @@ class TestTableToFlights(unittest.TestCase):
         for i, flight in enumerate(table6_converted_flights):
             self.assertEqual(flight, table6_flights[i])
         
+    def test_scott_1_72hr(self):
+
+        origin_terminal = 'Scott AFB Air Transportation Function'
+
+        # Load tables
+        table1 = Table.load_state("tests/table-objects/scott_1_72hr_table-1.pkl")
+        table2 = Table.load_state("tests/table-objects/scott_1_72hr_table-2.pkl")
+        table3 = Table.load_state("tests/table-objects/scott_1_72hr_table-3.pkl")
+
+        # Load known good flights
+        table1_flights = []
+        table2_flights = []
+        table3_flights = []
+
+        # Table 1
+        # No flights
+
+        # Table 2
+        # No flights
+
+        # Table 3
+        # No flights
+
+        # Use ThreadPoolExecutor to run conversions in parallel
+        with ThreadPoolExecutor() as executor:
+            fixed_date = "20230910"
+            futures = {
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
+            }
+
+            table1_converted_flights = futures['table1'].result()
+            table2_converted_flights = futures['table2'].result()
+            table3_converted_flights = futures['table3'].result()
+
+        # Check that the flights are the same
+        self.assertEqual(len(table1_converted_flights), 0)
+        self.assertEqual(len(table2_converted_flights), 0)
+        self.assertEqual(len(table3_converted_flights), 0)
+
     
