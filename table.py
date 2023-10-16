@@ -20,29 +20,41 @@ class Table:
         """Convert the table to a Markdown string."""
         try:
             md = []
+            
+            # Add title if available
             if self.title:
-                md.append(f"## Table {self.table_number} (Page: {self.page_number}, Confidence: {self.table_confidence})\n") 
+                md.append(f"## Table {self.table_number} (Page: {self.page_number}, Confidence: {self.table_confidence})\n")
                 md.append(f"{self.title} (Confidence: {self.title_confidence})\n")
-            # Calculate maximum width for each column for alignment
-            column_count = len(self.rows[0]) if self.rows else 0
-            max_widths = [0] * column_count
-            for row in self.rows:
-                for i, cell in enumerate(row):
-                    if i < column_count:
-                        max_widths[i] = max(max_widths[i], len(f"{cell[0]} ({cell[1]})"))
-            # Create header and rows
-            if self.rows:
-                header_row = [f"{cell[0]} ({cell[1]})".ljust(max_widths[i]) for i, cell in enumerate(self.rows[0])]
-                md.append("| " + " | ".join(header_row) + " |")
-                separator_row = ["-" * max_widths[i] for i in range(column_count)]
-                md.append("| " + " | ".join(separator_row) + " |")
-            for row in self.rows[1:]:
-                formatted_row = [f"{cell[0]} ({cell[1]})".ljust(max_widths[i]) for i, cell in enumerate(row)]
-                md.append("| " + " | ".join(formatted_row) + " |")
-            # Add footer
+
+            # Check for an empty table
+            if not self.rows or all(len(row) == 0 for row in self.rows):
+                md.append("(empty table)\n")
+            else:
+                # Calculate maximum width for each column for alignment
+                column_count = len(self.rows[0]) if self.rows else 0
+                max_widths = [0] * column_count
+                for row in self.rows:
+                    for i, cell in enumerate(row):
+                        if i < column_count:
+                            max_widths[i] = max(max_widths[i], len(f"{cell[0]} ({cell[1]})"))
+
+                # Create header and rows
+                if self.rows:
+                    header_row = [f"{cell[0]} ({cell[1]})".ljust(max_widths[i]) for i, cell in enumerate(self.rows[0])]
+                    md.append("| " + " | ".join(header_row) + " |")
+                    separator_row = ["-" * max_widths[i] for i in range(column_count)]
+                    md.append("| " + " | ".join(separator_row) + " |")
+
+                for row in self.rows[1:]:
+                    formatted_row = [f"{cell[0]} ({cell[1]})".ljust(max_widths[i]) for i, cell in enumerate(row)]
+                    md.append("| " + " | ".join(formatted_row) + " |")
+
+            # Add footer if available
             if self.footer:
                 md.append(f"*{self.footer}* (Confidence: {self.footer_confidence})")
+
             return "\n".join(md)
+
         except Exception as e:
             logging.error(f"An error occurred while converting the table to Markdown: {e}")
             return None
