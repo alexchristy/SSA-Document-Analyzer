@@ -1,10 +1,12 @@
+from copy import deepcopy
 from table import Table
 import logging
 import re
 from typing import List
 from date_utils import check_date_string
 from gpt3_turbo_analysis import GPT3TurboAnalysis
-from cell_parsing_utils import parse_seat_data, has_multiple_rollcall_times, parse_destination
+from cell_parsing_utils import parse_rollcall_time, parse_seat_data, has_multiple_rollcall_times, parse_destination
+import random
 
 def convert_textract_response_to_tables(json_response):
     """
@@ -524,3 +526,354 @@ def populate_merged_row_seat_columns(table: Table, merge_groups: List[List[tuple
                 row[seat_column_index] = new_seat_cell_tuple
 
     return merge_groups
+
+def scramble_columns(input_table: Table) -> Table:
+    try:
+        # Deep copy the original table to create a new table object
+        new_table = deepcopy(input_table)
+        
+        # Get the number of rows and columns in the table
+        num_rows = len(new_table.rows)
+        num_columns = new_table.get_num_of_columns()
+
+        # If no rows, log it and return the original table
+        if num_rows == 0 or num_columns == 0:
+            logging.info("The table is empty. Returning the original table.")
+            return new_table
+
+        # Generate a list of column indices and shuffle it
+        column_indices = list(range(num_columns))
+        random.shuffle(column_indices)
+
+        # Create a new list to hold rows with scrambled columns
+        new_rows = []
+
+        # Loop through each row
+        for row in new_table.rows:
+            new_row = []
+            # Use the shuffled column indices to rearrange the columns
+            for idx in column_indices:
+                new_row.append(row[idx])
+            new_rows.append(new_row)
+
+        # Update the rows in the new table
+        new_table.rows = new_rows
+        logging.info(f"Columns have been scrambled. New column order: {column_indices}")
+
+        return new_table
+
+    except Exception as e:
+        logging.error(f"An error occurred while scrambling the columns: {e}")
+        return None
+    
+def infer_roll_call_column_index(table: Table) -> int:
+    """
+    Infers the index of the roll call column in a given table. The function initially 
+    looks for a roll call column by checking if there are headers that match predefined
+    roll call headers. If it doesn't find one, it uses the table's title and cell contents 
+    to make an educated guess on which column contains roll call times.
+    
+    Parameters:
+        table (Table): A Table object that holds the table data including rows, title, and possibly footer.
+
+    Returns:
+        int: Returns the index of the inferred roll call column if found. 
+             Returns -1 if inference was unsuccessful or an error occurred.
+    
+    Logging:
+        Logs informative messages and errors using Python's built-in logging framework.
+        
+    Exceptions:
+        Logs any exceptions that occur during the execution and returns -1.
+    """
+
+    # First check if we can find roll call column by searching for a column header
+    roll_call_col_index = get_roll_call_column_index(table)
+    if roll_call_col_index is not None:
+        logging.info('No inference. Found roll call column by searching for column header.')
+        return roll_call_col_index
+
+    if table.title is None:
+        logging.error(f"Table title is empty. Not enough information to determine if table is a 72-hour table. Exiting...")
+        return -1
+    
+    # Check there is a valid date in the table title
+    match = check_date_string(table.title, return_match=True)
+
+    if match is None:
+        logging.error(f"Failed to get date from table title. Not enough information to determine if table is a 72-hour table. Exiting...")
+        return -1
+    
+    # Search cells for a colukmn of roll call times
+    # that can be parsed as roll call times
+    try:
+        num_rows = len(table.rows)
+        num_columns = table.get_num_of_columns()
+
+        # If no rows, log it and return
+        if num_rows == 0 or num_columns == 0:
+            logging.info("The table is empty. Cannot determine if it is a 72-hour table.")
+            return -1
+        
+        # If there are less than 3 columns, log it and return
+        if num_columns < 3:
+            logging.info("The table has less than 3 columns. Cannot determine if it is a 72-hour table.")
+            return -1
+        
+        for col in range(num_columns):
+            logging.info(f'Traversing column {col}...')
+
+            invalid_cell_count = 0
+            valid_cell_count = 0
+            empty_cell_count = 0
+            for row in range(num_rows):
+                cell_text = table.get_cell_text(col, row)
+
+                if cell_text is None or cell_text == '':
+                    logging.debug(f'Cell ({col}, {row}) is empty. Skipping...')
+                    empty_cell_count += 1
+                    continue
+
+                # Attempt to parse cell text as roll call time
+                roll_call_time = parse_rollcall_time(cell_text)
+
+                if roll_call_time is None:
+                    logging.debug(f'Cell ({col}, {row}) is not a valid roll call time. Skipping column...')
+                    invalid_cell_count += 1
+                    break
+
+                logging.debug(f'Cell ({col}, {row}) is a valid roll call time.')
+                valid_cell_count += 1
+            
+            if invalid_cell_count > 0:
+                logging.info(f'Column {col} is not a valid roll call time column. Checking next column...')
+                continue
+
+            if (valid_cell_count + empty_cell_count) == num_rows:
+                logging.info(f'Column {col} is a valid roll call time column.')
+                return col
+        
+    except Exception as e:
+        logging.error(f"An error occurred while inferring roll call column index: {e}")
+        return -1
+
+    return -1
+
+def infer_seats_column_index(table: Table) -> int:
+    """
+    Infers the index of the seat column in a given table. The function initially 
+    looks for a seat column by checking if there are headers that match predefined
+    seat headers. If it doesn't find one, it uses the table's title and cell contents 
+    to make an educated guess on which column contains seat data.
+    
+    Parameters:
+        table (Table): A Table object that holds the table data including rows, title, and possibly footer.
+
+    Returns:
+        int: Returns the index of the inferred seat column if found. 
+             Returns -1 if inference was unsuccessful or an error occurred.
+    
+    Logging:
+        Logs informative messages and errors using Python's built-in logging framework.
+        
+    Exceptions:
+        Logs any exceptions that occur during the execution and returns -1.
+    """
+
+    # First check if we can find seat column by searching for a column header
+    seat_col_index = get_seats_column_index(table)
+    if seat_col_index is not None:
+        logging.info('No inference. Found seat column by searching for column header.')
+        return seat_col_index
+
+    if table.title is None:
+        logging.error(f"Table title is empty. Not enough information to determine if table is a 72-hour table. Exiting...")
+        return -1
+    
+    # Check there is a valid date in the table title
+    match = check_date_string(table.title, return_match=True)
+
+    if match is None:
+        logging.error(f"Failed to get date from table title. Not enough information to determine if table is a 72-hour table. Exiting...")
+        return -1
+    
+    # Search cells for a colukmn of seats
+    # that can be parsed as seats
+    try:
+        num_rows = len(table.rows)
+        num_columns = table.get_num_of_columns()
+
+        # If no rows, log it and return
+        if num_rows == 0 or num_columns == 0:
+            logging.info("The table is empty. Cannot determine if it is a 72-hour table.")
+            return -1
+        
+        # If there are less than 3 columns, log it and return
+        if num_columns < 3:
+            logging.info("The table has less than 3 columns. Cannot determine if it is a 72-hour table.")
+            return -1
+        
+        for col in range(num_columns):
+            logging.info(f'Traversing column {col}...')
+
+            invalid_cell_count = 0
+            valid_cell_count = 0
+            empty_cell_count = 0
+            for row in range(num_rows):
+                cell_text = table.get_cell_text(col, row)
+
+                if cell_text is None or cell_text == '':
+                    logging.debug(f'Cell ({col}, {row}) is empty. Skipping...')
+                    empty_cell_count += 1
+                    continue
+
+                # Attempt to parse cell text as seat data
+                seat_data = parse_seat_data(cell_text)
+
+                if not seat_data:
+                    logging.debug(f'Cell ({col}, {row}) is not a valid seat data point. Skipping column...')
+                    invalid_cell_count += 1
+                    break
+
+                logging.debug(f'Cell ({col}, {row}) is a valid seat data point.')
+                valid_cell_count += 1
+            
+            if invalid_cell_count > 0:
+                logging.info(f'Column {col} is not a valid seat column. Checking next column...')
+                continue
+
+            if (valid_cell_count + empty_cell_count) == num_rows:
+                logging.info(f'Column {col} is a valid seat column.')
+                return col
+        
+    except Exception as e:
+        logging.error(f"An error occurred while inferring seat column index: {e}")
+        return -1
+
+    return -1
+
+def infer_destinations_column_index(table: Table) -> int:
+    """
+    Infers the index of the destination column in a given table. The function initially 
+    looks for a destination column by checking if there are headers that match predefined
+    destination headers. If it doesn't find one, it uses the table's title and cell contents 
+    to make an educated guess on which column contains destination data.
+    
+    Parameters:
+        table (Table): A Table object that holds the table data including rows, title, and possibly footer.
+
+    Returns:
+        int: Returns the index of the inferred destination column if found. 
+             Returns -1 if inference was unsuccessful or an error occurred.
+    
+    Logging:
+        Logs informative messages and errors using Python's built-in logging framework.
+        
+    Exceptions:
+        Logs any exceptions that occur during the execution and returns -1.
+    """
+
+    # First check if we can find seat column by searching for a column header
+    dest_col_index = get_destination_column_index(table)
+    if dest_col_index is not None:
+        logging.info('No inference. Found destination column by searching for column header.')
+        return dest_col_index
+
+    if table.title is None:
+        logging.error(f"Table title is empty. Not enough information to determine if table is a 72-hour table. Exiting...")
+        return -1
+    
+    # Check there is a valid date in the table title
+    match = check_date_string(table.title, return_match=True)
+
+    if match is None:
+        logging.error(f"Failed to get date from table title. Not enough information to determine if table is a 72-hour table. Exiting...")
+        return -1
+    
+    # Search cells for a column of destinations
+    # that can be parsed as destinations
+    try:
+        num_rows = len(table.rows)
+        num_columns = table.get_num_of_columns()
+
+        # If no rows, log it and return
+        if num_rows == 0 or num_columns == 0:
+            logging.info("The table is empty. Cannot determine if it is a 72-hour table.")
+            return -1
+        
+        # If there are less than 3 columns, log it and return
+        if num_columns < 3:
+            logging.info("The table has less than 3 columns. Cannot determine if it is a 72-hour table.")
+            return -1
+        
+        for col in range(num_columns):
+            logging.info(f'Traversing column {col}...')
+
+            invalid_cell_count = 0
+            valid_cell_count = 0
+            empty_cell_count = 0
+            for row in range(num_rows):
+                cell_text = table.get_cell_text(col, row)
+
+                if cell_text is None or cell_text == '':
+                    logging.debug(f'Cell ({col}, {row}) is empty. Skipping...')
+                    empty_cell_count += 1
+                    continue
+
+                # Attempt to parse cell text as seat data
+                dest_data = parse_destination(cell_text)
+
+                if dest_data is None:
+                    logging.debug(f'Cell ({col}, {row}) is not a valid destination cell. Skipping column...')
+                    invalid_cell_count += 1
+                    break
+
+                logging.debug(f'Cell ({col}, {row}) is a valid destination cell.')
+                valid_cell_count += 1
+            
+            if invalid_cell_count > 0:
+                logging.info(f'Column {col} is not a valid destination column. Checking next column...')
+                continue
+
+            if (valid_cell_count + empty_cell_count) == num_rows:
+                logging.info(f'Column {col} is a valid destination column.')
+                return col
+        
+    except Exception as e:
+        logging.error(f"An error occurred while inferring destination column index: {e}")
+        return -1
+
+    return -1
+
+def delete_column(input_table: Table, col_index: int) -> Table:
+    try:
+        # Validate the table and column index
+        if not isinstance(input_table, Table):
+            logging.error("Input is not an instance of the Table class.")
+            return None
+
+        num_columns = input_table.get_num_of_columns()
+        if col_index < 0 or (col_index >= num_columns and num_columns > 0):
+            logging.error(f"Invalid column index {col_index}. Valid range is 0 to {num_columns - 1}.")
+            return None
+
+        # Deep copy the original table to create a new table object
+        new_table = deepcopy(input_table)
+
+        # Create a new list to hold rows with the column removed
+        new_rows = []
+
+        # Loop through each row
+        for row in new_table.rows:
+            new_row = [cell for i, cell in enumerate(row) if i != col_index]
+            new_rows.append(new_row)
+
+        # Update the rows in the new table
+        new_table.rows = new_rows
+        logging.info(f"Column {col_index} has been deleted.")
+
+        return new_table
+
+    except Exception as e:
+        logging.error(f"An error occurred while deleting the column: {e}")
+        return None
