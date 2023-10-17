@@ -246,6 +246,7 @@ class TestCellParsingUtils(unittest.TestCase):
             'NO FLIGHTS': None,
             'NO FLIGHTS (First note) (Second note)': None,
             '***NO SCHEDULED DEPARTURES***': None,
+            'NORFOLK ( Patriot Express )': ['NORFOLK'],
         }
         
         for input_data, expected_output in test_cases.items():
