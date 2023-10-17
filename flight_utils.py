@@ -184,16 +184,18 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
     
     # Get column indices
     roll_call_column_index = infer_roll_call_column_index(table)
-    destination_column_index = infer_destinations_column_index(table)
-    seats_column_index = infer_seats_column_index(table)
 
     if roll_call_column_index == -1:
         logging.error(f"Failed to get roll call column index. Exiting...")
         return flights
 
+    destination_column_index = infer_destinations_column_index(table)
+
     if destination_column_index == -1:
         logging.error(f"Failed to get destination column index. Exiting...")
         return flights
+
+    seats_column_index = infer_seats_column_index(table)
 
     if seats_column_index == -1:
         logging.error(f"Failed to get seats column index. Exiting...")
