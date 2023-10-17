@@ -1585,4 +1585,55 @@ class TestTableToFlights(unittest.TestCase):
         for i, flight in enumerate(table9_converted_flights):
             self.assertEqual(flight, table9_flights[i])
 
+    def test_souda_bay_1_72hr(self):
 
+        origin_terminal = 'NSA Souda Bay Passenger Terminal'
+
+        # Load tables
+        table1 = Table.load_state("tests/table-objects/souda_bay_1_72hr_table-1.pkl")
+        table2 = Table.load_state("tests/table-objects/souda_bay_1_72hr_table-2.pkl")
+        table3 = Table.load_state("tests/table-objects/souda_bay_1_72hr_table-3.pkl")
+
+        # Load known good flights
+        table1_flights = []
+        table2_flights = []
+        table3_flights = []
+
+        # Table 1
+        table1_flights.append(Flight.load_state("tests/flight-objects/souda_bay_1_72hr_table-1_flight-1.pkl"))
+        table1_flights.append(Flight.load_state("tests/flight-objects/souda_bay_1_72hr_table-1_flight-2.pkl"))
+
+        # Table 2
+        table2_flights.append(Flight.load_state("tests/flight-objects/souda_bay_1_72hr_table-2_flight-1.pkl"))
+
+        # Table 3
+        # No flights
+
+        # Use ThreadPoolExecutor to run conversions in parallel
+        with ThreadPoolExecutor() as executor:
+            fixed_date = "20231001"
+            futures = {
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
+            }
+
+            table1_converted_flights = futures['table1'].result()
+            table2_converted_flights = futures['table2'].result()
+            table3_converted_flights = futures['table3'].result()
+
+        # Check that the flights are the same
+        self.assertEqual(len(table1_converted_flights), len(table1_flights))
+        self.assertEqual(len(table2_converted_flights), len(table2_flights))
+        self.assertEqual(len(table3_converted_flights), 0)
+
+        # Check that the converted flights are the same as the known good flights:
+        # Table 1
+        for i, flight in enumerate(table1_converted_flights):
+            self.assertEqual(flight, table1_flights[i])
+
+        # Table 2
+        for i, flight in enumerate(table2_converted_flights):
+            self.assertEqual(flight, table2_flights[i])
+        
+    
