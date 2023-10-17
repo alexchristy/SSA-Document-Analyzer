@@ -1,9 +1,8 @@
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 import sys
-
-# For Table class
-sys.path.append("../")
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from table import Table
 from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
@@ -495,9 +494,9 @@ class TestTableToFlights(unittest.TestCase):
         with ThreadPoolExecutor() as executor:
             fixed_date = "20230910"
             futures = {
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, False, fixed_date),
-                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, False, fixed_date),
-                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, False, fixed_date)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
@@ -668,10 +667,10 @@ class TestTableToFlights(unittest.TestCase):
         with ThreadPoolExecutor() as executor:
             fixed_date = "20230910"
             futures = { 
-                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, False, fixed_date),
-                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, False, fixed_date),
-                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, False, fixed_date),
-                'table4': executor.submit(convert_72hr_table_to_flights, table4, origin_terminal, False, fixed_date)
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date),
+                'table4': executor.submit(convert_72hr_table_to_flights, table4, origin_terminal, True, fixed_date)
             }
 
             table1_converted_flights = futures['table1'].result()
@@ -839,9 +838,8 @@ class TestTableToFlights(unittest.TestCase):
         # Check that the converted flights are the same as the known good flights:
         # Table 2
         for i, flight in enumerate(table2_converted_flights):
-            are_equal, diff_message = flight == table2_flights[i]
-            self.assertTrue(are_equal, f"Difference in flight {i}: {diff_message}")
-
+            self.assertEqual(flight, table2_flights[i])
+            
     def test_mcchord_1_72hr(self):
 
         origin_terminal = 'Joint Base Lewis-McChord Passenger Terminal'
@@ -1472,4 +1470,119 @@ class TestTableToFlights(unittest.TestCase):
         for i, flight in enumerate(table3_converted_flights):
             self.assertEqual(flight, table3_flights[i])
         
-    
+    def test_sigonella_1_72hr(self):
+
+        origin_terminal = 'NAS Sigonella Air Terminal'
+
+        # Load tables
+        table1 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-1.pkl")
+        table2 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-2.pkl")
+        table3 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-3.pkl")
+        table4 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-4.pkl")
+        table5 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-5.pkl")
+        table6 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-6.pkl")
+        table7 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-7.pkl")
+        table8 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-8.pkl")
+        table9 = Table.load_state("tests/table-objects/sigonella_1_72hr_table-9.pkl")
+
+        # Load known good flights
+        table1_flights = []
+        table2_flights = []
+        table3_flights = []
+        table4_flights = []
+        table5_flights = []
+        table6_flights = []
+        table7_flights = []
+        table8_flights = []
+        table9_flights = []
+
+        # Table 1
+        # No flights
+
+        # Table 2
+        # No flights
+
+        # Table 3
+        # No flights
+
+        # Table 4
+        # No flights
+
+        # Table 5
+        # No flights
+
+        # Table 6
+        # No flights
+
+        # Table 7
+        table7_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-7_flight-1.pkl"))
+        table7_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-7_flight-2.pkl"))
+        table7_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-7_flight-3.pkl"))
+
+        # Table 8
+        table8_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-8_flight-1.pkl"))
+        table8_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-8_flight-2.pkl"))
+        table8_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-8_flight-3.pkl"))
+        table8_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-8_flight-4.pkl"))
+
+        # Table 9
+        table9_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-9_flight-1.pkl"))
+        table9_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-9_flight-2.pkl"))
+        table9_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-9_flight-3.pkl"))
+        table9_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-9_flight-4.pkl"))
+        table9_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-9_flight-5.pkl"))
+        table9_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-9_flight-6.pkl"))
+        table9_flights.append(Flight.load_state("tests/flight-objects/sigonella_1_72hr_table-9_flight-7.pkl"))
+
+        # Use ThreadPoolExecutor to run conversions in parallel
+        with ThreadPoolExecutor() as executor:
+            fixed_date = "20231001"
+            futures = {
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date),
+                'table4': executor.submit(convert_72hr_table_to_flights, table4, origin_terminal, True, fixed_date),
+                'table5': executor.submit(convert_72hr_table_to_flights, table5, origin_terminal, True, fixed_date),
+                'table6': executor.submit(convert_72hr_table_to_flights, table6, origin_terminal, True, fixed_date),
+                'table7': executor.submit(convert_72hr_table_to_flights, table7, origin_terminal, True, fixed_date),
+                'table8': executor.submit(convert_72hr_table_to_flights, table8, origin_terminal, True, fixed_date),
+                'table9': executor.submit(convert_72hr_table_to_flights, table9, origin_terminal, True, fixed_date)
+            }
+
+            table1_converted_flights = futures['table1'].result()
+            table2_converted_flights = futures['table2'].result()
+            table3_converted_flights = futures['table3'].result()
+            table4_converted_flights = futures['table4'].result()
+            table5_converted_flights = futures['table5'].result()
+            table6_converted_flights = futures['table6'].result()
+            table7_converted_flights = futures['table7'].result()
+            table8_converted_flights = futures['table8'].result()
+            table9_converted_flights = futures['table9'].result()
+
+        print(table7_flights)
+
+        # Check that the flights are the same
+        self.assertEqual(len(table1_converted_flights), 0)
+        self.assertEqual(len(table2_converted_flights), 0)
+        self.assertEqual(len(table3_converted_flights), 0)
+        self.assertEqual(len(table4_converted_flights), 0)
+        self.assertEqual(len(table5_converted_flights), 0)
+        self.assertEqual(len(table6_converted_flights), 0)
+        self.assertEqual(len(table7_converted_flights), len(table7_flights))
+        self.assertEqual(len(table8_converted_flights), len(table8_flights))
+        self.assertEqual(len(table9_converted_flights), len(table9_flights))
+
+        # Check that the converted flights are not None and the same as the known good flights:
+        # Table 7
+        for i, flight in enumerate(table7_converted_flights):
+            self.assertEqual(flight, table7_flights[i])
+
+        # Table 8
+        for i, flight in enumerate(table8_converted_flights):
+            self.assertEqual(flight, table8_flights[i])
+        
+        # Table 9
+        for i, flight in enumerate(table9_converted_flights):
+            self.assertEqual(flight, table9_flights[i])
+
+
