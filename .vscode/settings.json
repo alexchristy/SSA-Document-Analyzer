@@ -12,5 +12,5 @@
     "python.analysis.extraPaths": [
         "./tests/textract-responses",
         "./tests/sns-event-messages"
-    ]
+    ],
 }
