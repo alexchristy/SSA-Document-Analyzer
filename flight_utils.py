@@ -188,18 +188,22 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
     if roll_call_column_index == -1:
         logging.error(f"Failed to get roll call column index. Exiting...")
         return flights
-
-    destination_column_index = infer_destinations_column_index(table)
-
-    if destination_column_index == -1:
-        logging.error(f"Failed to get destination column index. Exiting...")
-        return flights
+    logging.info(f"Roll call column index: {roll_call_column_index}")
 
     seats_column_index = infer_seats_column_index(table)
 
     if seats_column_index == -1:
         logging.error(f"Failed to get seats column index. Exiting...")
         return flights
+    logging.info(f"Seats column index: {seats_column_index}")
+
+
+    destination_column_index = infer_destinations_column_index(table)
+
+    if destination_column_index == -1:
+        logging.error(f"Failed to get destination column index. Exiting...")
+        return flights
+    logging.info(f"Destination column index: {destination_column_index}")
 
     # Create list of note column indices if there are more than 3 columns
     if table.get_num_of_columns() > 3:
