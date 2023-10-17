@@ -58,14 +58,13 @@ class Flight:
 
     def __eq__(self, other):
         if not isinstance(other, Flight):
-            return False, "Other object is not an instance of Flight"
-        differences = []
-        for attr in ['origin_terminal', 'destinations', 'rollcall_time', 'seats', 'notes', 'date', 'flight_id', 
-                     'rollcall_note', 'seat_note', 'destination_note', 'patriot_express', 'as_string']:
-            self_value, other_value = getattr(self, attr), getattr(other, attr)
-            if self_value != other_value:
-                differences.append(f"{attr}: {self_value} != {other_value}")
-        return (len(differences) == 0, ", ".join(differences))
+            return False
+        attributes_to_check = [
+            'origin_terminal', 'destinations', 'rollcall_time', 'seats', 'notes', 'date', 
+            'flight_id', 'rollcall_note', 'seat_note', 'destination_note', 'patriot_express', 'as_string'
+        ]
+        return all(getattr(self, attr) == getattr(other, attr) for attr in attributes_to_check)
+
     
     def to_string(self):
         return self.as_string
