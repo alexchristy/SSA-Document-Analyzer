@@ -5,7 +5,8 @@ from table import Table
 from flight import Flight
 from date_utils import check_date_string
 from cell_parsing_utils import parse_rollcall_time, parse_seat_data, parse_destination
-from table_utils import get_roll_call_column_index, get_destination_column_index, get_seats_column_index, convert_note_column_to_notes, merge_table_rows
+from table_utils import convert_note_column_to_notes, merge_table_rows
+from table_utils import infer_destinations_column_index, infer_roll_call_column_index, infer_seats_column_index
 from date_utils import create_datetime_from_str, reformat_date
 from note_extract_utils import extract_notes
 import re
@@ -182,19 +183,19 @@ def convert_72hr_table_to_flights(table: Table, origin_terminal: str, use_fixed_
         return flights
     
     # Get column indices
-    roll_call_column_index = get_roll_call_column_index(table)
-    destination_column_index = get_destination_column_index(table)
-    seats_column_index = get_seats_column_index(table)
+    roll_call_column_index = infer_roll_call_column_index(table)
+    destination_column_index = infer_destinations_column_index(table)
+    seats_column_index = infer_seats_column_index(table)
 
-    if roll_call_column_index is None:
+    if roll_call_column_index == -1:
         logging.error(f"Failed to get roll call column index. Exiting...")
         return flights
 
-    if destination_column_index is None:
+    if destination_column_index == -1:
         logging.error(f"Failed to get destination column index. Exiting...")
         return flights
 
-    if seats_column_index is None:
+    if seats_column_index == -1:
         logging.error(f"Failed to get seats column index. Exiting...")
         return flights
 
