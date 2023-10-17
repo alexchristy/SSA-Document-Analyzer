@@ -46,7 +46,7 @@ class GPT3TurboAnalysis:
 
                 # Making the API request
                 response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+                    model="ft:gpt-3.5-turbo-0613:personal::8AQqGP3S",
                     messages=[
                         {
                             "role": "user",
