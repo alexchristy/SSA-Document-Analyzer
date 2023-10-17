@@ -1742,4 +1742,83 @@ class TestTableToFlights(unittest.TestCase):
         for i, flight in enumerate(table1_converted_flights):
             self.assertEqual(flight, table1_flights[i])
 
-    
+    def test_naples_1_72hr(self):
+
+        origin_terminal = 'NSA Naples Passenger Terminal'
+
+        # Load tables
+        table1 = Table.load_state("tests/table-objects/naples_1_72hr_table-1.pkl")
+        table2 = Table.load_state("tests/table-objects/naples_1_72hr_table-2.pkl")
+        table3 = Table.load_state("tests/table-objects/naples_1_72hr_table-3.pkl")
+        table4 = Table.load_state("tests/table-objects/naples_1_72hr_table-4.pkl")
+        table5 = Table.load_state("tests/table-objects/naples_1_72hr_table-5.pkl")
+        table6 = Table.load_state("tests/table-objects/naples_1_72hr_table-6.pkl")
+        table7 = Table.load_state("tests/table-objects/naples_1_72hr_table-7.pkl")
+        table8 = Table.load_state("tests/table-objects/naples_1_72hr_table-8.pkl")
+
+        # Load known good flights
+        table1_flights = []
+        table2_flights = []
+        table3_flights = []
+        table4_flights = []
+        table5_flights = []
+        table6_flights = []
+        table7_flights = []
+        table8_flights = []
+
+        # Table 1
+        # No flights
+
+        # Table 2
+        # No flights
+
+        # Table 3
+        # No flights
+
+        # Table 4
+        # No flights
+
+        # Table 5
+        # No flights
+        
+        # Table 6
+        # No flights
+
+        # Table 7
+        # No flights
+
+        # Table 8
+        # No flights
+
+        # Use ThreadPoolExecutor to run conversions in parallel
+        with ThreadPoolExecutor() as executor:
+            fixed_date = "20231001"
+            futures = {
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date),
+                'table4': executor.submit(convert_72hr_table_to_flights, table4, origin_terminal, True, fixed_date),
+                'table5': executor.submit(convert_72hr_table_to_flights, table5, origin_terminal, True, fixed_date),
+                'table6': executor.submit(convert_72hr_table_to_flights, table6, origin_terminal, True, fixed_date),
+                'table7': executor.submit(convert_72hr_table_to_flights, table7, origin_terminal, True, fixed_date),
+                'table8': executor.submit(convert_72hr_table_to_flights, table8, origin_terminal, True, fixed_date)
+            }
+
+            table1_converted_flights = futures['table1'].result()
+            table2_converted_flights = futures['table2'].result()
+            table3_converted_flights = futures['table3'].result()
+            table4_converted_flights = futures['table4'].result()
+            table5_converted_flights = futures['table5'].result()
+            table6_converted_flights = futures['table6'].result()
+            table7_converted_flights = futures['table7'].result()
+            table8_converted_flights = futures['table8'].result()
+
+        # Check that the flights are the same
+        self.assertEqual(len(table1_converted_flights), 0)
+        self.assertEqual(len(table2_converted_flights), 0)
+        self.assertEqual(len(table3_converted_flights), 0)
+        self.assertEqual(len(table4_converted_flights), 0)
+        self.assertEqual(len(table5_converted_flights), 0)
+        self.assertEqual(len(table6_converted_flights), 0)
+        self.assertEqual(len(table7_converted_flights), 0)
+        self.assertEqual(len(table8_converted_flights), 0)
