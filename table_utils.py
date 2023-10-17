@@ -592,6 +592,8 @@ def infer_roll_call_column_index(table: Table) -> int:
     if roll_call_col_index is not None:
         logging.info('No inference. Found roll call column by searching for column header.')
         return roll_call_col_index
+    
+    logging.info('Attempting to infer roll call column index...')
 
     if table.title is None:
         logging.error(f"Table title is empty. Not enough information to determine if table is a 72-hour table. Exiting...")
@@ -629,6 +631,16 @@ def infer_roll_call_column_index(table: Table) -> int:
             for row in range(num_rows):
                 cell_text = table.get_cell_text(col, row)
 
+                if row == 0:
+
+                    # If the header cell for a column is not empty or None, then it is not a roll call column
+                    # as we searched for a roll call column header and didn't find one
+                    if not (cell_text == '' or cell_text is None):
+                        logging.info(f'Header Cell ({col}, {row}) is not empty. Is not a roll call column. Skipping column...')
+                        return -1
+
+                    continue
+
                 if cell_text is None or cell_text == '':
                     logging.debug(f'Cell ({col}, {row}) is empty. Skipping...')
                     empty_cell_count += 1
@@ -649,7 +661,7 @@ def infer_roll_call_column_index(table: Table) -> int:
                 logging.info(f'Column {col} is not a valid roll call time column. Checking next column...')
                 continue
 
-            if (valid_cell_count + empty_cell_count) == num_rows:
+            if (valid_cell_count + empty_cell_count) == (num_rows - 1):
                 logging.info(f'Column {col} is a valid roll call time column.')
                 return col
         
@@ -686,6 +698,8 @@ def infer_seats_column_index(table: Table) -> int:
         logging.info('No inference. Found seat column by searching for column header.')
         return seat_col_index
 
+    logging.info('Attempting to infer seat column index...')
+
     if table.title is None:
         logging.error(f"Table title is empty. Not enough information to determine if table is a 72-hour table. Exiting...")
         return -1
@@ -720,7 +734,18 @@ def infer_seats_column_index(table: Table) -> int:
             valid_cell_count = 0
             empty_cell_count = 0
             for row in range(num_rows):
+
                 cell_text = table.get_cell_text(col, row)
+
+                if row == 0:
+
+                    # If the header cell for a column is not empty or None, then it is not a roll call column
+                    # as we searched for a roll call column header and didn't find one
+                    if not (cell_text == '' or cell_text is None):
+                        logging.info(f'Header Cell ({col}, {row}) is not empty. Is not a seats column. Skipping column...')
+                        return -1
+
+                    continue
 
                 if cell_text is None or cell_text == '':
                     logging.debug(f'Cell ({col}, {row}) is empty. Skipping...')
@@ -742,7 +767,7 @@ def infer_seats_column_index(table: Table) -> int:
                 logging.info(f'Column {col} is not a valid seat column. Checking next column...')
                 continue
 
-            if (valid_cell_count + empty_cell_count) == num_rows:
+            if (valid_cell_count + empty_cell_count) == (num_rows - 1):
                 logging.info(f'Column {col} is a valid seat column.')
                 return col
         
@@ -779,6 +804,8 @@ def infer_destinations_column_index(table: Table) -> int:
         logging.info('No inference. Found destination column by searching for column header.')
         return dest_col_index
 
+    logging.info('Attempting to infer destination column index...')
+
     if table.title is None:
         logging.error(f"Table title is empty. Not enough information to determine if table is a 72-hour table. Exiting...")
         return -1
@@ -813,7 +840,18 @@ def infer_destinations_column_index(table: Table) -> int:
             valid_cell_count = 0
             empty_cell_count = 0
             for row in range(num_rows):
+
                 cell_text = table.get_cell_text(col, row)
+
+                if row == 0:
+
+                    # If the header cell for a column is not empty or None, then it is not a roll call column
+                    # as we searched for a roll call column header and didn't find one
+                    if not (cell_text == '' or cell_text is None):
+                        logging.info(f'Header Cell ({col}, {row}) is not empty. Is not a roll call column. Skipping column...')
+                        return -1
+
+                    continue
 
                 if cell_text is None or cell_text == '':
                     logging.debug(f'Cell ({col}, {row}) is empty. Skipping...')
@@ -835,7 +873,7 @@ def infer_destinations_column_index(table: Table) -> int:
                 logging.info(f'Column {col} is not a valid destination column. Checking next column...')
                 continue
 
-            if (valid_cell_count + empty_cell_count) == num_rows:
+            if (valid_cell_count + empty_cell_count) == (num_rows - 1):
                 logging.info(f'Column {col} is a valid destination column.')
                 return col
         
