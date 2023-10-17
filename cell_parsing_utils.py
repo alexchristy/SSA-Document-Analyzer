@@ -193,6 +193,19 @@ def split_parenthesis(text):
         logging.error(f"An error occurred: {e}")
         return None, None
 
+def combine_sequential_duplicates(destinations):
+    combined = []
+    prev_dest = None
+    
+    for dest in destinations:
+        if dest == prev_dest:
+            combined[-1] = f"{combined[-1]}, {dest}"
+        else:
+            combined.append(dest)
+        prev_dest = dest
+    
+    return combined
+
 def parse_destination(destination_data: str):
 
     from gpt3_turbo_analysis import GPT3TurboAnalysis
@@ -228,5 +241,8 @@ def parse_destination(destination_data: str):
         logging.error(f"An error occurred processing GPT returned destinations. Error: {e}")
         logging.error(f"Returned string: {returned_str}")
         return None
+    
+    # Combine sequential duplicates
+    destinations = combine_sequential_duplicates(destinations)
     
     return destinations
