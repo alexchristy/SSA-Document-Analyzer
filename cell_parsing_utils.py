@@ -105,7 +105,7 @@ def parse_seat_data(seat_data: str):
     seat_data = seat_data.replace('_', '-')
     format_freq = Counter()
 
-    combined_pattern = r'(?P<num>\d+)(?P<status>[tf])|(?P<status1>[tf])-?(?P<num1>\d+)|(?P<num2>\d+)\s*(?P<status2>[tf])|(?P<status3>[tf])\.?(?P<num3>\d+)'
+    combined_pattern = r'\b(?P<num>\d+)(?P<status>[tf])\b|\b(?P<status1>[tf])-?(?P<num1>\d+)\b|\b(?P<num2>\d+)\s*(?P<status2>[tf])\b|\b(?P<status3>[tf])\.?(?P<num3>\d+)\b'
 
     all_results = []
 
