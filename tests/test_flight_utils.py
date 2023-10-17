@@ -247,6 +247,10 @@ class TestCellParsingUtils(unittest.TestCase):
             'NO FLIGHTS (First note) (Second note)': None,
             '***NO SCHEDULED DEPARTURES***': None,
             'NORFOLK ( Patriot Express )': ['NORFOLK'],
+            'Kuwait, Kuwait': ['KUWAIT, KUWAIT'],
+            'Djibouti, Djibouti': ['DJIBOUTI, DJIBOUTI'],
+            'Mildenhall AFB, EU': ['MILDENHALL AFB, EU'],
+            '**DUSHANBE** - **AMBOULIINTL**': ['DUSHANBE', 'AMBOULI INTL'],
         }
         
         for input_data, expected_output in test_cases.items():
