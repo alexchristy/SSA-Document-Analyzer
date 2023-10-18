@@ -1822,3 +1822,52 @@ class TestTableToFlights(unittest.TestCase):
         self.assertEqual(len(table6_converted_flights), 0)
         self.assertEqual(len(table7_converted_flights), 0)
         self.assertEqual(len(table8_converted_flights), 0)
+
+    def test_misawa_1_72hr(self):
+
+        origin_terminal = 'Misawa AB Passenger Terminal'
+
+        # Load tables
+        table1 = Table.load_state("tests/table-objects/misawa_1_72hr_table-1.pkl")
+        table2 = Table.load_state("tests/table-objects/misawa_1_72hr_table-2.pkl")
+        table3 = Table.load_state("tests/table-objects/misawa_1_72hr_table-3.pkl")
+        table4 = Table.load_state("tests/table-objects/misawa_1_72hr_table-4.pkl")
+
+        # Load known good flights
+        table1_flights = []
+        table2_flights = []
+        table3_flights = []
+        table4_flights = []
+
+        # Table 1
+        # No flights
+
+        # Table 2
+        # No flights
+
+        # Table 3
+        # No flights
+
+        # Table 4
+        # No flights
+
+        # Use ThreadPoolExecutor to run conversions in parallel
+        with ThreadPoolExecutor() as executor:
+            fixed_date = "20231001"
+            futures = {
+                'table1': executor.submit(convert_72hr_table_to_flights, table1, origin_terminal, True, fixed_date),
+                'table2': executor.submit(convert_72hr_table_to_flights, table2, origin_terminal, True, fixed_date),
+                'table3': executor.submit(convert_72hr_table_to_flights, table3, origin_terminal, True, fixed_date),
+                'table4': executor.submit(convert_72hr_table_to_flights, table4, origin_terminal, True, fixed_date)
+            }
+
+            table1_converted_flights = futures['table1'].result()
+            table2_converted_flights = futures['table2'].result()
+            table3_converted_flights = futures['table3'].result()
+            table4_converted_flights = futures['table4'].result()
+
+        # Check that the flights are the same
+        self.assertEqual(len(table1_converted_flights), 0)
+        self.assertEqual(len(table2_converted_flights), 0)
+        self.assertEqual(len(table3_converted_flights), 0)
+        self.assertEqual(len(table4_converted_flights), 0)
