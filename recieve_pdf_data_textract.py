@@ -1,29 +1,29 @@
 import json
-from typing import List
-import boto3
-import os
-from firestore_db import FirestoreClient
 import logging
+import os
+import uuid
+from typing import Any, Dict, List, Tuple
+
+import boto3
 from dotenv import load_dotenv
-from datetime import datetime as dt  # Importing datetime class as dt to avoid naming conflicts
-from table import Table
-from table_utils import *
+
+from firestore_db import FirestoreClient
+from flight_utils import convert_72hr_table_to_flights
 from s3_bucket import S3Bucket
 from screenshot_table import capture_screen_shot_of_table_from_pdf
-from flight_utils import *
-import uuid
-import pickle
+from table import Table
 from table_utils import gen_tables_from_textract_response
 
-# REMOVE WHEN FINISHED TESTING
-import sys
-sys.path.append("./tests/textract-responses")
-sys.path.append("./tests/sns-event-messages")
+MIN_CONFIDENCE = 80
 
-from misawa_1_72hr_sns_messages import misawa_1_72hr_successful_job_sns_message as current_sns_message
-from misawa_1_72hr_textract_response import misawa_1_72hr_textract_response as current_textract_response
 
-def initialize_clients():
+def initialize_clients() -> boto3.client:
+    """Initialize the Textract client.
+
+    Returns
+    -------
+        boto3.client: The Textract client.
+    """
     # Set environment variables
     load_dotenv()
 
@@ -31,26 +31,28 @@ def initialize_clients():
     logging.basicConfig(level=logging.INFO)
 
     # Check if running in a local environment
-    if os.getenv('RUN_LOCAL'):
+    if os.getenv("RUN_LOCAL"):
         logging.info("Running in a local environment.")
-        
+
         # Setup AWS session
         boto3.setup_default_session(
-            aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-            aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-            region_name=os.getenv('AWS_REGION')
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            region_name=os.getenv("AWS_REGION"),
         )
 
         # Initialize Textract client
-        textract_client = boto3.client('textract')
-        
+        textract_client = boto3.client("textract")
+
     else:
         logging.info("Running in a cloud environment.")
-        
-        # Assume the role and environment is already set up in Lambda or EC2 instance, etc.
-        textract_client = boto3.client('textract')
+
+        # Assume the role and environment is already set up in Lambda or
+        # EC2 instance, etc.
+        textract_client = boto3.client("textract")
 
     return textract_client
+
 
 # Initialize Textract client
 textract_client = initialize_clients()
@@ -62,18 +64,22 @@ firestore_client = FirestoreClient()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-# Function to parse SNS event from Textract
-def parse_sns_event(event):
-    """Parses the SNS event from Textract.
-    
+
+def parse_sns_event(event: Dict[str, Any]) -> Tuple[str, str, str, str]:
+    """Parse the SNS event from Textract.
+
     Args:
+    ----
         event (dict): The SNS event.
-        
+
     Returns:
+    -------
         tuple: Tuple containing JobId, Status, S3 Object Name, and S3 Bucket Name.
     """
     try:
-        message_json_str = event.get('Records', [{}])[0].get('Sns', {}).get('Message', '{}')
+        message_json_str = (
+            event.get("Records", [{}])[0].get("Sns", {}).get("Message", "{}")
+        )
     except IndexError:
         logging.error("Malformed SNS event: Records array is empty.")
         return None, None, None, None
@@ -83,86 +89,125 @@ def parse_sns_event(event):
     except json.JSONDecodeError:
         logging.error("Failed to decode SNS message.")
         return None, None, None, None
-    
-    job_id = message_dict.get('JobId', None)
-    status = message_dict.get('Status', None)
-    
+
+    job_id = message_dict.get("JobId", None)
+    status = message_dict.get("Status", None)
+
     # Extract S3 Object Name and Bucket Name
-    s3_object_name = message_dict.get('DocumentLocation', {}).get('S3ObjectName', None)
-    s3_bucket_name = message_dict.get('DocumentLocation', {}).get('S3Bucket', None)
-    
+    s3_object_name = message_dict.get("DocumentLocation", {}).get("S3ObjectName", None)
+    s3_bucket_name = message_dict.get("DocumentLocation", {}).get("S3Bucket", None)
+
     return job_id, status, s3_object_name, s3_bucket_name
 
-def get_lowest_confidence_row(table):
 
+def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
+    """Get the row index and confidence score of the row with the lowest confidence in a table.
+
+    Args:
+    ----
+        table (boto3 Textract Table): The table to search.
+
+    Returns:
+    -------
+        tuple: Tuple containing the row index and confidence score.
+    """
     lowest_confidence = 100
 
-    for index, row in enumerate(table.rows):
-
+    for index, _row in enumerate(table.rows):
         # Ignore first row (column headers)
         if index == 0:
             continue
 
-        row_confidence = table.get_average_row_confidence(row_index=index, ignore_empty_cells=True)
-        
+        row_confidence = table.get_average_row_confidence(
+            row_index=index, ignore_empty_cells=True
+        )
+
         if row_confidence < lowest_confidence:
             lowest_confidence = row_confidence
             lowest_confidence_row_index = index
-    
+
     return lowest_confidence_row_index, lowest_confidence
 
-def get_document_analysis_results(client, job_id):
+
+def get_document_analysis_results(client: boto3.client, job_id: str) -> List[Dict]:
+    """Get the results of a Textract document analysis job.
+
+    Args:
+    ----
+        client (boto3 Textract client): The Textract client.
+        job_id (str): The ID of the Textract job.
+
+    Returns:
+    -------
+        list: List of dictionaries containing the results of the Textract job.
+    """
     # Initialize variables
     results = []
     next_token = None
-    
+
     try:
         while True:
             # Handle paginated responses
             if next_token:
-                response = client.get_document_analysis(JobId=job_id, NextToken=next_token)
+                response = client.get_document_analysis(
+                    JobId=job_id, NextToken=next_token
+                )
             else:
                 response = client.get_document_analysis(JobId=job_id)
-            
-            # Process the current page of results
-            blocks = response['Blocks']
-            results.extend(blocks)
-            
-            # Log the number of blocks received in the current page
-            logging.info(f"Received {len(blocks)} blocks in the current page.")
-            
-            # Check for more pages
-            next_token = response.get('NextToken', None)
-            if next_token is None:
+
+            # Append results to list
+            results.extend(response["Blocks"])
+
+            # Check if there are more pages of results
+            next_token = response.get("NextToken", None)
+            if not next_token:
                 break
 
     except Exception as e:
-        logging.error(f"An error occurred while getting document analysis results: {e}")
-    
+        logging.error("Error getting document analysis results: %s", e)
+        return []
+
     return results
 
-def reprocess_tables(tables: List[Table], s3_client: str, s3_object_path: str, response: dict) -> None:
+
+def reprocess_tables(
+    tables: List[Table], s3_client: str, s3_object_path: str, response: dict
+) -> List[Table] | None:
+    """Reprocess tables with low confidence scores in a Textract document analysis job.
+
+    Args:
+    ----
+        tables (List[Table]): The tables to reprocess.
+        s3_client (str): The name of the S3 client.
+        s3_object_path (str): The path to the S3 object.
+        response (dict): The response from the Textract job.
+
+    Returns:
+    -------
+        None
+    """
     # Check if any tables need to be reprocessed
     if not tables:
         logging.info("No tables need to be reprocessed.")
-        return
-    
-    download_dir = os.getenv('DOWNLOAD_DIR')
+        return None
+
+    download_dir = os.getenv("DOWNLOAD_DIR")
     if not download_dir:
         logging.error("Download directory is not set.")
-        raise EnvironmentError("Download directory is not set.")
-        
+        msg = "Download directory is not set."
+        raise EnvironmentError(msg)
+
     # Create local path to download PDF to
     unique_dir_name = str(uuid.uuid4())
     download_dir = os.path.join(download_dir, unique_dir_name)
-    
+
     # Check if download directory exists
     if not os.path.isdir(download_dir):
         # Create download directory
         try:
             os.makedirs(download_dir, exist_ok=True)
         except Exception as e:
-            logging.error(f"Failed to create download directory: {e}")
+            logging.error("Failed to create download directory: %s", e)
             raise
 
     # Get PDF filename from S3 object path
@@ -175,21 +220,29 @@ def reprocess_tables(tables: List[Table], s3_client: str, s3_object_path: str, r
     try:
         s3_client.download_from_s3(s3_object_path, local_pdf_path)
     except Exception as e:
-        logging.error(f"Failed to download PDF from S3: {e}")
+        logging.error("Failed to download PDF from S3: %s", e)
         raise
 
+    # Store reporcessed tables
+    reporcessed_tables = []
+
     # Reprocess tables with low confidence rows
-    logging.info(f"Reprocessing {len(tables)} tables.")
+    logging.info("Reprocessing %s tables.", len(tables))
     for table in tables:
-        logging.info(f"Reprocessing table with page number: {table.page_number}")
+        logging.info("Reprocessing table with page number: %s", table.page_number)
 
         # Get table page number
         page_number = table.page_number
 
-        table_screen_shot_with_title = capture_screen_shot_of_table_from_pdf(pdf_path=local_pdf_path, page_number=page_number, 
-                                                                    textract_response=response, output_folder=download_dir,
-                                                                    padding=75, include_title=True)
-        
+        table_screen_shot_with_title = capture_screen_shot_of_table_from_pdf(
+            pdf_path=local_pdf_path,
+            page_number=page_number,
+            textract_response=response,
+            output_folder=download_dir,
+            padding=75,
+            include_title=True,
+        )
+
         # Read the local PDF file
         with open(table_screen_shot_with_title, "rb") as file:
             file_bytes = bytearray(file.read())
@@ -197,8 +250,7 @@ def reprocess_tables(tables: List[Table], s3_client: str, s3_object_path: str, r
         # Send to screen shot to Textract for reprocessing
         # Call AnalyzeDocument API
         reprocess_response = textract_client.analyze_document(
-            Document={'Bytes': file_bytes},
-            FeatureTypes=["TABLES"]
+            Document={"Bytes": file_bytes}, FeatureTypes=["TABLES"]
         )
 
         # Parse the response
@@ -210,10 +262,11 @@ def reprocess_tables(tables: List[Table], s3_client: str, s3_object_path: str, r
         # Check if more than one table was found
         if len(reprocessed_table) > 1:
             logging.error("More than one table found in reprocessed table.")
-            raise Exception("More than one table found in reprocessed table.")
-        
+            msg = "More than one table found in reprocessed table."
+            raise Exception(msg)
+
         # Get the only table in the list if there is a table
-        # found. If not, set reprocessed_table to None and 
+        # found. If not, set reprocessed_table to None and
         # continue to the next table.
         if reprocessed_table:
             reprocessed_table = reprocessed_table[0]
@@ -222,13 +275,17 @@ def reprocess_tables(tables: List[Table], s3_client: str, s3_object_path: str, r
             continue
 
         # Get the lowest confidence row of the reproccessed table
-        _, lowest_confidence_row_reproccessed = get_lowest_confidence_row(reprocessed_table)
+        _, lowest_confidence_row_reproccessed = get_lowest_confidence_row(
+            reprocessed_table
+        )
 
         # Compare the lowest confidence row to the original table
         # If the confidence is higher, replace the original table with the reprocessed table
         if lowest_confidence_row_reproccessed > get_lowest_confidence_row(table)[1]:
-            logging.info("Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table.")
-            table = reprocessed_table
+            logging.info(
+                "Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table."
+            )
+            reporcessed_tables.append(reprocessed_table)
 
     # Remove PDF from local directory
     os.remove(local_pdf_path)
@@ -236,9 +293,52 @@ def reprocess_tables(tables: List[Table], s3_client: str, s3_object_path: str, r
     # Remove the local directory
     os.rmdir(download_dir)
 
-# Main Lambda function
-def lambda_handler(event, context):
+    return reporcessed_tables
 
+
+# Main Lambda function
+def lambda_handler(event: dict, context: dict) -> None:
+    """Lambda function that handles the event from SNS and processes the PDF using Textract.
+
+    Args:
+    ----
+        event (dict): The event object passed by AWS Lambda.
+        context (dict): The context object passed by AWS Lambda.
+
+    Returns:
+    -------
+        None
+    """
+    try:
+        # Parse the SNS message
+        job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
+
+        # Initialize S3 client
+        s3_client = S3Bucket(bucket_name=s3_bucket_name)
+
+        if not job_id or not status:
+            logging.error("JobId or Status missing in SNS message.")
+            return None
+
+        # Update the job status in Firestore
+        firestore_client.update_job_status(job_id, status)
+
+        # Get Origin terminal from S3 object path
+        pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
+        origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
+
+        # If job failed exit program
+        if status != "SUCCEEDED":
+            msg = "Job did not succeed."
+            raise (msg)
+
+        response = textract_client.get_document_analysis(JobId=job_id)
+
+        tables = gen_tables_from_textract_response(response)
+
+    except Exception as e:
+        logging.error("Error processing PDF: %s", e)
+        raise
     # Parse the SNS message
     job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
 
@@ -247,7 +347,7 @@ def lambda_handler(event, context):
 
     if not job_id or not status:
         logging.error("JobId or Status missing in SNS message.")
-        return
+        return None
 
     # Update the job status in Firestore
     firestore_client.update_job_status(job_id, status)
@@ -257,70 +357,54 @@ def lambda_handler(event, context):
     origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
     # If job failed exit program
-    if status != 'SUCCEEDED':
-        raise("Job did not succeed.")
+    if status != "SUCCEEDED":
+        msg = "Job did not succeed."
+        raise (msg)
 
-    # import hashlib
+    response = textract_client.get_document_analysis(JobId=job_id)
 
-    # response = context # textract_client.get_document_analysis(JobId=job_id)
+    tables = gen_tables_from_textract_response(response)
 
-    # tables = gen_tables_from_textract_response(response)
+    # List to hold tables needing reprocessing
+    tables_to_reprocess = []
 
-    # # List to hold tables needing reprocessing
-    # tables_to_reprocess = []
+    # Iterate through tables to find low confidence rows
+    for table in tables:
+        # Get the lowest confidence row
+        _, lowest_confidence = get_lowest_confidence_row(table)
 
-    # # Iterate through tables to find low confidence rows
-    # for table in tables:
+        # If the lowest confidence row is below the threshold
+        # add the table to the list of tables to reprocess
+        if lowest_confidence < MIN_CONFIDENCE:
+            tables_to_reprocess.append(table)
 
-    #     # Get the lowest confidence row
-    #     _, lowest_confidence = get_lowest_confidence_row(table)
+    # Reprocess tables with low confidence rows
+    reporcessed_tables = reprocess_tables(
+        tables=tables_to_reprocess,
+        s3_client=s3_client,
+        s3_object_path=s3_object_path,
+        response=response,
+    )
 
-    #     # If the lowest confidence row is below the threshold
-    #     # add the table to the list of tables to reprocess
-    #     if lowest_confidence < 80:
-    #         tables_to_reprocess.append(table)
+    flights = []
+    for i, table in enumerate(reporcessed_tables):
+        # Create flight objects from table
+        curr_flights = convert_72hr_table_to_flights(
+            table, origin_terminal=origin_terminal
+        )
 
-    # # Reprocess tables with low confidence rows
-    # reprocess_tables(tables=tables_to_reprocess, s3_client=s3_client, s3_object_path=s3_object_path, response=response)
+        if curr_flights:
+            flights.extend(curr_flights)
+        else:
+            logging.error("Failed to convert table %d to flights.", i)
 
-    # table_str = ""
-    # for idx, table in enumerate(tables):
+    if flights is None or not flights:
+        logging.error("Failed to any convert table to flights.")
+        return None
 
-    #     print(table.to_markdown())
-    #     table_str += table.to_markdown()
-    #     print("\n\n\n")
-    #     Table.save_state(table, f'table-{idx}.pkl')
-    # print(hashlib.sha256(table_str.encode()).hexdigest())
-        
-    table_pkl_path = 'tests/table-objects/misawa_1_72hr_table-4.pkl'
+    # TODO (alexchristy): Upload flights to Firestore
 
-    custom_date = '20230910'
-
-    table = Table.load_state(table_pkl_path)
-
-    # Create flight objects from table
-    flights = convert_72hr_table_to_flights(table, origin_terminal=origin_terminal, use_fixed_date=True, fixed_date=custom_date)
-
-    if flights is None:
-        logging.error("Failed to convert table to flights.")
-        return
-
-    flight_obj_name = os.path.basename(table_pkl_path).split('.')[0]
-
-    i = 1
-    for flight in flights:
-        flight.pretty_print()
-
-        with open(f'{flight_obj_name}_flight-{i}.pkl', 'wb') as file:
-            pickle.dump(flight, file)
-        
-        i += 1
-        
     return {
-        'statusCode': 200,
-        'body': json.dumps('Lambda function executed successfully!')
+        "statusCode": 200,
+        "body": json.dumps("Lambda function executed successfully!"),
     }
-
-
-if __name__ == "__main__":
-    lambda_handler(current_sns_message, current_textract_response)
