@@ -105,7 +105,7 @@ def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
 
     Args:
     ----
-        table (boto3 Textract Table): The table to search.
+        table (custom Table class): The table to search.
 
     Returns:
     -------
