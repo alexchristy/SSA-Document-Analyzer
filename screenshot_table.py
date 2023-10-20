@@ -1,41 +1,58 @@
-import os
 import logging
+import os
+from typing import Any, Dict, Optional
+
 from pdf2image import convert_from_path
-from PIL import Image
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
 
-def capture_screen_shot_of_table_from_pdf(pdf_path, textract_response, page_number, output_folder='.', padding=50, include_title=True):
-    """
-    Capture tables from a PDF based on AWS Textract response.
 
-    Parameters:
+def capture_screen_shot_of_table_from_pdf(
+    pdf_path: str,
+    textract_response: Dict[str, Any],
+    page_number: int,
+    **kwargs: Dict[str, Any],
+) -> Optional[str]:
+    """Capture tables from a PDF based on AWS Textract response.
+
+    Args:
+    ----
         pdf_path (str): Path to the PDF file.
         textract_response (dict): Response from AWS Textract GetDocumentAnalysis.
         page_number (int): Page number to capture the table from.
-        output_folder (str): Folder to save the screenshot. Default is current directory.
-        padding (int): Padding around the table in pixels. Default is 50.
-        include_title (bool): Whether to include table title in the screenshot. Default is True.
+        kwargs: Keyword arguments to pass to the function.
+
+    Keyword Args:
+    ------------
+        output_folder (str, optional): Folder to save the screenshot. Default is current directory.
+        padding (int, optional): Padding around the table in pixels. Default is 50.
+        include_title (bool, optional): Whether to include table title in the screenshot. Default is True.
 
     Returns:
+    -------
         str: Path to the last screenshot taken.
     """
+    output_folder = kwargs.get("output_folder", ".")
+    padding = kwargs.get("padding", 50)
+    include_title = kwargs.get("include_title", True)
     try:
         # Create output folder if it doesn't exist
         if not os.path.exists(output_folder):
             os.makedirs(output_folder)
-            logging.info(f"Created output folder: {output_folder}")
+            logging.info("Created output folder: %s", output_folder)
 
         # Convert PDF to images
         images = convert_from_path(pdf_path)
     except Exception as e:
-        logging.error(f"An error occurred while reading the PDF: {e}")
+        logging.error("An error occurred while reading the PDF: %s", e)
         return None
 
     # Validate page number
     if page_number > len(images) or page_number < 1:
-        logging.error(f"Invalid page number: {page_number}. Total pages: {len(images)}")
+        logging.error(
+            "Invalid page number: %s. Total pages: %s", page_number, len(images)
+        )
         return None
 
     # Get the image corresponding to the specified page
@@ -49,35 +66,38 @@ def capture_screen_shot_of_table_from_pdf(pdf_path, textract_response, page_numb
     if isinstance(textract_response, list):
         blocks_to_process = textract_response
     else:
-        blocks_to_process = textract_response.get('Blocks', [])
-        
+        blocks_to_process = textract_response.get("Blocks", [])
+
     for block in blocks_to_process:
-        if block['BlockType'] == 'TABLE' and block['Page'] == page_number:
+        if block["BlockType"] == "TABLE" and block["Page"] == page_number:
             # Increment table counter
             table_count += 1
 
             # Initialize bounding box coordinates
-            min_left = float('inf')
-            min_top = float('inf')
-            max_right = float('-inf')
-            max_bottom = float('-inf')
+            min_left = float("inf")
+            min_top = float("inf")
+            max_right = float("-inf")
+            max_bottom = float("-inf")
 
             # Extract bounding box coordinates for the table
-            bb = block['Geometry']['BoundingBox']
-            min_left = min(min_left, bb['Left'])
-            min_top = min(min_top, bb['Top'])
-            max_right = max(max_right, bb['Left'] + bb['Width'])
-            max_bottom = max(max_bottom, bb['Top'] + bb['Height'])
+            bb = block["Geometry"]["BoundingBox"]
+            min_left = min(min_left, bb["Left"])
+            min_top = min(min_top, bb["Top"])
+            max_right = max(max_right, bb["Left"] + bb["Width"])
+            max_bottom = max(max_bottom, bb["Top"] + bb["Height"])
 
             # Update bounding box to include table title and footer if needed
             for related_block in blocks_to_process:
-                if related_block['BlockType'] in ['TABLE_TITLE', 'TABLE_FOOTER'] and related_block['Page'] == page_number:
-                    if include_title or related_block['BlockType'] != 'TABLE_TITLE':
-                        bb = related_block['Geometry']['BoundingBox']
-                        min_left = min(min_left, bb['Left'])
-                        min_top = min(min_top, bb['Top'])
-                        max_right = max(max_right, bb['Left'] + bb['Width'])
-                        max_bottom = max(max_bottom, bb['Top'] + bb['Height'])
+                if (
+                    related_block["BlockType"] in ["TABLE_TITLE", "TABLE_FOOTER"]
+                    and related_block["Page"] == page_number
+                    and (include_title or related_block["BlockType"] != "TABLE_TITLE")
+                ):
+                    bb = related_block["Geometry"]["BoundingBox"]
+                    min_left = min(min_left, bb["Left"])
+                    min_top = min(min_top, bb["Top"])
+                    max_right = max(max_right, bb["Left"] + bb["Width"])
+                    max_bottom = max(max_bottom, bb["Top"] + bb["Height"])
 
             # Calculate coordinates for cropping, ensuring they are within bounds
             left = max(min_left * img.width - padding, 0)
@@ -89,12 +109,14 @@ def capture_screen_shot_of_table_from_pdf(pdf_path, textract_response, page_numb
             cropped_img = img.crop((left, top, right, bottom))
 
             # Save the cropped image
-            last_screenshot_path = os.path.join(output_folder, f"table_page_{page_number}_table_{table_count}.png")
+            last_screenshot_path = os.path.join(
+                output_folder, f"table_page_{page_number}_table_{table_count}.png"
+            )
             cropped_img.save(last_screenshot_path)
-            logging.info(f"Saved table screenshot: {last_screenshot_path}")
+            logging.info("Saved table screenshot: %s", last_screenshot_path)
 
     # Report if no tables were found on the page
     if table_count <= 0:
-        logging.warning(f"No tables found on page {page_number}")
+        logging.warning("No tables found on page %s", page_number)
 
     return last_screenshot_path
