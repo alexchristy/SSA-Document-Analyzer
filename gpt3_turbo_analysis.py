@@ -4,6 +4,7 @@ import time
 from typing import Optional
 
 import openai
+from openai.error import RateLimitError
 
 DELAY_MAX = 10
 
@@ -11,13 +12,12 @@ DELAY_MAX = 10
 class GPT3TurboAnalysis:
     """Class for analyzing data strings using GPT-3 Turbo."""
 
-    def __init__(self, api_key: Optional[str] = None) -> None:  # noqa: ANN101, D417
+    def __init__(self: "GPT3TurboAnalysis", api_key: Optional[str] = None) -> None:
         """Initialize GPT3TurboDestinationAnalysis class.
 
-        Parameters
-        ----------
-        - self (GPT3TurboAnalysis): The GPT3TurboAnalysis instance.
-        - api_key (str): OpenAI API key. If None, falls back to environment variable.
+        Args:
+        ----
+        api_key (str): OpenAI API key. If None, falls back to environment variable.
         """
         self.api_key = api_key if api_key else os.getenv("OPENAI_API_KEY")
 
@@ -29,16 +29,16 @@ class GPT3TurboAnalysis:
 
         openai.api_key = self.api_key
 
-    def get_destination_analysis(  # noqa: D417
-        self, destination_data: str  # noqa: ANN101
+    def get_destination_analysis(
+        self: "GPT3TurboAnalysis", destination_data: str
     ) -> str:
         """Analyzes a destination data string and returns a corrected and parsed version.
 
-        Parameters
-        ----------
-        - destination_data (str): The raw destination data string.
+        Args:
+        ----
+        destination_data (str): The raw destination data string.
 
-        Returns
+        Returns:
         -------
         - str: The analyzed destination string as returned by GPT-3.
         """
@@ -69,20 +69,19 @@ class GPT3TurboAnalysis:
                 )
 
                 return response["choices"][0]["message"]["content"]
+            except RateLimitError:  # Specifically catch RateLimitError
+                logging.warning(
+                    "Rate limit exceeded. Attempt %s/%s. Retrying in %s seconds.",
+                    attempt,
+                    num_attempts,
+                    delay,
+                )
+                time.sleep(delay)
+                delay *= 2
+                if delay > DELAY_MAX:
+                    delay = DELAY_MAX
 
             except openai.OpenAIError as e:
-                if e.error_code == "rate_limit_exceeded":
-                    logging.warning(
-                        "Rate limit exceeded. Attempt %s/%s. Retrying in %s seconds.",
-                        attempt,
-                        num_attempts,
-                        delay,
-                    )
-                    time.sleep(delay)
-                    delay *= 2
-                    if delay > DELAY_MAX:
-                        delay = DELAY_MAX
-
                 if "The server is overloaded or not ready yet" in str(
                     e
                 ):  # Adjust this to match the actual error message
