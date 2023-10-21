@@ -71,6 +71,18 @@ class GPT3TurboAnalysis:
                 return response["choices"][0]["message"]["content"]
 
             except openai.OpenAIError as e:
+                if e.error_code == "rate_limit_exceeded":
+                    logging.warning(
+                        "Rate limit exceeded. Attempt %s/%s. Retrying in %s seconds.",
+                        attempt,
+                        num_attempts,
+                        delay,
+                    )
+                    time.sleep(delay)
+                    delay *= 2
+                    if delay > DELAY_MAX:
+                        delay = DELAY_MAX
+
                 if "The server is overloaded or not ready yet" in str(
                     e
                 ):  # Adjust this to match the actual error message
