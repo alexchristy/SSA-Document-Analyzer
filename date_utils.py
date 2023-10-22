@@ -69,7 +69,7 @@ def reformat_date(date_str: str, current_date: datetime.datetime) -> str:
         return date_str
 
 
-def create_datetime_from_str(date_str: str) -> datetime.datetime:
+def create_datetime_from_str(date_str: str) -> datetime.datetime or None:
     """Create a datetime object from a string in the format YYYYMMDD.
 
     Args:
