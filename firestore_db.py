@@ -66,9 +66,7 @@ class FirestoreClient:
         logging.error("Job %s does not exist.", job_id)
         return None
 
-    def get_pdf_hash_with_s3_path(
-        self: "FirestoreClient", s3_object_path: str
-    ) -> Optional[str]:
+    def get_pdf_hash_with_s3_path(self: "FirestoreClient", s3_object_path: str) -> str:
         """Get the hash value of a PDF document from Firestore using its S3 object path.
 
         Args:
@@ -84,7 +82,7 @@ class FirestoreClient:
             pdf_archive = os.getenv("PDF_ARCHIVE_COLLECTION")
             if not pdf_archive:
                 logging.error("PDF_ARCHIVE_COLLECTION environment variable is not set.")
-                return None
+                return ""
 
             # Fetch the document(s) from Firestore
             query_result = (
@@ -96,7 +94,7 @@ class FirestoreClient:
             # Check if the document exists
             if query_result:
                 for doc in query_result:
-                    hash_value = doc.to_dict().get("hash", None)
+                    hash_value = doc.to_dict().get("hash", "")
                     if hash_value:
                         logging.info(
                             "Successfully retrieved hash value: %s", hash_value
@@ -107,16 +105,18 @@ class FirestoreClient:
                         "Document found but 'hash' attribute is missing. S3 Path: %s",
                         s3_object_path,
                     )
-                    return None
+                    return ""
 
                 logging.warning(
                     "No document found with matching S3 path: %s", s3_object_path
                 )
-                return None
+                return ""
 
         except Exception as e:
             logging.error("An error occurred: %s", e)
-            return None
+            return ""
+
+        return ""
 
     def update_job_status(self: "FirestoreClient", job_id: str, status: str) -> None:
         """Update the status of a job document in the Textract_Jobs collection.
