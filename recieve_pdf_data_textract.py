@@ -4,7 +4,7 @@ import os
 import uuid
 from typing import Any, Dict, List, Tuple
 
-import boto3
+import boto3  # type: ignore
 from dotenv import load_dotenv
 
 from firestore_db import FirestoreClient
@@ -122,6 +122,13 @@ def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
             row_index=index, ignore_empty_cells=True
         )
 
+        invalid_confidence = -1.0
+        if row_confidence < invalid_confidence:
+            logging.error(
+                "Failed to get average row confidence for row index %s.", index
+            )
+            continue
+
         if row_confidence < lowest_confidence:
             lowest_confidence = row_confidence
             lowest_confidence_row_index = index
@@ -171,8 +178,8 @@ def get_document_analysis_results(client: boto3.client, job_id: str) -> List[Dic
 
 
 def reprocess_tables(
-    tables: List[Table], s3_client: str, s3_object_path: str, response: dict
-) -> List[Table] | None:
+    tables: List[Table], s3_client: S3Bucket, s3_object_path: str, response: dict
+) -> List[Table]:
     """Reprocess tables with low confidence scores in a Textract document analysis job.
 
     Args:
@@ -189,7 +196,7 @@ def reprocess_tables(
     # Check if any tables need to be reprocessed
     if not tables:
         logging.info("No tables need to be reprocessed.")
-        return None
+        return []
 
     download_dir = os.getenv("DOWNLOAD_DIR")
     if not download_dir:
@@ -224,11 +231,11 @@ def reprocess_tables(
         raise
 
     # Store reporcessed tables
-    reporcessed_tables = []
+    reprocessed_tables_list = []
 
     # Reprocess tables with low confidence rows
     logging.info("Reprocessing %s tables.", len(tables))
-    for table in tables:
+    for i, table in enumerate(tables):
         logging.info("Reprocessing table with page number: %s", table.page_number)
 
         # Get table page number
@@ -243,6 +250,14 @@ def reprocess_tables(
             include_title=True,
         )
 
+        if not table_screen_shot_with_title:
+            logging.error(
+                "Failed to capture screen shot of table %d in s3 at: %s.",
+                i,
+                s3_object_path,
+            )
+            continue
+
         # Read the local PDF file
         with open(table_screen_shot_with_title, "rb") as file:
             file_bytes = bytearray(file.read())
@@ -254,13 +269,13 @@ def reprocess_tables(
         )
 
         # Parse the response
-        reprocessed_table = gen_tables_from_textract_response(reprocess_response)
+        new_tables = gen_tables_from_textract_response(reprocess_response)
 
         # Remove the screen shot of the table
         os.remove(table_screen_shot_with_title)
 
         # Check if more than one table was found
-        if len(reprocessed_table) > 1:
+        if len(new_tables) > 1:
             logging.error("More than one table found in reprocessed table.")
             msg = "More than one table found in reprocessed table."
             raise Exception(msg)
@@ -268,8 +283,8 @@ def reprocess_tables(
         # Get the only table in the list if there is a table
         # found. If not, set reprocessed_table to None and
         # continue to the next table.
-        if reprocessed_table:
-            reprocessed_table = reprocessed_table[0]
+        if new_tables:
+            reprocessed_table = new_tables[0]
         else:
             logging.warning("No tables found in reprocessed table.")
             continue
@@ -285,7 +300,7 @@ def reprocess_tables(
             logging.info(
                 "Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table."
             )
-            reporcessed_tables.append(reprocessed_table)
+            reprocessed_tables_list.append(reprocessed_table)
 
     # Remove PDF from local directory
     os.remove(local_pdf_path)
@@ -293,11 +308,11 @@ def reprocess_tables(
     # Remove the local directory
     os.rmdir(download_dir)
 
-    return reporcessed_tables
+    return reprocessed_tables_list
 
 
 # Main Lambda function
-def lambda_handler(event: dict, context: dict) -> None:
+def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
     """Lambda function that handles the event from SNS and processes the PDF using Textract.
 
     Args:
@@ -312,20 +327,40 @@ def lambda_handler(event: dict, context: dict) -> None:
     # Parse the SNS message
     job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
 
+    if not job_id or not status:
+        logging.error("JobId or Status missing in SNS message.")
+        no_job_status_msg = "JobId or Status missing in SNS message."
+        return {
+            "statusCode": 500,
+            "body": json.dumps(no_job_status_msg),
+        }
+
     if not s3_bucket_name:
         logging.error("S3 bucket name missing in SNS message.")
-        return None
+        response_msg = (
+            "S3 object path missing in SNS message. JobId: {}, Status: {}".format(
+                job_id, status
+            )
+        )
+        return {
+            "statusCode": 500,
+            "body": json.dumps(response_msg),
+        }
 
     if not s3_object_path:
         logging.error("S3 object path missing in SNS message.")
-        return None
+        response_msg = (
+            "S3 object path missing in SNS message. JobId: {}, Status: {}".format(
+                job_id, status
+            )
+        )
+        return {
+            "statusCode": 500,
+            "body": json.dumps(response_msg),
+        }
 
     # Initialize S3 client
     s3_client = S3Bucket(bucket_name=s3_bucket_name)
-
-    if not job_id or not status:
-        logging.error("JobId or Status missing in SNS message.")
-        return None
 
     # Update the job status in Firestore
     firestore_client.update_job_status(job_id, status)
@@ -334,8 +369,15 @@ def lambda_handler(event: dict, context: dict) -> None:
     pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
 
     if not pdf_hash:
-        logging.error("Failed to get PDF hash using s3 object path from Firestore.")
-        return None
+        logging.error(
+            "Failed to get PDF hash using s3 object path (%s) from Firestore.",
+            s3_object_path,
+        )
+        no_pdf_hash_msg = f"Failed to get PDF hash using s3 object path ({s3_object_path}) from Firestore."
+        return {
+            "statusCode": 500,
+            "body": json.dumps(no_pdf_hash_msg),
+        }
 
     origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
@@ -383,7 +425,11 @@ def lambda_handler(event: dict, context: dict) -> None:
 
     if flights is None or not flights:
         logging.error("Failed to any convert table to flights.")
-        return None
+        response_msg = f"Failed to convert any tables from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
+        return {
+            "statusCode": 500,
+            "body": json.dumps(response_msg),
+        }
 
     # TODO (alexchristy): Upload flights to Firestore
 
