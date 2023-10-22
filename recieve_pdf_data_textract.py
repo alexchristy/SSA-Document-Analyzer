@@ -111,7 +111,7 @@ def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
     -------
         tuple: Tuple containing the row index and confidence score.
     """
-    lowest_confidence = 100
+    lowest_confidence = 100.0
 
     for index, _row in enumerate(table.rows):
         # Ignore first row (column headers)
@@ -362,7 +362,7 @@ def lambda_handler(event: dict, context: dict) -> None:
             tables_to_reprocess.append(table)
 
     # Reprocess tables with low confidence rows
-    reporcessed_tables = reprocess_tables(
+    reprocessed_tables = reprocess_tables(
         tables=tables_to_reprocess,
         s3_client=s3_client,
         s3_object_path=s3_object_path,
@@ -370,7 +370,7 @@ def lambda_handler(event: dict, context: dict) -> None:
     )
 
     flights = []
-    for i, table in enumerate(reporcessed_tables):
+    for i, table in enumerate(reprocessed_tables):
         # Create flight objects from table
         curr_flights = convert_72hr_table_to_flights(
             table, origin_terminal=origin_terminal
