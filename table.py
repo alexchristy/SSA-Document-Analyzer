@@ -1,6 +1,6 @@
 import logging
 import pickle
-from typing import List, Tuple
+from typing import List, Optional, Tuple, Type
 
 
 class Table:
@@ -14,7 +14,9 @@ class Table:
         self.footer_confidence = 0.0
         self.table_confidence = 0.0
         self.page_number = 0  # New field for storing the page number
-        self.rows = []  # Each row is a list of tuples (cell_text, confidence)
+        self.rows: List[
+            List[Tuple[str, float]]
+        ] = []  # Each row is a list of tuples (cell_text, confidence)
         self.table_number = 0  # Table number, to be set externally
 
     def add_row(self: "Table", row: List[Tuple[str, float]]) -> None:
@@ -74,7 +76,7 @@ class Table:
             logging.error(
                 "An error occurred while converting the table to Markdown: %s", e
             )
-            return None
+            return "Error converting table to Markdown."
 
     def get_average_row_confidence(
         self: "Table", row_index: int, ignore_empty_cells: bool = False
@@ -98,7 +100,7 @@ class Table:
                     row_index,
                     len(self.rows) - 1,
                 )
-                return None
+                return -1.0
 
             # Extract the row based on the index
             row = self.rows[row_index]
@@ -117,7 +119,7 @@ class Table:
             logging.error(
                 "An error occurred while calculating the average row confidence: %s", e
             )
-            return None
+            return -1.0
 
     def save_state(self: "Table", filename: str = "table_state.pkl") -> bool:
         """Save the state of the table to a file.
@@ -155,7 +157,7 @@ class Table:
                 index,
                 len(self.rows) - 1,
             )
-            return None
+            return []
 
         return self.rows[index]
 
@@ -193,7 +195,7 @@ class Table:
                 row_index,
                 len(self.rows) - 1,
             )
-            return None
+            return ""
 
         # Check if the column index is out of range
         if column_index < 0 or column_index >= len(self.rows[row_index]):
@@ -202,12 +204,12 @@ class Table:
                 column_index,
                 len(self.rows[row_index]) - 1,
             )
-            return None
+            return ""
 
         # Extract the cell text
         return self.rows[row_index][column_index][0]
 
-    def __eq__(self: "Table", other: "Table") -> bool:
+    def __eq__(self: "Table", other: object) -> bool:
         """Return True if this table is equal to the other table, False otherwise.
 
         Args:
@@ -258,7 +260,9 @@ class Table:
             return False
 
     @classmethod
-    def load_state(cls: "Table", filename: str = "table_state.pkl") -> "Table":
+    def load_state(
+        cls: Type["Table"], filename: str = "table_state.pkl"
+    ) -> Optional["Table"]:
         """Load the state of the table from a file.
 
         Args:
