@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from pdf2image import convert_from_path
 
@@ -12,8 +12,8 @@ def capture_screen_shot_of_table_from_pdf(
     pdf_path: str,
     textract_response: Dict[str, Any],
     page_number: int,
-    **kwargs: Dict[str, Any],
-) -> Optional[str]:
+    **kwargs: Any,  # noqa: ANN401 (Ignored to allow using **kwargs)
+) -> str:
     """Capture tables from a PDF based on AWS Textract response.
 
     Args:
@@ -46,21 +46,21 @@ def capture_screen_shot_of_table_from_pdf(
         images = convert_from_path(pdf_path)
     except Exception as e:
         logging.error("An error occurred while reading the PDF: %s", e)
-        return None
+        return ""
 
     # Validate page number
     if page_number > len(images) or page_number < 1:
         logging.error(
             "Invalid page number: %s. Total pages: %s", page_number, len(images)
         )
-        return None
+        return ""
 
     # Get the image corresponding to the specified page
     img = images[page_number - 1]
 
     # Initialize table counter and last screenshot path
     table_count = 0
-    last_screenshot_path = None
+    last_screenshot_path = ""
 
     # Check if the input is paginated (list of blocks) or not (single page JSON response)
     if isinstance(textract_response, list):
