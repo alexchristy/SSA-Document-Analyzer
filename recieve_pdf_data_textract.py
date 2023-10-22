@@ -82,20 +82,20 @@ def parse_sns_event(event: Dict[str, Any]) -> Tuple[str, str, str, str]:
         )
     except IndexError:
         logging.error("Malformed SNS event: Records array is empty.")
-        return None, None, None, None
+        return "", "", "", ""
 
     try:
         message_dict = json.loads(message_json_str)
     except json.JSONDecodeError:
         logging.error("Failed to decode SNS message.")
-        return None, None, None, None
+        return "", "", "", ""
 
-    job_id = message_dict.get("JobId", None)
-    status = message_dict.get("Status", None)
+    job_id = message_dict.get("JobId", "")
+    status = message_dict.get("Status", "")
 
     # Extract S3 Object Name and Bucket Name
-    s3_object_name = message_dict.get("DocumentLocation", {}).get("S3ObjectName", None)
-    s3_bucket_name = message_dict.get("DocumentLocation", {}).get("S3Bucket", None)
+    s3_object_name = message_dict.get("DocumentLocation", {}).get("S3ObjectName", "")
+    s3_bucket_name = message_dict.get("DocumentLocation", {}).get("S3Bucket", "")
 
     return job_id, status, s3_object_name, s3_bucket_name
 
@@ -309,38 +309,16 @@ def lambda_handler(event: dict, context: dict) -> None:
     -------
         None
     """
-    try:
-        # Parse the SNS message
-        job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
-
-        # Initialize S3 client
-        s3_client = S3Bucket(bucket_name=s3_bucket_name)
-
-        if not job_id or not status:
-            logging.error("JobId or Status missing in SNS message.")
-            return None
-
-        # Update the job status in Firestore
-        firestore_client.update_job_status(job_id, status)
-
-        # Get Origin terminal from S3 object path
-        pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
-        origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
-
-        # If job failed exit program
-        if status != "SUCCEEDED":
-            msg = "Job did not succeed."
-            raise (msg)
-
-        response = textract_client.get_document_analysis(JobId=job_id)
-
-        tables = gen_tables_from_textract_response(response)
-
-    except Exception as e:
-        logging.error("Error processing PDF: %s", e)
-        raise
     # Parse the SNS message
     job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
+
+    if not s3_bucket_name:
+        logging.error("S3 bucket name missing in SNS message.")
+        return None
+
+    if not s3_object_path:
+        logging.error("S3 object path missing in SNS message.")
+        return None
 
     # Initialize S3 client
     s3_client = S3Bucket(bucket_name=s3_bucket_name)
@@ -354,11 +332,16 @@ def lambda_handler(event: dict, context: dict) -> None:
 
     # Get Origin terminal from S3 object path
     pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
+
+    if not pdf_hash:
+        logging.error("Failed to get PDF hash using s3 object path from Firestore.")
+        return None
+
     origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
     # If job failed exit program
     if status != "SUCCEEDED":
-        msg = "Job did not succeed."
+        msg = Exception("Job did not succeed.")
         raise (msg)
 
     response = textract_client.get_document_analysis(JobId=job_id)
