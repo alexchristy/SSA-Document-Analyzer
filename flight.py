@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import logging
 import pickle
+from typing import Optional, Type
 
 
 class Flight:
@@ -105,7 +106,7 @@ class Flight:
         print(f"Patriot Express: {self.patriot_express}")
         print(f"{'=' * 40}")
 
-    def __eq__(self: "Flight", other: "Flight") -> bool:
+    def __eq__(self: "Flight", other: object) -> bool:
         """Check if two Flight objects are equal.
 
         Parameters
@@ -152,7 +153,9 @@ class Flight:
         return hashlib.sha256(self.as_string.encode()).hexdigest()
 
     @classmethod
-    def load_state(cls: "Flight", filename: str = "flight_state.pkl") -> "Flight":
+    def load_state(
+        cls: Type["Flight"], filename: str = "flight_state.pkl"
+    ) -> Optional["Flight"]:
         """Load the state of the Flight object from a pickle file.
 
         Parameters
