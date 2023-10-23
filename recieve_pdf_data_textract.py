@@ -381,6 +381,19 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
 
     origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
+    if not origin_terminal:
+        logging.error(
+            "Failed to get origin terminal using PDF hash (%s) from Firestore.",
+            pdf_hash,
+        )
+        no_origin_terminal_msg = (
+            f"Failed to get origin terminal using PDF hash ({pdf_hash}) from Firestore."
+        )
+        return {
+            "statusCode": 500,
+            "body": json.dumps(no_origin_terminal_msg),
+        }
+
     # If job failed exit program
     if status != "SUCCEEDED":
         msg = Exception("Job did not succeed.")

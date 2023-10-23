@@ -2,7 +2,12 @@ import logging
 import os
 from typing import Any, Dict, List, Optional
 
-from firebase_admin import credentials, firestore, get_app, initialize_app
+from firebase_admin import (  # type: ignore
+    credentials,
+    firestore,
+    get_app,
+    initialize_app,
+)
 
 from flight import Flight
 
@@ -236,4 +241,4 @@ class FirestoreClient:
         logging.warning("PDF with hash %s does not exist in the database.", pdf_hash)
 
         # Return None to indicate that no PDF was found
-        return None
+        return ""
