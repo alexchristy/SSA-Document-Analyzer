@@ -1,5 +1,6 @@
 import datetime
 import re
+from typing import Optional, Union
 
 
 def reformat_date(date_str: str, current_date: datetime.datetime) -> str:
@@ -69,7 +70,7 @@ def reformat_date(date_str: str, current_date: datetime.datetime) -> str:
         return date_str
 
 
-def create_datetime_from_str(date_str: str) -> datetime.datetime or None:
+def create_datetime_from_str(date_str: str) -> Optional[datetime.datetime]:
     """Create a datetime object from a string in the format YYYYMMDD.
 
     Args:
@@ -105,7 +106,9 @@ def create_datetime_from_str(date_str: str) -> datetime.datetime or None:
         return None
 
 
-def check_date_string(input_string: str, return_match: bool = False) -> bool or str:
+def check_date_string(
+    input_string: str, return_match: bool = False
+) -> Optional[Union[bool, str]]:
     """Check if a given string is a valid date string in one of several formats.
 
     Args:
