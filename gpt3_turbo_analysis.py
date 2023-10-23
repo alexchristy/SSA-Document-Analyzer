@@ -31,7 +31,7 @@ class GPT3TurboAnalysis:
 
     def get_destination_analysis(
         self: "GPT3TurboAnalysis", destination_data: str
-    ) -> str:
+    ) -> Optional[str]:
         """Analyzes a destination data string and returns a corrected and parsed version.
 
         Args:

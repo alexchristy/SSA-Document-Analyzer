@@ -755,7 +755,7 @@ def populate_merged_row_seat_columns(
             dest_analyzed = gpt_analyzer.get_destination_analysis(dest_text)
 
             # Not a destination row skip
-            if dest_analyzed == "None":
+            if dest_analyzed == "None" or dest_analyzed is None:
                 continue
 
             seats = parse_seat_data(seat_text)
