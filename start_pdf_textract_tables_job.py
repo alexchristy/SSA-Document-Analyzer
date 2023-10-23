@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Any, Dict
 
-import boto3
+import boto3  # type: ignore
 
 from firestore_db import FirestoreClient
 
