@@ -2,7 +2,7 @@ import datetime
 import hashlib
 import logging
 import pickle
-from typing import Optional, Type
+from typing import Any, Dict, Optional, Type
 
 
 class Flight:
@@ -14,7 +14,7 @@ class Flight:
         destinations: list,
         rollcall_time: str,
         seats: list,
-        notes: str,
+        notes: Dict[str, Any],
         date: str,
         rollcall_note: bool = False,
         seat_note: bool = False,

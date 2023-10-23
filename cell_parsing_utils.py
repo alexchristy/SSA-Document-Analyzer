@@ -3,7 +3,7 @@ import json
 import logging
 import re
 from collections import Counter
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 def parse_rollcall_time(time_str: str) -> str or None:
@@ -278,7 +278,7 @@ def combine_sequential_duplicates(destinations: List[str]) -> List[str]:
     return combined
 
 
-def parse_destination(destination_data: str) -> str:
+def parse_destination(destination_data: str) -> Optional[List[str]]:
     """Parse the destination data using GPT-3 Turbo.
 
     Args:
@@ -287,7 +287,7 @@ def parse_destination(destination_data: str) -> str:
 
     Returns:
     -------
-        str: The parsed destination data.
+        List[str]: The parsed destination data.
     """
     from gpt3_turbo_analysis import GPT3TurboAnalysis
     from note_extract_utils import _extract_parenthesis_notes

@@ -1,9 +1,9 @@
 import datetime
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, cast
 
-from fuzzywuzzy import fuzz
+from fuzzywuzzy import fuzz  # type: ignore
 
 from cell_parsing_utils import parse_destination, parse_rollcall_time, parse_seat_data
 from date_utils import check_date_string, create_datetime_from_str, reformat_date
@@ -164,15 +164,17 @@ def sort_nested_dict(d: Dict[str, Any]) -> Dict[str, Any]:
             logging.info("Sorting nested dictionary for key: %s", key)
             result[key] = sort_nested_dict(value)
         elif isinstance(value, list):
-            # Sort lists if the values are strings or other sortable types
             logging.info("Sorting list for key: %s", key)
             try:
-                result[key] = sorted(value)
+                # Cast sorted list to Any
+                result[key] = cast(Any, sorted(value))
             except TypeError:
                 # If values within the list are unsortable, leave the list as is
-                result[key] = value
+                # Cast the value to Any
+                result[key] = cast(Any, value)
         else:
-            result[key] = value
+            # Cast the value to Any
+            result[key] = cast(Any, value)
     return result
 
 
@@ -222,7 +224,7 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
     has_note_columns = False
 
     # Initialize list of flights
-    flights = []
+    flights: List[Flight] = []
 
     # Check if table is empty
     if table is None:
@@ -294,7 +296,12 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
         return flights
 
     # Merge rows in table as needed
-    table = merge_table_rows(table)
+    merged_table = merge_table_rows(table)
+    if merged_table is None:
+        logging.error("Failed to merge rows in table. Exiting...")
+        return flights
+
+    table = merged_table
 
     if table is None:
         logging.error("Failed to merge rows in table. Exiting...")
@@ -310,12 +317,12 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
 
         # Special flight data variables
         has_roll_call_note = False
-        roll_call_notes = {}
+        roll_call_notes: Dict[str, Any] = {}
         has_seat_note = False
-        seat_notes = {}
+        seat_notes: Dict[str, Any] = {}
         has_dest_note = False
         dest_notes = {}
-        notes = {}
+        notes: Dict[str, Any] = {}
 
         # Define cells for parsing
         dest_cell = row[destination_column_index]
@@ -330,6 +337,10 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
         # Skip row if it doesn't have complete data
         if roll_call_time is None and not seats and destinations is None:
             logging.info("Skipping row %s due to incomplete data.", row_index)
+            continue
+
+        if destinations is None:
+            logging.error("Failed to parse destinations. Skipping row...")
             continue
 
         # Check if the roll call time is a valid roll call time
