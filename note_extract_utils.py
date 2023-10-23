@@ -29,10 +29,10 @@ def _extract_single_asterisk_note(text: str) -> str:
         match = re.search(r"((\*+\s*)+)+\s*(.*?)\s*((\*+\s*)+)+", text)
         if match and match.group(3).strip():
             return match.group(3)
-        return None
+        return ""
     except Exception as e:
         logging.error("Error in _extract_single_note: %s", e)
-        return None
+        return ""
 
 
 def _reverse_string(s: str) -> str:
@@ -63,16 +63,20 @@ def _extract_multiple_asterisk_notes(text: str) -> list:
     """
     try:
         notes = []
-        text = _remove_spaces_around_asterisks(text)
-        if text is None:
+        cleaned_text = _remove_spaces_around_asterisks(text)
+        if cleaned_text is None:
             return []
 
         while True:
-            note = _extract_single_asterisk_note(text)
+            parsed_note = _extract_single_asterisk_note(cleaned_text)
+            if parsed_note is None:
+                continue
+
+            note = parsed_note
             if note:
                 notes.append(note)
                 note_with_asterisks_match = re.search(
-                    r"((\*+\s*)+)+\s*.*?\s*((\*+\s*)+)+", text
+                    r"((\*+\s*)+)+\s*.*?\s*((\*+\s*)+)+", cleaned_text
                 )
 
                 if note_with_asterisks_match is None:
@@ -82,7 +86,7 @@ def _extract_multiple_asterisk_notes(text: str) -> list:
                 end_asterisks = note_with_asterisks_match.group(4).count("*")
                 min_asterisks = min(start_asterisks, end_asterisks)
                 removal_substring = "*" * min_asterisks + note + "*" * min_asterisks
-                text = text.replace(removal_substring, "", 1).strip()
+                cleaned_text = cleaned_text.replace(removal_substring, "", 1).strip()
             else:
                 break
         return notes
