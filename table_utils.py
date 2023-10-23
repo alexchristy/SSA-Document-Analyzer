@@ -80,7 +80,7 @@ def convert_textract_response_to_tables(json_response: Dict[str, Any]) -> List[T
     table_title_exclusion_list = ["updated", "current"]
 
     try:
-        tables = []
+        tables: List[Table] = []
         # Check if the input is paginated (list of blocks) or not (single page JSON response)
         if isinstance(json_response, list):
             blocks = json_response
@@ -154,10 +154,10 @@ def convert_textract_response_to_tables(json_response: Dict[str, Any]) -> List[T
                 footer_text = collect_text_from_children(block)
                 current_table.footer = footer_text
                 current_table.footer_confidence = block.get("Confidence", 0.0)
-        return tables if tables else None
+        return tables if tables else []
     except Exception as e:
         logging.error("An error occurred while converting to table: %s", e)
-        return None
+        return []
 
 
 def find_table_title_with_date(
@@ -322,6 +322,10 @@ def gen_tables_from_textract_response(textract_response: Dict[str, Any]) -> List
     """
     tables = convert_textract_response_to_tables(textract_response)
 
+    if not tables:
+        logging.error("No tables returned from convert_textract_response_to_tables.")
+        return []
+
     if not isinstance(tables, list):
         logging.error("Expected a list of tables, got something else.")
         return []
@@ -351,15 +355,15 @@ def get_destination_column_index(table: Table) -> int:
 
     if table is None:
         logging.error("Exiting function! Table is empty.")
-        return None
+        return -1
 
     if table.rows is None:
         logging.error("Exiting function! There are no rows in the table.")
-        return None
+        return -1
 
     if table.get_num_of_columns() == 0:
         logging.error("Exiting function! There are no columns in the table.")
-        return None
+        return -1
 
     # Define regex pattern to match destination
     # column header
@@ -372,7 +376,7 @@ def get_destination_column_index(table: Table) -> int:
                 logging.info("Found destination column header: %s", column_header[0])
                 return index
 
-    return None
+    return -1
 
 
 def get_seats_column_index(table: Table) -> int:
@@ -390,15 +394,15 @@ def get_seats_column_index(table: Table) -> int:
 
     if table is None:
         logging.error("Exiting function! Table is empty.")
-        return None
+        return -1
 
     if table.rows is None:
         logging.error("Exiting function! There are no rows in the table.")
-        return None
+        return -1
 
     if table.get_num_of_columns() == 0:
         logging.error("Exiting function! There are no columns in the table.")
-        return None
+        return -1
 
     # Define regex pattern to match seats
     # column header
@@ -411,7 +415,7 @@ def get_seats_column_index(table: Table) -> int:
                 logging.info("Found seat data column header: %s", column_header[0])
                 return index
 
-    return None
+    return -1
 
 
 def convert_note_column_to_notes(
@@ -480,15 +484,15 @@ def get_roll_call_column_index(table: Table) -> int:
 
     if table is None:
         logging.error("Exiting function! Table is empty.")
-        return None
+        return -1
 
     if table.rows is None:
         logging.error("Exiting function! There are no rows in the table.")
-        return None
+        return -1
 
     if table.get_num_of_columns() == 0:
         logging.error("Exiting function! There are no columns in the table.")
-        return None
+        return -1
 
     # Define regex pattern to match roll call time
     # column header
@@ -501,10 +505,10 @@ def get_roll_call_column_index(table: Table) -> int:
                 logging.info("Found roll call time column header: %s", column_header[0])
                 return index
 
-    return None
+    return -1
 
 
-def merge_table_rows(table: Table) -> Table:
+def merge_table_rows(table: Table) -> Optional[Table]:
     """Merge vertically adjacent rows in a given table that have cells with the same confidence value.
 
     The merged cell's confidence value becomes the average of the merged cells, rounded to 8 decimal places.
@@ -533,17 +537,19 @@ def merge_table_rows(table: Table) -> Table:
             return table
 
         # Populate merged row seat columns
-        merge_groups = populate_merged_row_seat_columns(table, merge_groups)
+        groups_merged = populate_merged_row_seat_columns(table, merge_groups)
 
         # Merge rows in each group
-        return _merge_grouped_rows(table, merge_groups)
+        return _merge_grouped_rows(table, groups_merged)
 
     except Exception as e:
         logging.error("An error occurred while merging table rows: %s", e)
         return None
 
 
-def _get_merge_row_groups(table: Table) -> List[List[tuple]]:
+def _get_merge_row_groups(
+    table: Table,
+) -> List[List[Tuple[int, List[Tuple[str, float]]]]]:
     """Group rows together that should be merged.
 
     Find groups of vertically adjacent rows in a given table that have cells with the same confidence value and
@@ -560,7 +566,7 @@ def _get_merge_row_groups(table: Table) -> List[List[tuple]]:
     try:
         if not table.rows:
             logging.info("No rows in the table to merge.")
-            return table
+            return []
 
         # Initialize a list to keep track of row groups to merge
         merge_groups = []
@@ -584,12 +590,14 @@ def _get_merge_row_groups(table: Table) -> List[List[tuple]]:
 
     except Exception as e:
         logging.error("An error occurred while identifying merge groups: %s", e)
-        return None
+        return []
 
     return merge_groups
 
 
-def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
+def _merge_grouped_rows(
+    table: Table, merge_groups: List[List[Tuple[int, List[Tuple[str, float]]]]]
+) -> Optional[Table]:
     """Take in a table and a list of merge groups and merges the rows in the table based on the merge groups.
 
     Args:
@@ -609,7 +617,7 @@ def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
         num_columns = len(table.rows[0])
         # Perform row merging for identified merge groups
         for group in merge_groups:
-            merged_row = [("", 0)] * num_columns
+            merged_row = [("", 0.0)] * num_columns
             first_row_index = group[0][0]
 
             for _, row in group:
@@ -622,6 +630,15 @@ def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
 
             # Do not merge rows that have multiple roll call times
             roll_call_col_index = get_roll_call_column_index(table)
+
+            if roll_call_col_index == -1:
+                logging.info(
+                    "Skipping merging rows %s to %s because there is no roll call column.",
+                    first_row_index,
+                    group[-1][0],
+                )
+                continue
+
             if has_multiple_rollcall_times(merged_row[roll_call_col_index][0]):
                 logging.info(
                     "Skipping merging rows %s to %s because they have multiple roll call times.",
@@ -637,6 +654,22 @@ def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
             dest_col_index = get_destination_column_index(table)
             dests = parse_destination(merged_row[dest_col_index][0])
             seats = parse_seat_data(merged_row[seat_col_index][0])
+
+            if dest_col_index == -1:
+                logging.info(
+                    "Skipping merging rows %s to %s because there is no destination column.",
+                    first_row_index,
+                    group[-1][0],
+                )
+                continue
+
+            if seat_col_index == -1:
+                logging.info(
+                    "Skipping merging rows %s to %s because there is no seat data column.",
+                    first_row_index,
+                    group[-1][0],
+                )
+                continue
 
             # Do not merge row with no destinations
             if dests is None:
@@ -654,8 +687,11 @@ def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
             table.rows[first_row_index] = merged_row
 
             # Remove the merged rows from the original table, except for the first one which we've replaced
-            for idx, _ in group[1:]:
-                table.rows[idx] = None
+            indices_to_remove = sorted(
+                [idx for idx, _ in group[1:]]
+            )  # Sort to delete from end
+            for idx in reversed(indices_to_remove):  # Delete from end
+                del table.rows[idx]
 
         # Remove None rows (which are placeholders for the merged rows)
         table.rows = [row for row in table.rows if row is not None]
@@ -668,8 +704,8 @@ def _merge_grouped_rows(table: Table, merge_groups: List[List[tuple]]) -> Table:
 
 
 def populate_merged_row_seat_columns(
-    table: Table, merge_groups: List[List[tuple]]
-) -> List[List[tuple]]:
+    table: Table, merge_groups: List[List[Tuple[int, List[Tuple[str, float]]]]]
+) -> List[List[Tuple[int, List[Tuple[str, float]]]]]:
     """Fill empty seat data cells in rows to be merged with 0T.
 
     This function takes in a list of merge groups and populates the seat data for rows that will be merged only
@@ -689,6 +725,14 @@ def populate_merged_row_seat_columns(
 
     dest_column_index = get_destination_column_index(table)
     seat_column_index = get_seats_column_index(table)
+
+    if dest_column_index == -1:
+        logging.error("No destination column found. Exiting function!")
+        return merge_groups
+
+    if seat_column_index == -1:
+        logging.error("No seat data column found. Exiting function!")
+        return merge_groups
 
     for group in merge_groups:
         # Search to see if there are two different
@@ -729,7 +773,7 @@ def populate_merged_row_seat_columns(
     return merge_groups
 
 
-def scramble_columns(input_table: Table) -> Table:
+def scramble_columns(input_table: Table) -> Optional[Table]:
     """Scrambles the columns of a table in a random order.
 
     Args:
@@ -806,7 +850,7 @@ def infer_roll_call_column_index(table: Table) -> int:
     """
     # First check if we can find roll call column by searching for a column header
     roll_call_col_index = get_roll_call_column_index(table)
-    if roll_call_col_index is not None:
+    if roll_call_col_index != -1:
         logging.info(
             "No inference. Found roll call column by searching for column header."
         )
@@ -913,7 +957,7 @@ def infer_seats_column_index(table: Table) -> int:
     """
     # First check if we can find seat column by searching for a column header
     seat_col_index = get_seats_column_index(table)
-    if seat_col_index is not None:
+    if seat_col_index != -1:
         logging.info("No inference. Found seat column by searching for column header.")
         return seat_col_index
 
@@ -1018,7 +1062,7 @@ def infer_destinations_column_index(table: Table) -> int:
     """
     # First check if we can find seat column by searching for a column header
     dest_col_index = get_destination_column_index(table)
-    if dest_col_index is not None:
+    if dest_col_index != -1:
         logging.info(
             "No inference. Found destination column by searching for column header."
         )
@@ -1098,7 +1142,7 @@ def infer_destinations_column_index(table: Table) -> int:
     return -1
 
 
-def delete_column(input_table: Table, col_index: int) -> Table:
+def delete_column(input_table: Table, col_index: int) -> Optional[Table]:
     """Delete a column from a table.
 
     Args:

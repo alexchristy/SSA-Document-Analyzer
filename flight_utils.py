@@ -296,6 +296,10 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
     # Merge rows in table as needed
     table = merge_table_rows(table)
 
+    if table is None:
+        logging.error("Failed to merge rows in table. Exiting...")
+        return flights
+
     # Iterate through each row
     for row_index, row in enumerate(table.rows):
         logging.info("Processing row %s.", row_index)
