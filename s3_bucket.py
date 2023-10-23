@@ -2,9 +2,9 @@ import logging
 import os
 from typing import Optional
 
-import boto3
-from boto3.exceptions import S3UploadFailedError
-from botocore.exceptions import ParamValidationError
+import boto3  # type: ignore
+from boto3.exceptions import S3UploadFailedError  # type: ignore
+from botocore.exceptions import ParamValidationError  # type: ignore
 
 
 class S3Bucket:
