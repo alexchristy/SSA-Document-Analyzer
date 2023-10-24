@@ -1,231 +1,244 @@
-from firebase_admin import credentials, firestore, initialize_app, get_app
-import os
 import logging
+import os
+from typing import Any, Dict, List, Optional
+
+from firebase_admin import (  # type: ignore
+    credentials,
+    firestore,
+    get_app,
+    initialize_app,
+)
+
+from flight import Flight
+
 
 class FirestoreClient:
-    
-    def __init__(self):
+    """A client for interacting with Firestore."""
+
+    def __init__(self: "FirestoreClient") -> None:
+        """Initialize a FirestoreClient object."""
         # Initialize app only if it hasn't been initialized yet
         try:
             self.app = get_app()
-        except ValueError as e:
+        except ValueError:
             # Get the path to the Firebase Admin SDK service account key JSON file from an environment variable
-            fs_creds_path = os.getenv('FS_CRED_PATH')
-            
+            fs_creds_path = os.getenv("FS_CRED_PATH")
+
             # Initialize the credentials with the JSON file
             cred = credentials.Certificate(fs_creds_path)
-            
+
             # Initialize the Firebase application with the credentials
             self.app = initialize_app(cred)
-            
+
         # Create the Firestore client
         self.db = firestore.client(app=self.app)
-        
-    def add_textract_job(self, job_id, pdf_hash):
-        # Add the job ID to the Firestore database in a single set operation
-        self.db.collection('Textract_Jobs').document(job_id).set({
-            'status': 'STARTED',
-            'pdf_hash': pdf_hash
-        })
 
-    def get_textract_job(self, job_id):
+    def add_textract_job(self: "FirestoreClient", job_id: str, pdf_hash: str) -> None:
+        """Add a Textract job to the Firestore database.
+
+        Args:
+        ----
+        job_id (str): The ID of the Textract job.
+        pdf_hash (str): The hash value of the PDF document.
+
+        """
+        # Add the job ID to the Firestore database in a single set operation
+        self.db.collection("Textract_Jobs").document(job_id).set(
+            {"status": "STARTED", "pdf_hash": pdf_hash}
+        )
+
+    def get_textract_job(
+        self: "FirestoreClient", job_id: str
+    ) -> Optional[Dict[str, Any]]:
+        """Get a Textract job from Firestore.
+
+        Args:
+        ----
+        job_id (str): The ID of the Textract job.
+
+        Returns:
+        -------
+        Optional[Dict[str, Any]]: A dictionary representing the Textract job if it exists, otherwise None.
+
+        """
         # Get the Textract job from Firestore
-        job = self.db.collection('Textract_Jobs').document(job_id).get()
-        
+        job = self.db.collection("Textract_Jobs").document(job_id).get()
+
         # Check if the job exists
         if job.exists:
             return job.to_dict()
-        else:
-            logging.error(f"Job {job_id} does not exist.")
-            return None
 
-    def get_pdf_hash_with_s3_path(self, s3_object_path):
+        logging.error("Job %s does not exist.", job_id)
+        return None
+
+    def get_pdf_hash_with_s3_path(self: "FirestoreClient", s3_object_path: str) -> str:
+        """Get the hash value of a PDF document from Firestore using its S3 object path.
+
+        Args:
+        ----
+        s3_object_path (str): The S3 object path of the PDF document.
+
+        Returns:
+        -------
+        Optional[str]: The hash value of the PDF document if it exists in Firestore, otherwise None.
+
+        """
         try:
-            pdf_archive = os.getenv('PDF_ARCHIVE_COLLECTION')
+            pdf_archive = os.getenv("PDF_ARCHIVE_COLLECTION")
             if not pdf_archive:
                 logging.error("PDF_ARCHIVE_COLLECTION environment variable is not set.")
-                return None
+                return ""
 
             # Fetch the document(s) from Firestore
-            query_result = self.db.collection(pdf_archive).where('cloud_path', '==', str(s3_object_path)).get()
+            query_result = (
+                self.db.collection(pdf_archive)
+                .where("cloud_path", "==", str(s3_object_path))
+                .get()
+            )
 
             # Check if the document exists
             if query_result:
                 for doc in query_result:
-                    hash_value = doc.to_dict().get('hash', None)
+                    hash_value = doc.to_dict().get("hash", "")
                     if hash_value:
-                        logging.info(f"Successfully retrieved hash value: {hash_value}")
+                        logging.info(
+                            "Successfully retrieved hash value: %s", hash_value
+                        )
                         return hash_value
-                    else:
-                        logging.warning(f"Document found but 'hash' attribute is missing. S3 Path: {s3_object_path}")
-                        return None
 
-                logging.warning(f"No document found with matching S3 path: {s3_object_path}")
-                return None
+                    logging.warning(
+                        "Document found but 'hash' attribute is missing. S3 Path: %s",
+                        s3_object_path,
+                    )
+                    return ""
+
+                logging.warning(
+                    "No document found with matching S3 path: %s", s3_object_path
+                )
+                return ""
 
         except Exception as e:
-            logging.error(f"An error occurred: {e}")
-            return None
-    
-    def update_job_status(self, job_id, status):
-        """
-        Update the status of a job document in the Textract_Jobs collection.
+            logging.error("An error occurred: %s", e)
+            return ""
 
-        Parameters:
+        return ""
+
+    def update_job_status(self: "FirestoreClient", job_id: str, status: str) -> None:
+        """Update the status of a job document in the Textract_Jobs collection.
+
+        Args:
+        ----
         job_id (str): The ID of the Textract job.
         status (str): The new status to set for the job.
 
         """
         try:
-            job_ref = self.db.collection('Textract_Jobs').document(job_id)
-            
+            job_ref = self.db.collection("Textract_Jobs").document(job_id)
+
             # Update the 'status' field in the job document
-            job_ref.update({'status': status})
-            
-            logging.info(f"Successfully updated job {job_id} with status {status}")
+            job_ref.update({"status": status})
+
+            logging.info("Successfully updated job %s with status %s", job_id, status)
         except Exception as e:
-            logging.error(f"An error occurred while updating the job status: {e}")
+            logging.error("An error occurred while updating the job status: %s", e)
 
+    def add_flight_ids_to_pdf(
+        self: "FirestoreClient", pdf_hash: str, flight_ids: List[str]
+    ) -> None:
+        """Add a list of flight IDs to a PDF document in the PDF_ARCHIVE_COLLECTION.
 
-    def add_flight_ids_to_pdf(self, pdf_hash, flight_ids):
-        """
-        Add a list of flight IDs to a PDF document in the PDF_ARCHIVE_COLLECTION.
-
-        Parameters:
+        Args:
+        ----
         pdf_hash (str): The hash of the PDF document.
         flight_ids (list): The list of flight IDs.
 
         """
         try:
-            pdf_ref = self.db.collection(os.getenv('PDF_ARCHIVE_COLLECTION')).document(pdf_hash)
+            pdf_ref = self.db.collection(os.getenv("PDF_ARCHIVE_COLLECTION")).document(
+                pdf_hash
+            )
 
             # Add the list of flight IDs to the 'flight_ids' array in the PDF document
-            pdf_ref.update({'flight_ids': firestore.ArrayUnion(flight_ids)})
-            
-            logging.info(f"Successfully added flight IDs to PDF {pdf_hash}")
+            pdf_ref.update({"flight_ids": firestore.ArrayUnion(flight_ids)})
+
+            logging.info("Successfully added flight IDs to PDF %s", pdf_hash)
         except Exception as e:
-            logging.error(f"An error occurred while adding the flight IDs to the PDF: {e}")
+            logging.error(
+                "An error occurred while adding the flight IDs to the PDF: %s", e
+            )
 
-    def insert_flight(self, flight):
-        """
-        Insert a flight object into the FLIGHT_ARCHIVE_COLLECTION.
+    def insert_flight(self: "FirestoreClient", flight: Flight) -> None:
+        """Insert a flight object into the FLIGHT_ARCHIVE_COLLECTION.
 
-        Parameters:
+        Args:
+        ----
         flight (Flight): The Flight object to insert.
-        
+
         """
         try:
-            flight_collection = os.getenv('FLIGHT_ARCHIVE_COLLECTION')
+            flight_collection = os.getenv("FLIGHT_ARCHIVE_COLLECTION")
             if not flight_collection:
-                logging.error("FLIGHT_ARCHIVE_COLLECTION environment variable is not set.")
+                logging.error(
+                    "FLIGHT_ARCHIVE_COLLECTION environment variable is not set."
+                )
                 return
 
             # Convert the Flight object to a dictionary
             flight_data = flight.to_dict()
-            
-            # Insert the flight object into the Firestore collection
-            self.db.collection(flight_collection).document(flight.flight_id).set(flight_data)
 
-            logging.info(f"Successfully inserted flight with ID {flight.flight_id} into {flight_collection}")
+            # Insert the flight object into the Firestore collection
+            self.db.collection(flight_collection).document(flight.flight_id).set(
+                flight_data
+            )
+
+            logging.info(
+                "Successfully inserted flight with ID %s into %s",
+                flight.flight_id,
+                flight_collection,
+            )
         except Exception as e:
-            logging.error(f"An error occurred while inserting the flight object: {e}")
-    
-    def update_job_status(self, job_id, status):
-        try:
-            self.db.collection('Textract_Jobs').document(job_id).update({'status': status})
-            logging.info(f"Successfully updated job {job_id} with status {status}")
-        except Exception as e:
-            logging.error(f"An error occurred while updating the job status: {e}")
-    
-    def get_terminal_name_by_pdf_hash(self, hash: str) -> str:
-        """
+            logging.error("An error occurred while inserting the flight object: %s", e)
+
+    def get_terminal_name_by_pdf_hash(self: "FirestoreClient", pdf_hash: str) -> str:
+        """Get name of terminal that owns the PDF identified by the supplied hash.
+
         This function returns the name of the terminal that owns the PDF that is
         identified by the supplied hash.
-        
-        :param hash: The SHA-256 hash of the PDF file
-        :return: Terminal name or None if the hash is invalid or the PDF does not exist
-        """
 
-        logging.info('Entering get_pdf_by_hash().')
- 
+        Args:
+        ----
+        pdf_hash: The SHA-256 hash of the PDF file
+
+        Returns:
+        -------
+        (str) Terminal name or None if the hash is invalid or the PDF does not exist
+        """
+        logging.info("Entering get_pdf_by_hash().")
+
         # Get the name of the collections from environment variables
-        pdf_archive_coll = os.getenv('PDF_ARCHIVE_COLLECTION')
-        terminal_coll = os.getenv('TERMINAL_COLLECTION')
-        
+        pdf_archive_coll = os.getenv("PDF_ARCHIVE_COLLECTION")
+
         # Create a reference to the document using the SHA-256 hash as the document ID
-        doc_ref = self.db.collection(pdf_archive_coll).document(hash)
-        
+        doc_ref = self.db.collection(pdf_archive_coll).document(pdf_hash)
+
         # Try to retrieve the document
         doc = doc_ref.get()
-        
+
         # Check if the document exists
         if doc.exists:
             # The document exists, so we retrieve its data and create a Pdf object
-            logging.info(f'PDF with hash {hash} found in the database.')
-            
+            logging.info("PDF with hash %s found in the database.", pdf_hash)
+
             # Get the document's data
             pdf_data = doc.to_dict()
-            
+
             # Return the terminal name
-            terminalName = pdf_data['terminal']
-            logging.info(f'Terminal name: {terminalName}')
-            return terminalName
-        
-        else:
-            # The document does not exist
-            logging.warning(f'PDF with hash {hash} does not exist in the database.')
-            
-            # Return None to indicate that no PDF was found
-            return None
-        
-    def get_potential_destinations(self):
-
-        terminal_collection = os.getenv('TERMINAL_COLLECTION')
-        if not terminal_collection:
-            logging.error("TERMINAL_COLLECTION environment variable is not set.")
-            raise Exception("TERMINAL_COLLECTION environment variable is not set.")
-        
-        # Get all the terminals from Firestore
-        terminals = self.db.collection(terminal_collection).get()
-
-        # Create a list to store the potential destinations
-        potential_destinations = []
-
-        # Iterate through the terminals
-        for terminal in terminals:
-            # Get the terminal's data
-            terminal_data = terminal.to_dict()
-            
-            # Get the terminal's location
-            terminal_location = terminal_data['location']
-            terminal_name = terminal_data['name']
-            
-            # Add the tuple to the list
-            potential_destinations.append((terminal_name, terminal_location))
-        
-        return potential_destinations
-    
-    def get_terminal_name_by_location(self, location):
-        terminal_collection = os.getenv('TERMINAL_COLLECTION')
-        if not terminal_collection:
-            logging.error("TERMINAL_COLLECTION environment variable is not set.")
-            raise Exception("TERMINAL_COLLECTION environment variable is not set.")
-        
-        # Create a query to find the terminal with the specified location
-        query = self.db.collection(terminal_collection).where('location', '==', location)
-        
-        # Execute the query
-        query_result = query.get()
-        
-        # Check if the query returned any results
-        if query_result:
-            # Get the terminal's data
-            terminal_data = query_result[0].to_dict()
-            
-            # Get the terminal's name
-            terminal_name = terminal_data['name']
-            
+            terminal_name = pdf_data["terminal"]
+            logging.info("Terminal name: %s", terminal_name)
             return terminal_name
-        else:
-            logging.error(f"No terminal found with location {location}.")
-            return None
+
+        # The document does not exist
+        logging.warning("PDF with hash %s does not exist in the database.", pdf_hash)
+
+        # Return None to indicate that no PDF was found
+        return ""

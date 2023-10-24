@@ -1,10 +1,11 @@
+import datetime as dt
 import unittest
 from datetime import datetime
 
 # Function tested imports
-from flight_utils import reformat_date
-from flight_utils import create_datetime_from_str
+from flight_utils import create_datetime_from_str, reformat_date
 from table_utils import check_date_string
+
 
 class TestReformatDate(unittest.TestCase):
     def test_normal_date(self):
@@ -25,17 +26,18 @@ class TestReformatDate(unittest.TestCase):
         expected_output = date_str
         self.assertEqual(reformat_date(date_str, current_date), expected_output)
 
-class TestCreateDatetimeFromStr(unittest.TestCase):
 
+class TestCreateDatetimeFromStr(unittest.TestCase):
     def test_valid_date(self):
         date_str = "20211231"
-        expected_output = datetime(year=2021, month=12, day=31)
+        expected_output = datetime(year=2021, month=12, day=31, tzinfo=dt.timezone.utc)
         self.assertEqual(create_datetime_from_str(date_str), expected_output)
 
     def test_invalid_date(self):
         date_str = "20211331"
         expected_output = None
         self.assertEqual(create_datetime_from_str(date_str), expected_output)
+
 
 class TestCheckDateString(unittest.TestCase):
     def test_valid_date_1(self):
