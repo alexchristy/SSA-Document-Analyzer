@@ -433,6 +433,10 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
             # Check if date is a valid date string
             match = check_date_string(date_string, return_match=True)
 
+            if match is None:
+                logging.error("Failed to get date from table title. Skipping row...")
+                continue
+
             # Remove key from notes
             notes = recursively_remove_keys(notes, [date_key])
 
@@ -458,6 +462,11 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
         notes = prune_empty_values(notes)
         notes = sort_nested_dict(notes)
 
+        # Confirm match is a string before passing to reformat_date
+        if not isinstance(match, str):
+            logging.error("Match is not a string. Exiting...")
+            return flights
+
         # Added this functionality to allow for testing with a fixed date
         # which allows for proper testing of year inference functionality
         # of the reformat_date function
@@ -468,6 +477,11 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
                 return flights
 
             custom_date = create_datetime_from_str(fixed_date)
+
+            if custom_date is None:
+                logging.error("Failed to create datetime object from fixed date.")
+                return flights
+
             date = reformat_date(match, custom_date)
         else:
             date = reformat_date(match, datetime.datetime.now(tz=datetime.UTC))

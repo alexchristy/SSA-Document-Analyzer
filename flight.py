@@ -12,7 +12,7 @@ class Flight:
         self: "Flight",
         origin_terminal: str,
         destinations: list,
-        rollcall_time: str,
+        rollcall_time: Optional[str],
         seats: list,
         notes: Dict[str, Any],
         date: str,

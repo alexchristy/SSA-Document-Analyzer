@@ -3,10 +3,10 @@ import json
 import logging
 import re
 from collections import Counter
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union, cast
 
 
-def parse_rollcall_time(time_str: str) -> str or None:
+def parse_rollcall_time(time_str: str) -> Optional[str]:
     """Parse a string representing a rollcall time and returns the time as a string in the format 'HHMM'.
 
     Args:
@@ -89,6 +89,11 @@ def has_multiple_rollcall_times(time_str: str) -> bool:
     count = 0
     while time_str.strip():  # Skip empty or white-space only strings
         parsed_time = parse_rollcall_time(time_str)
+
+        if parsed_time is None:
+            logging.info("No more rollcall times found in %s", time_str)
+            break
+
         if parsed_time:
             count += 1
             # Remove the parsed time and strip
@@ -149,7 +154,7 @@ def ocr_combo_correction(input_str: str, correction_map: Dict[str, str]) -> List
     return ["".join(p) for p in itertools.product(*possibilities)]
 
 
-def parse_seat_data(seat_data: str) -> List[List[int or str]]:
+def parse_seat_data(seat_data: str) -> List[List[Union[int, str]]]:
     """Parse a string of seat data and returns a list of lists containing the seat number and status.
 
     Args:
@@ -163,7 +168,7 @@ def parse_seat_data(seat_data: str) -> List[List[int or str]]:
     correction_map = {"O": "0", "I": "1", "l": "1", "S": "5", "Z": "2", "B": "8"}
 
     seat_data = seat_data.replace("_", "-")
-    format_freq = Counter()
+    format_freq: Counter = Counter()
 
     combined_pattern = r"\b(?P<num>\d+)(?P<status>[tf])\b|\b(?P<status1>[tf])-?(?P<num1>\d+)\b|\b(?P<num2>\d+)\s*(?P<status2>[tf])\b|\b(?P<status3>[tf])\.?(?P<num3>\d+)\b"
 
@@ -202,7 +207,7 @@ def parse_seat_data(seat_data: str) -> List[List[int or str]]:
             )
 
         results.sort(
-            key=lambda x: x["index"]
+            key=lambda x: cast(int, x["index"])
         )  # Sort by index to preserve original order
         all_results.append(results)
 
@@ -216,27 +221,30 @@ def parse_seat_data(seat_data: str) -> List[List[int or str]]:
 
     # Choose the most frequent format for the result
     if most_frequent_format:
-        final_results = next(
+        selected_result = next(
             (r for r in all_results if r[0]["format"] == most_frequent_format),
             all_results[0],
         )
+        final_results = [x["data"] for x in selected_result]
     else:
-        final_results = all_results[0]
+        final_results = [x["data"] for x in all_results[0]]
 
     # Deduplicate results, but keep all "TBD"
-    final_results = [
-        list(x["data"])
-        for i, x in enumerate(final_results)
-        if x["data"][1] == "TBD"
-        or all(x["data"] != y["data"] for y in final_results[:i])
-    ]
+    converted_results: List[List[Union[int, str]]] = []
 
-    if final_results:
-        logging.info("Parsed seat data: %s", final_results)
-    else:
-        logging.error("Failed to parse seat data: Invalid format '%s'", seat_data)
+    seat_data_point_max_len = 2
+    for i, x in enumerate(final_results):
+        if (
+            isinstance(x, list)
+            and len(x) == seat_data_point_max_len
+            and isinstance(x[0], int)
+            and isinstance(x[1], str)
+            and (x[1] == "TBD" or all(x != y for y in final_results[:i]))
+        ):
+            converted_results.append(x)
 
-    return final_results
+        # Assign the new list back to final_results
+    return converted_results
 
 
 def ocr_correction(input_str: str) -> str:
@@ -265,7 +273,7 @@ def combine_sequential_duplicates(destinations: List[str]) -> List[str]:
     -------
         List[str]: A list of destination strings with sequential duplicates combined.
     """
-    combined = []
+    combined: List[str] = []
     prev_dest = None
 
     for dest in destinations:
