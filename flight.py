@@ -71,7 +71,7 @@ class Flight:
         """
         return {
             "origin_terminal": self.origin_terminal,
-            "destination_terminal": self.destinations,
+            "destinations": self.destinations,
             "rollcall_time": self.rollcall_time,
             "seats": self.seats,
             "notes": self.notes,
@@ -151,6 +151,17 @@ class Flight:
             str: A unique ID for the Flight object.
         """
         return hashlib.sha256(self.as_string.encode()).hexdigest()
+
+    def convert_seat_data(self: "Flight") -> None:
+        """Convert the seat data from a list of lists to a list of dictionaries."""
+        # Convert the seat data to a list of dictionaries
+        seats = []
+        for data_point in self.seats:
+            seat = {}
+            seat["number"] = data_point[0]
+            seat["status"] = data_point[1]
+            seats.append(seat)
+        self.seats = seats
 
     @classmethod
     def load_state(
