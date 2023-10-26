@@ -8,6 +8,7 @@ import boto3  # type: ignore
 from dotenv import load_dotenv
 
 from firestore_db import FirestoreClient
+from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
 from s3_bucket import S3Bucket
 from screenshot_table import capture_screen_shot_of_table_from_pdf
@@ -43,6 +44,7 @@ def initialize_clients() -> boto3.client:
 
         # Initialize Textract client
         textract_client = boto3.client("textract")
+        lambda_client = boto3.client("lambda")
 
     else:
         logging.info("Running in a cloud environment.")
@@ -50,12 +52,13 @@ def initialize_clients() -> boto3.client:
         # Assume the role and environment is already set up in Lambda or
         # EC2 instance, etc.
         textract_client = boto3.client("textract")
+        lambda_client = boto3.client("lambda")
 
-    return textract_client
+    return textract_client, lambda_client
 
 
 # Initialize Textract client
-textract_client = initialize_clients()
+textract_client, lambda_client = initialize_clients()
 
 # Initialize Firestore client
 firestore_client = FirestoreClient()
@@ -63,6 +66,9 @@ firestore_client = FirestoreClient()
 # Initialize logger and set log level
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+# Load store_flights_in_firestore Lambda function name from environment variable
+STORE_FLIGHTS_LAMBDA = os.getenv("STORE_FLIGHTS_LAMBDA")
 
 
 def parse_sns_event(event: Dict[str, Any]) -> Tuple[str, str, str, str]:
@@ -175,6 +181,27 @@ def get_document_analysis_results(client: boto3.client, job_id: str) -> List[Dic
         return []
 
     return results
+
+
+def array_to_dict(array: List[Any]) -> dict:
+    """Convert an array to a dictionary.
+
+    Args:
+    ----
+        array (list): The array to convert.
+
+    Returns:
+    -------
+        dict: The resulting dictionary.
+    """
+    try:
+        result_dict = {}
+        for index, obj in enumerate(array):
+            result_dict[index] = obj
+        return result_dict
+    except Exception as e:
+        print(f"Error: {e!s}")
+        raise
 
 
 def reprocess_tables(
@@ -312,7 +339,7 @@ def reprocess_tables(
 
 
 # Main Lambda function
-def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
+def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:  # noqa: PLR0911
     """Lambda function that handles the event from SNS and processes the PDF using Textract.
 
     Args:
@@ -424,7 +451,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         response=response,
     )
 
-    flights = []
+    flights: List[Flight] = []
     for i, table in enumerate(reprocessed_tables):
         # Create flight objects from table
         curr_flights = convert_72hr_table_to_flights(
@@ -444,7 +471,19 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             "body": json.dumps(response_msg),
         }
 
-    # TODO (alexchristy): Upload flights to Firestore
+    # Make flight objects compliant with firestore
+    for flight in flights:
+        flight.convert_seat_data()
+
+    flights_dict = array_to_dict(flights)
+
+    payload = json.dumps(flights_dict)
+
+    response = lambda_client.invoke(
+        FunctionName=STORE_FLIGHTS_LAMBDA,
+        InvocationType="Event",
+        Payload=payload,
+    )
 
     return {
         "statusCode": 200,
