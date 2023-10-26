@@ -386,11 +386,12 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:  # noqa: PLR09
             "body": json.dumps(response_msg),
         }
 
-    # Initialize S3 client
-    s3_client = S3Bucket(bucket_name=s3_bucket_name)
-
     # Update the job status in Firestore
     firestore_client.update_job_status(job_id, status)
+    firestore_client.add_job_finished_timestamp(job_id)
+
+    # Initialize S3 client
+    s3_client = S3Bucket(bucket_name=s3_bucket_name)
 
     # Get Origin terminal from S3 object path
     pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
@@ -474,6 +475,9 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:  # noqa: PLR09
     # Make flight objects compliant with firestore
     for flight in flights:
         flight.convert_seat_data()
+
+    # Save flight IDs to Textract Job
+    firestore_client.add_flight_ids_to_job(job_id, flights)
 
     flights_dict = array_to_dict(flights)
 
