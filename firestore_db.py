@@ -167,8 +167,8 @@ class FirestoreClient:
                 "An error occurred while adding the flight IDs to the PDF: %s", e
             )
 
-    def insert_flight(self: "FirestoreClient", flight: Flight) -> None:
-        """Insert a flight object into the FLIGHT_ARCHIVE_COLLECTION.
+    def store_flight(self: "FirestoreClient", flight: Flight) -> None:
+        """Store a flight object into the FLIGHT_CURRENT_COLLECTION.
 
         Args:
         ----
@@ -176,10 +176,10 @@ class FirestoreClient:
 
         """
         try:
-            flight_collection = os.getenv("FLIGHT_ARCHIVE_COLLECTION")
+            flight_collection = os.getenv("FLIGHT_CURRENT_COLLECTION")
             if not flight_collection:
                 logging.error(
-                    "FLIGHT_ARCHIVE_COLLECTION environment variable is not set."
+                    "FLIGHT_CURRENT_COLLECTION environment variable is not set."
                 )
                 return
 
