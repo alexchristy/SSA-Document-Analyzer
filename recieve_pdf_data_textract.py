@@ -487,5 +487,5 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:  # noqa: PLR09
 
     return {
         "statusCode": 200,
-        "body": json.dumps("Lambda function executed successfully!"),
+        "body": json.dumps(f"Invoked second lambda asynchronously: {response}"),
     }
