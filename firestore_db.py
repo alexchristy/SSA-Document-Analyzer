@@ -143,12 +143,13 @@ class FirestoreClient:
         except Exception as e:
             logging.error("An error occurred while updating the job status: %s", e)
 
-    def add_job_started_timestamp(self: "FirestoreClient", job_id: str) -> None:
+    def add_job_timestamp(self: "FirestoreClient", job_id: str, timestamp: str) -> None:
         """Add a started timestamp to the job document in the Textract_Jobs collection.
 
         Args:
         ----
         job_id (str): The ID of the Textract job.
+        timestamp (str): The timestamp to add to the job document.
 
         """
         try:
@@ -157,42 +158,19 @@ class FirestoreClient:
             # Update the 'finished' field in the job document
             job_ref.update(
                 {
-                    "started": int(
+                    timestamp: int(
                         datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
                     )
                 }
             )
 
-            logging.info("Successfully added a started timestamp to job %s", job_id)
+            logging.info(
+                "Successfully added a %s timestamp to job %s", timestamp, job_id
+            )
         except Exception as e:
             logging.error(
-                "An error occurred while adding the started timestamp to the job: %s", e
-            )
-
-    def add_job_finished_timestamp(self: "FirestoreClient", job_id: str) -> None:
-        """Add a finished timestamp to the job document in the Textract_Jobs collection.
-
-        Args:
-        ----
-        job_id (str): The ID of the Textract job.
-
-        """
-        try:
-            job_ref = self.db.collection("Textract_Jobs").document(job_id)
-
-            # Update the 'finished' field in the job document
-            job_ref.update(
-                {
-                    "finished": int(
-                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
-                    )
-                }
-            )
-
-            logging.info("Successfully added a finished timestamp to job %s", job_id)
-        except Exception as e:
-            logging.error(
-                "An error occurred while adding the finished timestamp to the job: %s",
+                "An error occurred while adding the %s timestamp to the job: %s",
+                timestamp,
                 e,
             )
 
