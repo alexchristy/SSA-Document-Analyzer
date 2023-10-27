@@ -5,7 +5,6 @@ import uuid
 from typing import Any, Dict, List, Tuple
 
 import boto3  # type: ignore
-from dotenv import load_dotenv
 
 from firestore_db import FirestoreClient
 from flight import Flight
@@ -18,41 +17,48 @@ from table_utils import gen_tables_from_textract_response
 MIN_CONFIDENCE = 80
 
 
-def initialize_clients() -> boto3.client:
-    """Initialize the Textract client.
+def initialize_clients() -> Tuple[boto3.client, boto3.client]:
+    """Initialize the Textract and Lambda clients.
 
     Returns
     -------
-        boto3.client: The Textract client.
+        Tuple[boto3.client, boto3.client]: The Textract and Lambda clients.
     """
-    # Set environment variables
-    load_dotenv()
-
     # Initialize logging
     logging.basicConfig(level=logging.INFO)
 
-    # Check if running in a local environment
-    if os.getenv("RUN_LOCAL"):
-        logging.info("Running in a local environment.")
+    textract_client = None
+    lambda_client = None
 
-        # Setup AWS session
-        boto3.setup_default_session(
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION"),
-        )
+    try:
+        if os.getenv("RUN_LOCAL"):
+            logging.info("Running in a local environment.")
 
-        # Initialize Textract client
+            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            aws_region = os.getenv("AWS_REGION")
+
+            if not all([aws_access_key, aws_secret_key, aws_region]):
+                logging.error(
+                    "Missing AWS credentials or region for local environment."
+                )
+                msg = "Missing AWS credentials or region for local environment."
+                raise ValueError(msg)
+
+            boto3.setup_default_session(
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
+                region_name=aws_region,
+            )
+        else:
+            logging.info("Running in a cloud environment.")
+
         textract_client = boto3.client("textract")
         lambda_client = boto3.client("lambda")
 
-    else:
-        logging.info("Running in a cloud environment.")
-
-        # Assume the role and environment is already set up in Lambda or
-        # EC2 instance, etc.
-        textract_client = boto3.client("textract")
-        lambda_client = boto3.client("lambda")
+    except Exception as e:
+        logging.error("Failed to initialize AWS clients: %s", e)
+        raise e
 
     return textract_client, lambda_client
 
@@ -351,6 +357,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:  # noqa: PLR09
     -------
         None
     """
+    print("Current PATH: %s", os.environ["PATH"])
     # Parse the SNS message
     job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
 
