@@ -4,8 +4,6 @@
 
 This project contains the code and tests for AWS Lambda functions that process PDF flight schedules. 
 
----
-
 ## Table of Contents
 
 - [Functions](#functions)
@@ -13,8 +11,6 @@ This project contains the code and tests for AWS Lambda functions that process P
   - [Textract_to_Tables](#textract_to_tables)
   - [Tables_to_72HR_Flights](#tables_to_72hr_flights)
 - [Deployment](#deployment)
-
----
 
 ## Functions
 
@@ -52,8 +48,6 @@ This project contains the code and tests for AWS Lambda functions that process P
 - **Lambda Handler**: `tables_to_72hr_flights.lambda_handler`
 - **Deployment**: [Zip Archive Method](#deployment)
 - **Dependencies**: See `dependencies/convert_72hr_flights_requirements.txt`
-
----
 
 ## Deployment
 
