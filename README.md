@@ -1,6 +1,6 @@
 # SmartSpaceA Document Analyzer
 
-This project contains the code and tests for the code that runs as three seperate AWS Lambda functions:
+This project contains the code and tests for the four backend AWS Lambda functions that process PDF flight schedules.
 
 ## Functions
 
