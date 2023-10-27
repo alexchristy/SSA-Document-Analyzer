@@ -158,7 +158,7 @@ class FirestoreClient:
             job_ref.update(
                 {
                     "started": int(
-                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M")
+                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
                     )
                 }
             )
@@ -184,7 +184,7 @@ class FirestoreClient:
             job_ref.update(
                 {
                     "finished": int(
-                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M")
+                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
                     )
                 }
             )
