@@ -33,6 +33,7 @@ package/
 
 # Virtual envs
 LAMBDA-ENV
+package-env
 
 # Unstored pickled objects in root directory
 /*.pkl

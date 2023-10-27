@@ -5,9 +5,9 @@ import uuid
 from typing import Any, Dict, List, Tuple
 
 import boto3  # type: ignore
-from dotenv import load_dotenv
 
 from firestore_db import FirestoreClient
+from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
 from s3_bucket import S3Bucket
 from screenshot_table import capture_screen_shot_of_table_from_pdf
@@ -17,45 +17,54 @@ from table_utils import gen_tables_from_textract_response
 MIN_CONFIDENCE = 80
 
 
-def initialize_clients() -> boto3.client:
-    """Initialize the Textract client.
+def initialize_clients() -> Tuple[boto3.client, boto3.client]:
+    """Initialize the Textract and Lambda clients.
 
     Returns
     -------
-        boto3.client: The Textract client.
+        Tuple[boto3.client, boto3.client]: The Textract and Lambda clients.
     """
-    # Set environment variables
-    load_dotenv()
-
     # Initialize logging
     logging.basicConfig(level=logging.INFO)
 
-    # Check if running in a local environment
-    if os.getenv("RUN_LOCAL"):
-        logging.info("Running in a local environment.")
+    textract_client = None
+    lambda_client = None
 
-        # Setup AWS session
-        boto3.setup_default_session(
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            region_name=os.getenv("AWS_REGION"),
-        )
+    try:
+        if os.getenv("RUN_LOCAL"):
+            logging.info("Running in a local environment.")
 
-        # Initialize Textract client
+            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
+            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+            aws_region = os.getenv("AWS_REGION")
+
+            if not all([aws_access_key, aws_secret_key, aws_region]):
+                logging.error(
+                    "Missing AWS credentials or region for local environment."
+                )
+                msg = "Missing AWS credentials or region for local environment."
+                raise ValueError(msg)
+
+            boto3.setup_default_session(
+                aws_access_key_id=aws_access_key,
+                aws_secret_access_key=aws_secret_key,
+                region_name=aws_region,
+            )
+        else:
+            logging.info("Running in a cloud environment.")
+
         textract_client = boto3.client("textract")
+        lambda_client = boto3.client("lambda")
 
-    else:
-        logging.info("Running in a cloud environment.")
+    except Exception as e:
+        logging.error("Failed to initialize AWS clients: %s", e)
+        raise e
 
-        # Assume the role and environment is already set up in Lambda or
-        # EC2 instance, etc.
-        textract_client = boto3.client("textract")
-
-    return textract_client
+    return textract_client, lambda_client
 
 
 # Initialize Textract client
-textract_client = initialize_clients()
+textract_client, lambda_client = initialize_clients()
 
 # Initialize Firestore client
 firestore_client = FirestoreClient()
@@ -63,6 +72,9 @@ firestore_client = FirestoreClient()
 # Initialize logger and set log level
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
+
+# Load store_flights_in_firestore Lambda function name from environment variable
+STORE_FLIGHTS_LAMBDA = os.getenv("STORE_FLIGHTS_LAMBDA")
 
 
 def parse_sns_event(event: Dict[str, Any]) -> Tuple[str, str, str, str]:
@@ -175,6 +187,27 @@ def get_document_analysis_results(client: boto3.client, job_id: str) -> List[Dic
         return []
 
     return results
+
+
+def array_to_dict(array: List[Any]) -> dict:
+    """Convert an array to a dictionary.
+
+    Args:
+    ----
+        array (list): The array to convert.
+
+    Returns:
+    -------
+        dict: The resulting dictionary.
+    """
+    try:
+        result_dict = {}
+        for index, obj in enumerate(array):
+            result_dict[index] = obj
+        return result_dict
+    except Exception as e:
+        print(f"Error: {e!s}")
+        raise
 
 
 def reprocess_tables(
@@ -312,7 +345,7 @@ def reprocess_tables(
 
 
 # Main Lambda function
-def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
+def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:  # noqa: PLR0911
     """Lambda function that handles the event from SNS and processes the PDF using Textract.
 
     Args:
@@ -324,6 +357,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
     -------
         None
     """
+    print("Current PATH: %s", os.environ["PATH"])
     # Parse the SNS message
     job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
 
@@ -359,11 +393,12 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             "body": json.dumps(response_msg),
         }
 
-    # Initialize S3 client
-    s3_client = S3Bucket(bucket_name=s3_bucket_name)
-
     # Update the job status in Firestore
     firestore_client.update_job_status(job_id, status)
+    firestore_client.add_job_finished_timestamp(job_id)
+
+    # Initialize S3 client
+    s3_client = S3Bucket(bucket_name=s3_bucket_name)
 
     # Get Origin terminal from S3 object path
     pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
@@ -424,7 +459,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         response=response,
     )
 
-    flights = []
+    flights: List[Flight] = []
     for i, table in enumerate(reprocessed_tables):
         # Create flight objects from table
         curr_flights = convert_72hr_table_to_flights(
@@ -444,9 +479,24 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             "body": json.dumps(response_msg),
         }
 
-    # TODO (alexchristy): Upload flights to Firestore
+    # Make flight objects compliant with firestore
+    for flight in flights:
+        flight.convert_seat_data()
+
+    # Save flight IDs to Textract Job
+    firestore_client.add_flight_ids_to_job(job_id, flights)
+
+    flights_dict = array_to_dict(flights)
+
+    payload = json.dumps(flights_dict)
+
+    response = lambda_client.invoke(
+        FunctionName=STORE_FLIGHTS_LAMBDA,
+        InvocationType="Event",
+        Payload=payload,
+    )
 
     return {
         "statusCode": 200,
-        "body": json.dumps("Lambda function executed successfully!"),
+        "body": json.dumps(f"Invoked second lambda asynchronously: {response}"),
     }

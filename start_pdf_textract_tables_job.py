@@ -64,6 +64,8 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
         if pdf_hash:
             fs.add_textract_job(job_id, pdf_hash)
             logging.info("Textract job ID %s and logs stored in Firestore", job_id)
+
+            fs.add_job_started_timestamp(job_id)
         else:
             msg = f"Could not find PDF hash for S3 object: {s3_object}"
             raise Exception(msg)

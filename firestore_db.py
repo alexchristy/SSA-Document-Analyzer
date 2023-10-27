@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 from typing import Any, Dict, List, Optional
@@ -142,6 +143,86 @@ class FirestoreClient:
         except Exception as e:
             logging.error("An error occurred while updating the job status: %s", e)
 
+    def add_job_started_timestamp(self: "FirestoreClient", job_id: str) -> None:
+        """Add a started timestamp to the job document in the Textract_Jobs collection.
+
+        Args:
+        ----
+        job_id (str): The ID of the Textract job.
+
+        """
+        try:
+            job_ref = self.db.collection("Textract_Jobs").document(job_id)
+
+            # Update the 'finished' field in the job document
+            job_ref.update(
+                {
+                    "started": int(
+                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
+                    )
+                }
+            )
+
+            logging.info("Successfully added a started timestamp to job %s", job_id)
+        except Exception as e:
+            logging.error(
+                "An error occurred while adding the started timestamp to the job: %s", e
+            )
+
+    def add_job_finished_timestamp(self: "FirestoreClient", job_id: str) -> None:
+        """Add a finished timestamp to the job document in the Textract_Jobs collection.
+
+        Args:
+        ----
+        job_id (str): The ID of the Textract job.
+
+        """
+        try:
+            job_ref = self.db.collection("Textract_Jobs").document(job_id)
+
+            # Update the 'finished' field in the job document
+            job_ref.update(
+                {
+                    "finished": int(
+                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
+                    )
+                }
+            )
+
+            logging.info("Successfully added a finished timestamp to job %s", job_id)
+        except Exception as e:
+            logging.error(
+                "An error occurred while adding the finished timestamp to the job: %s",
+                e,
+            )
+
+    def add_flight_ids_to_job(
+        self: "FirestoreClient", job_id: str, flights: List[Flight]
+    ) -> None:
+        """Add a list of flight IDs that were create from the textract job.
+
+        Args:
+        ----
+        job_id (str): The ID of the Textract job.
+        flights (list): The list of Flight objects.
+        """
+        try:
+            job_ref = self.db.collection("Textract_Jobs").document(job_id)
+
+            # Create a list of flight IDs from the list of Flight objects
+            flight_ids = [flight.flight_id for flight in flights]
+
+            # Update the 'flight_ids' field in the job document
+            job_ref.update({"flight_ids": flight_ids})
+
+            logging.info(
+                "Successfully added flight IDs to job %s: %s", job_id, flight_ids
+            )
+        except Exception as e:
+            logging.error(
+                "An error occurred while adding the flight IDs to the job: %s", e
+            )
+
     def add_flight_ids_to_pdf(
         self: "FirestoreClient", pdf_hash: str, flight_ids: List[str]
     ) -> None:
@@ -167,8 +248,8 @@ class FirestoreClient:
                 "An error occurred while adding the flight IDs to the PDF: %s", e
             )
 
-    def insert_flight(self: "FirestoreClient", flight: Flight) -> None:
-        """Insert a flight object into the FLIGHT_ARCHIVE_COLLECTION.
+    def store_flight(self: "FirestoreClient", flight: Flight) -> None:
+        """Store a flight object into the FLIGHT_CURRENT_COLLECTION.
 
         Args:
         ----
@@ -176,10 +257,10 @@ class FirestoreClient:
 
         """
         try:
-            flight_collection = os.getenv("FLIGHT_ARCHIVE_COLLECTION")
+            flight_collection = os.getenv("FLIGHT_CURRENT_COLLECTION")
             if not flight_collection:
                 logging.error(
-                    "FLIGHT_ARCHIVE_COLLECTION environment variable is not set."
+                    "FLIGHT_CURRENT_COLLECTION environment variable is not set."
                 )
                 return
 
