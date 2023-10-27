@@ -1,74 +1,87 @@
 # SmartSpaceA Document Analyzer
 
-This project contains the code and tests for the four backend AWS Lambda functions that process PDF flight schedules.
+## Overview
+
+This project contains the code and tests for AWS Lambda functions that process PDF flight schedules. 
+
+---
+
+## Table of Contents
+
+- [Functions](#functions)
+  - [Start-PDF-Textract-Job](#start-pdf-textract-job)
+  - [Textract_to_Tables](#textract_to_tables)
+  - [Tables_to_72HR_Flights](#tables_to_72hr_flights)
+- [Deployment](#deployment)
+
+---
 
 ## Functions
 
-### Start_PDF_Textract_Job
+### Start-PDF-Textract-Job
 
-This Lambda function is the one that is triggered by adding new PDFs into the current folder of the S3 bucket that stores PDFs scraped by the Update Checker.
+> **Trigger**: Uploading new PDFs to an S3 bucket.
 
-**Details:**
-- Lambda Handler: start_pdf_textract_tables_job.lambda_handler
-- Deployment: [Zip Archive Method](#deploy-to-aws-lambda)
-- Dependencies: `/dependencies/start_job_requirements.txt`
-- Enviroment Variables: (To be added)
-- Note: N/A
+- **Lambda Handler**: `start_pdf_textract_tables_job.lambda_handler`
+- **Deployment**: [Zip Archive Method](#deployment)
+- **Dependencies**: See `dependencies/start_job_requirements.txt`
+- **Environment Variables**: 
+  - `FS_CRED_PATH`: Firebase creds.json path for Firestore.
+  - `PDF_ARCHIVE_COLLECTION`: Firestore collection for PDF hash retrieval.
+  - `SNS_ROLE_ARN`: IAM Role for SNS pipeline.
+  - `SNS_TOPIC_ARN`: SNS Topic ARN.
 
-### Textract_to_Tables (To be split from /recieve_pdf_data_textract.py)
+---
 
-This Lambda function is responsible for recieving the data from textract about the PDF processed. It takes in a SNS message and then processes the Textract response table objects. These table objects are defined in `/table.py`. This function will then trigger one of the three Tables_to_X functions below for further processing.
+### Textract_to_Tables
 
-**Details:**
-- Lambda Handler: textract_to_tables.lambda_handler
-- Deployment: [Zip Archive Method](#deploy-to-aws-lambda)
-- Dependencies: `/dependecies/textract_parsing_requirements.txt`
-- Enviorment Variables: (To be added)
-- Notes:
-  - This function will reprocess tables with synchronous requests to Textract if a any row has an average cell confidence of below 80.
+> **Responsibility**: Processes table objects from Textract.
+
+- **Lambda Handler**: `textract_to_tables.lambda_handler`
+- **Deployment**: [Zip Archive Method](#deployment)
+- **Dependencies**: See `dependencies/textract_parsing_requirements.txt`
+- **Notes**: 
+  - Reprocesses tables if cell confidence is below 80%.
+
+---
 
 ### Tables_to_72HR_Flights
 
-This Lambda function is responsible for recieving table objects from [Textract_to_Tables](#textract_to_tables) function and converting the tables into flight objects. These flight objects are defined in `/flight.py`.
+> **Responsibility**: Converts table objects into flight objects.
 
-**Details:**
-- Lambda Hanlder: tables_to_72hr_flights.lambda_handler
-- Deployment: [Zip Archive Method](#deploy-to-aws-lambda)
-- Dependencies: `/dependencies/convert_72hr_flights_requirements.txt`
-- Eviroment Variables: (To be added)
-- Notes: N/A
+- **Lambda Handler**: `tables_to_72hr_flights.lambda_handler`
+- **Deployment**: [Zip Archive Method](#deployment)
+- **Dependencies**: See `dependencies/convert_72hr_flights_requirements.txt`
 
-## Deploy to AWS Lambda
+---
 
-1) Make deployment directory:
+## Deployment
 
-```bash
-mkdir deployment_package
-```
+### Steps
 
-2) Bundle dependencies:
+1. **Create Deployment Directory**
+    ```bash
+    mkdir deployment_package
+    ```
+   
+2. **Install Dependencies**
+    ```bash
+    pip install -r /path/to/function/requirements.txt --target ./deployment_package
+    ```
+    > **Note**: For virtual environments, activate it before running the above command.
+   
+3. **Copy Custom Libraries**
+    ```bash
+    cp /path/to/project/root/*.py ./deployment_package
+    ```
+   
+4. **(Optional) Copy Firestore Credentials**
+    ```bash
+    cp /path/to/project/root/creds.json ./deployment_package
+    ```
 
-```bash
-pip install -r /path/to/function/requirements.txt --target ./deployment_package
-```
-
-> **Note:** If you are developing the functions in a virtual enviroment their package versions might not match the system python packages. To fix this, enter the virtual enviroment and then run the command above.
-
-3) Copy custom libraries
-
-```bash
-cp /path/to/project/root/*.py ./deployment_package
-```
-
-4) (Optional) Copy firestore credentials
-
-```bash
-cp /path/to/project/root/creds.json ./deployment_package
-```
-
-5) Create zip archive
-
-```bash
-cd ./deployment_package
-zip -r9 ../deployment_package.zip .
-```
+5. **Create Zip Archive**
+    ```bash
+    cd ./deployment_package
+    zip -r9 ../deployment_package.zip .
+    ```
