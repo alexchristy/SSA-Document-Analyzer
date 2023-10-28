@@ -84,6 +84,7 @@ class FirestoreClient:
         Optional[str]: The hash value of the PDF document if it exists in Firestore, otherwise None.
 
         """
+        logging.info("Retrieving hash value for S3 object path: %s", s3_object_path)
         try:
             pdf_archive = os.getenv("PDF_ARCHIVE_COLLECTION")
             if not pdf_archive:
@@ -119,7 +120,9 @@ class FirestoreClient:
                 return ""
 
         except Exception as e:
-            logging.error("An error occurred: %s", e)
+            logging.error(
+                "An error occurred while retrieving pdf hash with s3 object path: %s", e
+            )
             return ""
 
         return ""
@@ -272,7 +275,7 @@ class FirestoreClient:
         -------
         (str) Terminal name or None if the hash is invalid or the PDF does not exist
         """
-        logging.info("Entering get_pdf_by_hash().")
+        logging.info("Retrieving terminal name by PDF hash.")
 
         # Get the name of the collections from environment variables
         pdf_archive_coll = os.getenv("PDF_ARCHIVE_COLLECTION")
@@ -286,7 +289,9 @@ class FirestoreClient:
         # Check if the document exists
         if doc.exists:
             # The document exists, so we retrieve its data and create a Pdf object
-            logging.info("PDF with hash %s found in the database.", pdf_hash)
+            logging.info(
+                "Found terminal name. PDF with hash %s found in the database.", pdf_hash
+            )
 
             # Get the document's data
             pdf_data = doc.to_dict()
@@ -297,7 +302,10 @@ class FirestoreClient:
             return terminal_name
 
         # The document does not exist
-        logging.warning("PDF with hash %s does not exist in the database.", pdf_hash)
+        logging.warning(
+            "Unable to retrieve terminal name. PDF with hash %s does not exist in the database.",
+            pdf_hash,
+        )
 
         # Return None to indicate that no PDF was found
         return ""
@@ -316,7 +324,7 @@ class FirestoreClient:
         -------
         (str) Terminal name or None if the hash is invalid or the PDF does not exist
         """
-        logging.info("Entering get_pdf_by_hash().")
+        logging.info("Retrieving PDF type by hash.")
 
         # Get the name of the collections from environment variables
         pdf_archive_coll = os.getenv("PDF_ARCHIVE_COLLECTION", "PDF_Archive")
@@ -330,18 +338,23 @@ class FirestoreClient:
         # Check if the document exists
         if doc.exists:
             # The document exists, so we retrieve its data and create a Pdf object
-            logging.info("PDF with hash %s found in the database.", pdf_hash)
+            logging.info(
+                "Found PDF type. PDF with hash %s found in the database.", pdf_hash
+            )
 
             # Get the document's data
             pdf_data = doc.to_dict()
 
             # Return the terminal name
-            pdf_type = pdf_data["terminal"]
+            pdf_type = pdf_data["type"]
             logging.info("PDF type: %s", pdf_type)
             return pdf_type
 
         # The document does not exist
-        logging.warning("PDF with hash %s does not exist in the database.", pdf_hash)
+        logging.warning(
+            "Unable to get PDF type. PDF with hash %s does not exist in the database.",
+            pdf_hash,
+        )
 
         # Return None to indicate that no PDF was found
         return ""
