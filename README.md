@@ -39,6 +39,7 @@ This project contains the code and tests for AWS Lambda functions that process P
 - **Eviroment Variables:**
   - `DOWNLOAD_DIR`: Path to directory where pdfs can be download to reprocesses them with screenshots.
   - `FS_CRED_PATH`: Path to Firestore credentials.
+  - `PDF_ARCHIVE_COLLECTION`: Name of firestore collection where pdf info is stored.
 - **Notes**: 
   - Reprocesses tables if cell confidence is below 80%.
 
