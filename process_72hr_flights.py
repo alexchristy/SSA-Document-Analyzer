@@ -129,6 +129,8 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             logging.critical(response_msg)
             raise ValueError(response_msg)
 
+        firestore_client.add_job_timestamp(job_id, "started_72hr_processing")
+
         # Deserialize JSON to Python object
         reprocessed_tables = json.loads(payload)
 
@@ -166,6 +168,9 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
 
         payload = json.dumps(flights_dict)
 
+        firestore_client.add_job_timestamp(job_id, "finished_72hr_processing")
+
+        # Invoke second lambda asynchronously
         response = lambda_client.invoke(
             FunctionName=STORE_FLIGHTS_LAMBDA,
             InvocationType="Event",

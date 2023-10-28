@@ -425,6 +425,8 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             }
         )
 
+        firestore_client.add_job_timestamp(job_id, "tables_parsed_finished")
+
         # Invoke lambda to process tables
         lambda_client.invoke(
             FunctionName=func_name,
