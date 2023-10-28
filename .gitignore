@@ -31,9 +31,13 @@ start_job.zip
 recieve_job.zip
 package/
 
-# Virtual envs
+# Virtual envs:
+# Development
 LAMBDA-ENV
-package-env
+
+# start_pdf_textract_tables_job
+start_job_env
+
 
 # Unstored pickled objects in root directory
 /*.pkl
