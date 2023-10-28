@@ -1,18 +1,19 @@
-import json
-import unittest
-from unittest.mock import patch, MagicMock
-import sys
 import hashlib
-from recieve_pdf_data_textract import (
+import json
+import logging
+import sys
+import unittest
+from unittest.mock import MagicMock, patch
+
+from firestore_db import FirestoreClient
+from parse_sns import parse_sns_event
+from s3_bucket import S3Bucket
+from table_utils import gen_tables_from_textract_response
+from textract_to_tables import (
     get_document_analysis_results,
-    parse_sns_event,
     get_lowest_confidence_row,
     reprocess_tables,
 )
-from table_utils import gen_tables_from_textract_response
-from s3_bucket import S3Bucket
-import logging
-from firestore_db import FirestoreClient
 
 # Include test data directories
 sys.path.append("tests/textract-responses")

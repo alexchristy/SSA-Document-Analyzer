@@ -143,12 +143,13 @@ class FirestoreClient:
         except Exception as e:
             logging.error("An error occurred while updating the job status: %s", e)
 
-    def add_job_started_timestamp(self: "FirestoreClient", job_id: str) -> None:
+    def add_job_timestamp(self: "FirestoreClient", job_id: str, timestamp: str) -> None:
         """Add a started timestamp to the job document in the Textract_Jobs collection.
 
         Args:
         ----
         job_id (str): The ID of the Textract job.
+        timestamp (str): The timestamp to add to the job document.
 
         """
         try:
@@ -157,42 +158,19 @@ class FirestoreClient:
             # Update the 'finished' field in the job document
             job_ref.update(
                 {
-                    "started": int(
+                    timestamp: int(
                         datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
                     )
                 }
             )
 
-            logging.info("Successfully added a started timestamp to job %s", job_id)
+            logging.info(
+                "Successfully added a %s timestamp to job %s", timestamp, job_id
+            )
         except Exception as e:
             logging.error(
-                "An error occurred while adding the started timestamp to the job: %s", e
-            )
-
-    def add_job_finished_timestamp(self: "FirestoreClient", job_id: str) -> None:
-        """Add a finished timestamp to the job document in the Textract_Jobs collection.
-
-        Args:
-        ----
-        job_id (str): The ID of the Textract job.
-
-        """
-        try:
-            job_ref = self.db.collection("Textract_Jobs").document(job_id)
-
-            # Update the 'finished' field in the job document
-            job_ref.update(
-                {
-                    "finished": int(
-                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
-                    )
-                }
-            )
-
-            logging.info("Successfully added a finished timestamp to job %s", job_id)
-        except Exception as e:
-            logging.error(
-                "An error occurred while adding the finished timestamp to the job: %s",
+                "An error occurred while adding the %s timestamp to the job: %s",
+                timestamp,
                 e,
             )
 
@@ -317,6 +295,50 @@ class FirestoreClient:
             terminal_name = pdf_data["terminal"]
             logging.info("Terminal name: %s", terminal_name)
             return terminal_name
+
+        # The document does not exist
+        logging.warning("PDF with hash %s does not exist in the database.", pdf_hash)
+
+        # Return None to indicate that no PDF was found
+        return ""
+
+    def get_pdf_type_by_hash(self: "FirestoreClient", pdf_hash: str) -> str:
+        """Get name of terminal that owns the PDF identified by the supplied hash.
+
+        This function returns the name of the terminal that owns the PDF that is
+        identified by the supplied hash.
+
+        Args:
+        ----
+        pdf_hash: The SHA-256 hash of the PDF file
+
+        Returns:
+        -------
+        (str) Terminal name or None if the hash is invalid or the PDF does not exist
+        """
+        logging.info("Entering get_pdf_by_hash().")
+
+        # Get the name of the collections from environment variables
+        pdf_archive_coll = os.getenv("PDF_ARCHIVE_COLLECTION", "PDF_Archive")
+
+        # Create a reference to the document using the SHA-256 hash as the document ID
+        doc_ref = self.db.collection(pdf_archive_coll).document(pdf_hash)
+
+        # Try to retrieve the document
+        doc = doc_ref.get()
+
+        # Check if the document exists
+        if doc.exists:
+            # The document exists, so we retrieve its data and create a Pdf object
+            logging.info("PDF with hash %s found in the database.", pdf_hash)
+
+            # Get the document's data
+            pdf_data = doc.to_dict()
+
+            # Return the terminal name
+            pdf_type = pdf_data["terminal"]
+            logging.info("PDF type: %s", pdf_type)
+            return pdf_type
 
         # The document does not exist
         logging.warning("PDF with hash %s does not exist in the database.", pdf_hash)

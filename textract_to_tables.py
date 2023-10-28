@@ -7,14 +7,11 @@ from typing import Any, Dict, List, Tuple
 import boto3  # type: ignore
 
 from firestore_db import FirestoreClient
-from flight import Flight
-from flight_utils import convert_72hr_table_to_flights
+from parse_sns import parse_sns_event
 from s3_bucket import S3Bucket
 from screenshot_table import capture_screen_shot_of_table_from_pdf
 from table import Table
 from table_utils import gen_tables_from_textract_response
-
-MIN_CONFIDENCE = 80
 
 
 def initialize_clients() -> Tuple[boto3.client, boto3.client]:
@@ -61,55 +58,6 @@ def initialize_clients() -> Tuple[boto3.client, boto3.client]:
         raise e
 
     return textract_client, lambda_client
-
-
-# Initialize Textract client
-textract_client, lambda_client = initialize_clients()
-
-# Initialize Firestore client
-firestore_client = FirestoreClient()
-
-# Initialize logger and set log level
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-# Load store_flights_in_firestore Lambda function name from environment variable
-STORE_FLIGHTS_LAMBDA = os.getenv("STORE_FLIGHTS_LAMBDA")
-
-
-def parse_sns_event(event: Dict[str, Any]) -> Tuple[str, str, str, str]:
-    """Parse the SNS event from Textract.
-
-    Args:
-    ----
-        event (dict): The SNS event.
-
-    Returns:
-    -------
-        tuple: Tuple containing JobId, Status, S3 Object Name, and S3 Bucket Name.
-    """
-    try:
-        message_json_str = (
-            event.get("Records", [{}])[0].get("Sns", {}).get("Message", "{}")
-        )
-    except IndexError:
-        logging.error("Malformed SNS event: Records array is empty.")
-        return "", "", "", ""
-
-    try:
-        message_dict = json.loads(message_json_str)
-    except json.JSONDecodeError:
-        logging.error("Failed to decode SNS message.")
-        return "", "", "", ""
-
-    job_id = message_dict.get("JobId", "")
-    status = message_dict.get("Status", "")
-
-    # Extract S3 Object Name and Bucket Name
-    s3_object_name = message_dict.get("DocumentLocation", {}).get("S3ObjectName", "")
-    s3_bucket_name = message_dict.get("DocumentLocation", {}).get("S3Bucket", "")
-
-    return job_id, status, s3_object_name, s3_bucket_name
 
 
 def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
@@ -187,27 +135,6 @@ def get_document_analysis_results(client: boto3.client, job_id: str) -> List[Dic
         return []
 
     return results
-
-
-def array_to_dict(array: List[Any]) -> dict:
-    """Convert an array to a dictionary.
-
-    Args:
-    ----
-        array (list): The array to convert.
-
-    Returns:
-    -------
-        dict: The resulting dictionary.
-    """
-    try:
-        result_dict = {}
-        for index, obj in enumerate(array):
-            result_dict[index] = obj
-        return result_dict
-    except Exception as e:
-        print(f"Error: {e!s}")
-        raise
 
 
 def reprocess_tables(
@@ -344,9 +271,19 @@ def reprocess_tables(
     return reprocessed_tables_list
 
 
-# Main Lambda function
-def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:  # noqa: PLR0911
-    """Lambda function that handles the event from SNS and processes the PDF using Textract.
+# Initialize Textract client
+textract_client, lambda_client = initialize_clients()
+
+# Initialize Firestore client
+firestore_client = FirestoreClient()
+
+# Initialize logger and set log level
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+
+def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
+    """Convert textract response to tables.
 
     Args:
     ----
@@ -355,148 +292,151 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:  # noqa: PLR09
 
     Returns:
     -------
-        None
+        dict: A dictionary containing the status code and response body.
     """
-    print("Current PATH: %s", os.environ["PATH"])
-    # Parse the SNS message
-    job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
+    try:
+        # Parse the SNS message
+        job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
 
-    if not job_id or not status:
-        logging.error("JobId or Status missing in SNS message.")
-        no_job_status_msg = "JobId or Status missing in SNS message."
-        return {
-            "statusCode": 500,
-            "body": json.dumps(no_job_status_msg),
-        }
+        if not job_id or not status:
+            no_job_status_msg = "JobId or Status missing in SNS message."
+            logging.error(no_job_status_msg)
+            raise ValueError(no_job_status_msg)
 
-    if not s3_bucket_name:
-        logging.error("S3 bucket name missing in SNS message.")
-        response_msg = (
-            "S3 object path missing in SNS message. JobId: {}, Status: {}".format(
-                job_id, status
+        if not s3_bucket_name:
+            response_msg = (
+                "S3 object path missing in SNS message. JobId: {}, Status: {}".format(
+                    job_id, status
+                )
             )
-        )
-        return {
-            "statusCode": 500,
-            "body": json.dumps(response_msg),
-        }
+            logging.error(response_msg)
+            raise ValueError(response_msg)
 
-    if not s3_object_path:
-        logging.error("S3 object path missing in SNS message.")
-        response_msg = (
-            "S3 object path missing in SNS message. JobId: {}, Status: {}".format(
-                job_id, status
+        if not s3_object_path:
+            response_msg = (
+                "S3 object path missing in SNS message. JobId: {}, Status: {}".format(
+                    job_id, status
+                )
             )
-        )
-        return {
-            "statusCode": 500,
-            "body": json.dumps(response_msg),
-        }
+            logging.error(response_msg)
+            raise ValueError(response_msg)
 
-    # Update the job status in Firestore
-    firestore_client.update_job_status(job_id, status)
-    firestore_client.add_job_finished_timestamp(job_id)
+        # Get extra environment variables
+        min_confidence = int(os.getenv("MIN_CONFIDENCE", "80"))
+        lambda_72hr_flight = os.getenv("LAMBDA_72HR_FLIGHT", "Process-72hr-Flights")
+        lambda_30day_flight = os.getenv("LAMBDA_30DAY_FLIGHT", "Process-30day-Flights")
+        lambda_rollcall = os.getenv("LAMBDA_ROLLCALL", "Process-Rollcall")
 
-    # Initialize S3 client
-    s3_client = S3Bucket(bucket_name=s3_bucket_name)
+        # Initialize S3 client
+        s3_client = S3Bucket(bucket_name=s3_bucket_name)
 
-    # Get Origin terminal from S3 object path
-    pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
+        # Update the job status in Firestore
+        firestore_client.update_job_status(job_id, status)
+        firestore_client.add_job_timestamp(job_id, "textract_finished")
+        firestore_client.add_job_timestamp(job_id, "tables_parsed_started")
 
-    if not pdf_hash:
-        logging.error(
-            "Failed to get PDF hash using s3 object path (%s) from Firestore.",
-            s3_object_path,
-        )
-        no_pdf_hash_msg = f"Failed to get PDF hash using s3 object path ({s3_object_path}) from Firestore."
-        return {
-            "statusCode": 500,
-            "body": json.dumps(no_pdf_hash_msg),
-        }
+        # Get the PDF hash from Firestore
+        pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
 
-    origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
+        if not pdf_hash:
+            logging.error(
+                "Failed to get PDF hash using s3 object path (%s) from Firestore.",
+                s3_object_path,
+            )
+            no_pdf_hash_msg = f"Failed to get PDF hash using s3 object path ({s3_object_path}) from Firestore."
+            return {
+                "statusCode": 500,
+                "body": json.dumps(no_pdf_hash_msg),
+            }
 
-    if not origin_terminal:
-        logging.error(
-            "Failed to get origin terminal using PDF hash (%s) from Firestore.",
-            pdf_hash,
-        )
-        no_origin_terminal_msg = (
-            f"Failed to get origin terminal using PDF hash ({pdf_hash}) from Firestore."
-        )
-        return {
-            "statusCode": 500,
-            "body": json.dumps(no_origin_terminal_msg),
-        }
+        # Get the origin terminal from Firestore
+        origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
-    # If job failed exit program
-    if status != "SUCCEEDED":
-        msg = Exception("Job did not succeed.")
-        raise (msg)
+        if not origin_terminal:
+            logging.error(
+                "Failed to get origin terminal using PDF hash (%s) from Firestore.",
+                pdf_hash,
+            )
+            no_origin_terminal_msg = f"Failed to get origin terminal using PDF hash ({pdf_hash}) from Firestore."
+            return {
+                "statusCode": 500,
+                "body": json.dumps(no_origin_terminal_msg),
+            }
 
-    response = textract_client.get_document_analysis(JobId=job_id)
+        # If job failed exit program
+        if status != "SUCCEEDED":
+            msg = Exception("Job did not succeed.")
+            raise (msg)
 
-    tables = gen_tables_from_textract_response(response)
+        response = textract_client.get_document_analysis(JobId=job_id)
 
-    # List to hold tables needing reprocessing
-    tables_to_reprocess = []
+        tables = gen_tables_from_textract_response(response)
 
-    # Iterate through tables to find low confidence rows
-    for table in tables:
-        # Get the lowest confidence row
-        _, lowest_confidence = get_lowest_confidence_row(table)
+        # List to hold tables needing reprocessing
+        tables_to_reprocess = []
 
-        # If the lowest confidence row is below the threshold
-        # add the table to the list of tables to reprocess
-        if lowest_confidence < MIN_CONFIDENCE:
-            tables_to_reprocess.append(table)
+        # Iterate through tables to find low confidence rows
+        for table in tables:
+            # Get the lowest confidence row
+            _, lowest_confidence = get_lowest_confidence_row(table)
 
-    # Reprocess tables with low confidence rows
-    reprocessed_tables = reprocess_tables(
-        tables=tables_to_reprocess,
-        s3_client=s3_client,
-        s3_object_path=s3_object_path,
-        response=response,
-    )
+            # If the lowest confidence row is below the threshold
+            # add the table to the list of tables to reprocess
+            if lowest_confidence < min_confidence:
+                tables_to_reprocess.append(table)
 
-    flights: List[Flight] = []
-    for i, table in enumerate(reprocessed_tables):
-        # Create flight objects from table
-        curr_flights = convert_72hr_table_to_flights(
-            table, origin_terminal=origin_terminal
+        # Reprocess tables with low confidence rows
+        reprocessed_tables = reprocess_tables(
+            tables=tables_to_reprocess,
+            s3_client=s3_client,
+            s3_object_path=s3_object_path,
+            response=response,
         )
 
-        if curr_flights:
-            flights.extend(curr_flights)
+        pdf_type = firestore_client.get_pdf_type_by_hash(pdf_hash)
+
+        if not pdf_type:
+            logging.critical("Failed to get PDF type from Firestore.")
+            no_pdf_type_msg = "Failed to get PDF type from Firestore."
+            return {
+                "statusCode": 500,
+                "body": json.dumps(no_pdf_type_msg),
+            }
+
+        if pdf_type == "72_HR":
+            func_name = lambda_72hr_flight
+        elif pdf_type == "30_DAY":
+            func_name = lambda_30day_flight
+        elif pdf_type == "ROLLCALL":
+            func_name = lambda_rollcall
         else:
-            logging.error("Failed to convert table %d to flights.", i)
+            logging.critical("Invalid PDF type: %s", pdf_type)
+            invalid_pdf_type_msg = f"Invalid PDF type: {pdf_type}"
+            return {
+                "statusCode": 500,
+                "body": json.dumps(invalid_pdf_type_msg),
+            }
 
-    if flights is None or not flights:
-        logging.error("Failed to any convert table to flights.")
-        response_msg = f"Failed to convert any tables from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
+        payload = json.dumps(
+            {
+                "tables": reprocessed_tables,
+                "pdf_hash": pdf_hash,
+                "job_id": job_id,
+            }
+        )
+
+        # Invoke lambda to process tables
+        lambda_client.invoke(
+            FunctionName=func_name,
+            InvocationType="Event",
+            Payload=payload,
+        )
+
         return {
-            "statusCode": 500,
-            "body": json.dumps(response_msg),
+            "statusCode": 200,
+            "body": json.dumps("Successfully parsed textract to tables."),
         }
 
-    # Make flight objects compliant with firestore
-    for flight in flights:
-        flight.convert_seat_data()
-
-    # Save flight IDs to Textract Job
-    firestore_client.add_flight_ids_to_job(job_id, flights)
-
-    flights_dict = array_to_dict(flights)
-
-    payload = json.dumps(flights_dict)
-
-    response = lambda_client.invoke(
-        FunctionName=STORE_FLIGHTS_LAMBDA,
-        InvocationType="Event",
-        Payload=payload,
-    )
-
-    return {
-        "statusCode": 200,
-        "body": json.dumps(f"Invoked second lambda asynchronously: {response}"),
-    }
+    except Exception as e:
+        logger.exception("Error occurred: %s", e)
+        return {"statusCode": 500, "body": json.dumps("Internal Server Error.")}
