@@ -5,7 +5,7 @@ import unittest
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(current_dir, "sns-event-messages"))
 
-from recieve_pdf_data_textract import parse_sns_event  # noqa: E402
+from parse_sns import parse_sns_event  # noqa: E402
 
 sys.path.append("./sns-event-messages")
 

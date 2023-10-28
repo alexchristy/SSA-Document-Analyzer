@@ -301,3 +301,47 @@ class FirestoreClient:
 
         # Return None to indicate that no PDF was found
         return ""
+
+    def get_pdf_type_by_hash(self: "FirestoreClient", pdf_hash: str) -> str:
+        """Get name of terminal that owns the PDF identified by the supplied hash.
+
+        This function returns the name of the terminal that owns the PDF that is
+        identified by the supplied hash.
+
+        Args:
+        ----
+        pdf_hash: The SHA-256 hash of the PDF file
+
+        Returns:
+        -------
+        (str) Terminal name or None if the hash is invalid or the PDF does not exist
+        """
+        logging.info("Entering get_pdf_by_hash().")
+
+        # Get the name of the collections from environment variables
+        pdf_archive_coll = os.getenv("PDF_ARCHIVE_COLLECTION", "PDF_Archive")
+
+        # Create a reference to the document using the SHA-256 hash as the document ID
+        doc_ref = self.db.collection(pdf_archive_coll).document(pdf_hash)
+
+        # Try to retrieve the document
+        doc = doc_ref.get()
+
+        # Check if the document exists
+        if doc.exists:
+            # The document exists, so we retrieve its data and create a Pdf object
+            logging.info("PDF with hash %s found in the database.", pdf_hash)
+
+            # Get the document's data
+            pdf_data = doc.to_dict()
+
+            # Return the terminal name
+            pdf_type = pdf_data["terminal"]
+            logging.info("PDF type: %s", pdf_type)
+            return pdf_type
+
+        # The document does not exist
+        logging.warning("PDF with hash %s does not exist in the database.", pdf_hash)
+
+        # Return None to indicate that no PDF was found
+        return ""
