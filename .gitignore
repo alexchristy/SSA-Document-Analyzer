@@ -38,6 +38,9 @@ LAMBDA-ENV
 # start_pdf_textract_tables_job
 start_job_env
 
+# textract_to_tables
+to_tables_env
+
 
 # Unstored pickled objects in root directory
 /*.pkl
