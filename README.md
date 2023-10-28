@@ -36,6 +36,9 @@ This project contains the code and tests for AWS Lambda functions that process P
 - **Lambda Handler**: `textract_to_tables.lambda_handler`
 - **Deployment**: [Zip Archive Method](#deployment)
 - **Dependencies**: See `dependencies/textract_parsing_requirements.txt`
+- **Eviroment Variables:**
+  - `DOWNLOAD_DIR`: Path to directory where pdfs can be download to reprocesses them with screenshots.
+  - `FS_CRED_PATH`: Path to Firestore credentials.
 - **Notes**: 
   - Reprocesses tables if cell confidence is below 80%.
 
