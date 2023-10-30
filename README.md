@@ -41,17 +41,17 @@ This project contains the code and tests for AWS Lambda functions that process P
   - `FS_CRED_PATH`: Path to Firestore credentials.
   - `PDF_ARCHIVE_COLLECTION`: Name of firestore collection where pdf info is stored.
 - **Notes**: 
-  - Reprocesses tables if cell confidence is below 80%.
+  - Reprocesses tables if avergae cell confidence for a row is below 80%.
 
 ---
 
-### Tables_to_72HR_Flights
+### Process-72HR-Flights
 
-> **Responsibility**: Converts table objects into flight objects.
+> **Responsibility**: Converts table objects from 72hr schedules into flight objects.
 
-- **Lambda Handler**: `tables_to_72hr_flights.lambda_handler`
+- **Lambda Handler**: `process_72hr_flights.lambda_handler`
 - **Deployment**: [Zip Archive Method](#deployment)
-- **Dependencies**: See `dependencies/convert_72hr_flights_requirements.txt`
+- **Dependencies**: See `dependencies/process_72hr_requirements.txt`
 
 ## Deployment
 
