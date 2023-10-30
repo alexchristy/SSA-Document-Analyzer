@@ -368,30 +368,32 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             msg = Exception("Job did not succeed.")
             raise (msg)
 
+        # Existing tables
         response = textract_client.get_document_analysis(JobId=job_id)
-
         tables = gen_tables_from_textract_response(response)
 
-        # List to hold tables needing reprocessing
+        # Lists to hold tables
         tables_to_reprocess = []
+        tables_to_keep = []
 
         # Iterate through tables to find low confidence rows
         for table in tables:
-            # Get the lowest confidence row
             _, lowest_confidence = get_lowest_confidence_row(table)
-
-            # If the lowest confidence row is below the threshold
-            # add the table to the list of tables to reprocess
             if lowest_confidence < min_confidence:
                 tables_to_reprocess.append(table)
+            else:
+                tables_to_keep.append(table)
 
-        # Reprocess tables with low confidence rows
-        reprocessed_tables = reprocess_tables(
-            tables=tables_to_reprocess,
-            s3_client=s3_client,
-            s3_object_path=s3_object_path,
-            response=response,
-        )
+        if tables_to_reprocess:
+            # Reprocess tables with low confidence rows
+            reprocessed_tables = reprocess_tables(
+                tables=tables_to_reprocess,
+                s3_client=s3_client,
+                s3_object_path=s3_object_path,
+                response=response,
+            )
+            # Remove the old versions of reprocessed tables and add the new versions
+            tables = tables_to_keep + reprocessed_tables
 
         pdf_type = firestore_client.get_pdf_type_by_hash(pdf_hash)
 
@@ -417,15 +419,21 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
                 "body": json.dumps(invalid_pdf_type_msg),
             }
 
+        # Serialize tables to dictionaries
+        serialized_tables = [table.to_dict() for table in tables]
+
         payload = json.dumps(
             {
-                "tables": reprocessed_tables,
+                "tables": serialized_tables,
                 "pdf_hash": pdf_hash,
                 "job_id": job_id,
             }
         )
 
         firestore_client.add_job_timestamp(job_id, "tables_parsed_finished")
+
+        logging.info("Parsed %d tables.", len(tables))
+        logging.info("Invoking lambda: %s", func_name)
 
         # Invoke lambda to process tables
         lambda_client.invoke(
