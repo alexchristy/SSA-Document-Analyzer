@@ -8,6 +8,7 @@ import boto3  # type: ignore
 from firestore_db import FirestoreClient
 from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
+from table import Table
 
 MIN_CONFIDENCE = 80
 
@@ -107,38 +108,46 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         dict: A dictionary containing the response from the Lambda function.
     """
     try:
-        # Extract payload from event
-        payload = json.loads(event.get("Payload", "{}"))
+        # Get tables from event, if any
+        event_tables = event.get("tables", [])
+        pdf_hash = event.get("pdf_hash", "")
+        job_id = event.get("job_id", "")
 
-        reprocessed_tables = payload.get("tables", [])
-        pdf_hash = payload.get("pdf_hash", "")
-        job_id = payload.get("job_id", "")
+        print(f"PDF Hash: {pdf_hash}")
+        print(f"Job ID: {job_id}")
 
-        if not reprocessed_tables:
-            response_msg = f"No tables found in payload: {payload}"
+        tables = []
+        for i, table_dict in enumerate(event_tables):
+            curr_table = Table.from_dict(table_dict)
+
+            if curr_table is None:
+                logging.info("Failed to convert table %d from a dictionary", i)
+                continue
+
+            tables.append(curr_table)
+
+        if not tables:
+            response_msg = f"No tables found in payload: {event}"
             logging.critical(response_msg)
             raise ValueError(response_msg)
 
         if not pdf_hash:
-            response_msg = f"No pdf_hash found in payload: {payload}"
+            response_msg = f"No pdf_hash found in payload: {event}"
             logging.critical(response_msg)
             raise ValueError(response_msg)
 
         if not job_id:
-            response_msg = f"No job_id found in payload: {payload}"
+            response_msg = f"No job_id found in payload: {event}"
             logging.critical(response_msg)
             raise ValueError(response_msg)
 
         firestore_client.add_job_timestamp(job_id, "started_72hr_processing")
 
-        # Deserialize JSON to Python object
-        reprocessed_tables = json.loads(payload)
-
         # Get the origin terminal from Firestore
         origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
         flights: List[Flight] = []
-        for i, table in enumerate(reprocessed_tables):
+        for i, table in enumerate(tables):
             # Create flight objects from table
             curr_flights = convert_72hr_table_to_flights(
                 table, origin_terminal=origin_terminal
