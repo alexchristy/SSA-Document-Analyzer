@@ -41,6 +41,8 @@ start_job_env
 # textract_to_tables
 to_tables_env
 
+# process_72hr_flights
+convert_72hr_env
 
 # Unstored pickled objects in root directory
 /*.pkl
