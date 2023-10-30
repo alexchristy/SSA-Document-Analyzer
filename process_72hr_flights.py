@@ -183,9 +183,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         # Save flight IDs to Textract Job
         firestore_client.add_flight_ids_to_job(job_id, flights)
 
-        flight_payload = array_to_dict(flight_dict_list)
-
-        payload = json.dumps(flight_payload)
+        flight_payload = json.dumps(flight_dict_list)
 
         firestore_client.add_job_timestamp(job_id, "finished_72hr_processing")
 
@@ -193,7 +191,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         response = lambda_client.invoke(
             FunctionName=STORE_FLIGHTS_LAMBDA,
             InvocationType="Event",
-            Payload=payload,
+            Payload=flight_payload.encode("utf-8"),
         )
 
         return {
