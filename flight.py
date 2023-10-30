@@ -186,8 +186,23 @@ class Flight:
             Flight: A Flight object or None if an error occurred.
         """
         try:
-            # Initialize Flight object with dictionary attributes
-            return cls(**data)
+            # Only pick the keys that are accepted by __init__
+            valid_keys = {
+                "origin_terminal",
+                "destinations",
+                "rollcall_time",
+                "seats",
+                "notes",
+                "date",
+                "rollcall_note",
+                "seat_note",
+                "destination_note",
+                "patriot_express",
+            }
+            filtered_data = {k: v for k, v in data.items() if k in valid_keys}
+
+            # Initialize Flight object with filtered dictionary attributes
+            return cls(**filtered_data)
         except Exception as e:
             logging.error("Failed to create Flight from dict: %s", e)
             return None
