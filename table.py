@@ -1,6 +1,6 @@
 import logging
 import pickle
-from typing import List, Optional, Tuple, Type
+from typing import Dict, List, Optional, Tuple, Type
 
 
 class Table:
@@ -280,4 +280,28 @@ class Table:
                 )
         except Exception as e:
             logging.error("An error occurred while loading the table state: %s", e)
+            return None
+
+    def to_dict(self: "Table") -> Dict[str, object]:
+        """Serialize the Table object to a dictionary."""
+        try:
+            return vars(self)  # Converts all attributes to dictionary
+        except Exception as e:
+            logging.error(
+                "An error occurred while converting the table to dictionary: %s", e
+            )
+            return {}
+
+    @classmethod
+    def from_dict(cls: Type["Table"], d: Dict[str, object]) -> Optional["Table"]:
+        """Initialize a Table object from a dictionary."""
+        try:
+            table = cls()  # Create a new Table object
+            for key, value in d.items():  # Populate the attributes from the dictionary
+                setattr(table, key, value)
+            return table
+        except Exception as e:
+            logging.error(
+                "An error occurred while initializing the table from dictionary: %s", e
+            )
             return None
