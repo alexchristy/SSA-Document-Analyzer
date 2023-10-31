@@ -45,6 +45,14 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
         logging.info("SNS topic ARN for Textract: %s", sns_topic_arn)
         logging.info("SNS role ARN for Textract: %s", sns_role_arn)
 
+        # Store document with job ID and log contents
+        pdf_hash = fs.get_pdf_hash_with_s3_path(s3_object)
+
+        # Check if hash was successfully retrieved
+        if not pdf_hash or pdf_hash == "" or pdf_hash is None:
+            msg = f"Could not find PDF hash for S3 object: {s3_object}"
+            raise Exception(msg)
+
         # Start Textract job
         client = boto3.client("textract")
         response = client.start_document_analysis(
@@ -57,18 +65,10 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
         job_id = response["JobId"]
         logging.info("Textract job started with ID: %s", job_id)
 
-        # Store document with job ID and log contents
-        pdf_hash = fs.get_pdf_hash_with_s3_path(s3_object)
+        fs.add_textract_job(job_id, pdf_hash)
+        logging.info("Textract job ID %s and logs stored in Firestore", job_id)
 
-        # Check if hash was successfully retrieved
-        if pdf_hash:
-            fs.add_textract_job(job_id, pdf_hash)
-            logging.info("Textract job ID %s and logs stored in Firestore", job_id)
-
-            fs.add_job_timestamp(job_id, "textract_started")
-        else:
-            msg = f"Could not find PDF hash for S3 object: {s3_object}"
-            raise Exception(msg)
+        fs.add_job_timestamp(job_id, "textract_started")
 
     except Exception as e:
         logging.error("Error processing the Textract job: %s", e)
