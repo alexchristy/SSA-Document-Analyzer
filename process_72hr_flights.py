@@ -174,24 +174,27 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
                 "body": json.dumps(response_msg),
             }
 
-        # Make flight objects compliant with firestore
-        flight_dict_list = []
+        logging.info("Converted %d tables to %d flights.", len(tables), len(flights))
+
+        # Store flights in Firestore
         for flight in flights:
-            flight_dict = flight.to_dict()
-            flight_dict_list.append(flight_dict)
+            flight.convert_seat_data()
+            firestore_client.store_flight(flight)
 
         # Save flight IDs to Textract Job
         firestore_client.add_flight_ids_to_job(job_id, flights)
 
-        flight_payload = json.dumps(flight_dict_list)
-
         firestore_client.add_job_timestamp(job_id, "finished_72hr_processing")
+
+        payload = {
+            "terminal": origin_terminal,
+        }
 
         # Invoke second lambda asynchronously
         response = lambda_client.invoke(
             FunctionName=STORE_FLIGHTS_LAMBDA,
             InvocationType="Event",
-            Payload=flight_payload.encode("utf-8"),
+            Payload=json.dumps(payload),
         )
 
         return {
