@@ -8,6 +8,7 @@ import boto3  # type: ignore
 from firestore_db import FirestoreClient
 from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
+from table import Table
 
 MIN_CONFIDENCE = 80
 
@@ -107,38 +108,54 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         dict: A dictionary containing the response from the Lambda function.
     """
     try:
-        # Extract payload from event
-        payload = json.loads(event.get("Payload", "{}"))
+        print(f"Event: {event}")
+        # Get tables from event, if any
+        event_tables = event.get("tables", [])
+        pdf_hash = event.get("pdf_hash", "")
+        job_id = event.get("job_id", "")
 
-        reprocessed_tables = payload.get("tables", [])
-        pdf_hash = payload.get("pdf_hash", "")
-        job_id = payload.get("job_id", "")
+        print(f"PDF Hash: {pdf_hash}")
+        print(f"Job ID: {job_id}")
 
-        if not reprocessed_tables:
-            response_msg = f"No tables found in payload: {payload}"
+        tables = []
+        for i, table_dict in enumerate(event_tables):
+            curr_table = Table.from_dict(table_dict)
+
+            if curr_table is None:
+                logging.info("Failed to convert table %d from a dictionary", i)
+                continue
+
+            tables.append(curr_table)
+
+        print(f"Recieved {len(tables)} tables from event.")
+
+        if not tables or tables is None:
+            response_msg = f"No tables found in payload: {event}"
             logging.critical(response_msg)
             raise ValueError(response_msg)
 
-        if not pdf_hash:
-            response_msg = f"No pdf_hash found in payload: {payload}"
+        if not pdf_hash or pdf_hash is None:
+            response_msg = f"No pdf_hash found in payload: {event}"
             logging.critical(response_msg)
             raise ValueError(response_msg)
 
-        if not job_id:
-            response_msg = f"No job_id found in payload: {payload}"
+        if not job_id or job_id is None:
+            response_msg = f"No job_id found in payload: {event}"
             logging.critical(response_msg)
             raise ValueError(response_msg)
 
         firestore_client.add_job_timestamp(job_id, "started_72hr_processing")
 
-        # Deserialize JSON to Python object
-        reprocessed_tables = json.loads(payload)
-
         # Get the origin terminal from Firestore
         origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
+        if not origin_terminal or origin_terminal is None:
+            msg = f"Could not retrieve terminal name for pdf_hash: {pdf_hash}"
+            logging.critical(msg)
+            raise ValueError(msg)
+
         flights: List[Flight] = []
-        for i, table in enumerate(reprocessed_tables):
+        for i, table in enumerate(tables):
             # Create flight objects from table
             curr_flights = convert_72hr_table_to_flights(
                 table, origin_terminal=origin_terminal
@@ -157,24 +174,27 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
                 "body": json.dumps(response_msg),
             }
 
-        # Make flight objects compliant with firestore
+        logging.info("Converted %d tables to %d flights.", len(tables), len(flights))
+
+        # Store flights in Firestore
         for flight in flights:
             flight.convert_seat_data()
+            firestore_client.store_flight(flight)
 
         # Save flight IDs to Textract Job
         firestore_client.add_flight_ids_to_job(job_id, flights)
 
-        flights_dict = array_to_dict(flights)
-
-        payload = json.dumps(flights_dict)
-
         firestore_client.add_job_timestamp(job_id, "finished_72hr_processing")
+
+        payload = {
+            "terminal": origin_terminal,
+        }
 
         # Invoke second lambda asynchronously
         response = lambda_client.invoke(
             FunctionName=STORE_FLIGHTS_LAMBDA,
             InvocationType="Event",
-            Payload=payload,
+            Payload=json.dumps(payload),
         )
 
         return {
@@ -184,3 +204,88 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
     except Exception as e:
         logger.exception("Error occurred: %s", e)
         return {"statusCode": 500, "body": json.dumps("Internal Server Error.")}
+
+
+event = {
+    "tables": [
+        {
+            "title": "DEPARTURES FROM: DOVER AFB, DE FRIDAY, 18TH AUGUST 2023",
+            "title_confidence": 99.609375,
+            "footer": "",
+            "footer_confidence": 0.0,
+            "table_confidence": 99.755859375,
+            "page_number": 1,
+            "rows": [
+                [
+                    ["ROLLCALL", 92.822265625],
+                    ["DESTINATION", 95.263671875],
+                    ["SEATS", 90.8203125],
+                ],
+                [
+                    ["1240", 92.87109375],
+                    ["BANGOR, ME / RAMSTEIN AB, GERMANY", 95.361328125],
+                    ["53T", 90.91796875],
+                ],
+                [
+                    ["1605", 93.017578125],
+                    ["RAMSTEIN AB, GERMANY", 95.5078125],
+                    ["73T", 91.015625],
+                ],
+            ],
+            "table_number": 1,
+        },
+        {
+            "title": "DEPARTURES FROM: DOVER AFB, DE SATURDAY, 19TH AUGUST 2023",
+            "title_confidence": 99.4140625,
+            "footer": "",
+            "footer_confidence": 0.0,
+            "table_confidence": 99.853515625,
+            "page_number": 2,
+            "rows": [
+                [
+                    ["ROLLCALL", 92.28515625],
+                    ["DESTINATION", 96.09375],
+                    ["SEATS", 90.771484375],
+                ],
+                [
+                    ["0240", 89.501953125],
+                    ["RAMSTEIN AB, GERMANY", 93.1640625],
+                    ["73T", 87.98828125],
+                ],
+                [
+                    ["2010", 91.748046875],
+                    ["RAMSTEIN AB, GERMANY", 95.5078125],
+                    ["53T", 90.234375],
+                ],
+            ],
+            "table_number": 2,
+        },
+        {
+            "title": "DEPARTURES FROM: DOVER AFB, DE SUNDAY, 20TH AUGUST 2023",
+            "title_confidence": 99.462890625,
+            "footer": "",
+            "footer_confidence": 0.0,
+            "table_confidence": 99.8046875,
+            "page_number": 3,
+            "rows": [
+                [
+                    ["ROLLCALL", 91.9921875],
+                    ["DESTINATION", 95.60546875],
+                    ["SEATS", 89.84375],
+                ],
+                [
+                    ["0005", 91.796875],
+                    ["RAMSTEIN AB, GERMANY", 95.41015625],
+                    ["53T", 89.6484375],
+                ],
+            ],
+            "table_number": 3,
+        },
+    ],
+    "pdf_hash": "177590f6fb7e72a9b211d1c46bc412aa614e6f3b72e9d95515b4e7a0cc2eb5e2",
+    "job_id": "79d6564404f1fb348bf59c229bd324edc0de64d798a9fbc2515cb9beacdabd08",
+}
+
+
+if __name__ == "__main__":
+    lambda_handler(event, {})

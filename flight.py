@@ -62,29 +62,6 @@ class Flight:
         """
         return f"{self.origin_terminal}{self.destinations}{self.rollcall_time}{self.seats}{self.notes}{self.date}{self.rollcall_note}{self.seat_note}{self.destination_note}{self.patriot_express}"
 
-    def to_dict(self: "Flight") -> dict:
-        """Convert the Flight object to a dictionary.
-
-        Returns
-        -------
-            dict: A dictionary representation of the Flight object.
-        """
-        return {
-            "origin_terminal": self.origin_terminal,
-            "destinations": self.destinations,
-            "rollcall_time": self.rollcall_time,
-            "seats": self.seats,
-            "notes": self.notes,
-            "flight_id": self.flight_id,
-            "date": self.date,
-            "rollcall_note": self.rollcall_note,
-            "seat_note": self.seat_note,
-            "destination_note": self.destination_note,
-            "patriot_express": self.patriot_express,
-            "creation_time": self.creation_time,
-            "as_string": self.as_string,
-        }
-
     def pretty_print(self: "Flight") -> None:
         """Print a formatted representation of the Flight object."""
         print(f"{'=' * 40}")
@@ -184,4 +161,48 @@ class Flight:
                 return pickle.load(f)  # noqa: S301 (Only used for testing)
         except Exception as e:
             logging.error("An error occurred while loading the flight state: %s", e)
+            return None
+
+    def to_dict(self: "Flight") -> dict:
+        """Convert the Flight object to a dictionary.
+
+        Returns
+        -------
+            dict: A dictionary representation of the Flight object.
+        """
+        # Directly serialize class attributes
+        return vars(self)
+
+    @classmethod
+    def from_dict(cls: Type["Flight"], data: Dict[str, Any]) -> Optional["Flight"]:
+        """Create a Flight object from a dictionary.
+
+        Args:
+        ----
+            data (Dict[str, Any]): The dictionary containing the Flight attributes.
+
+        Returns:
+        -------
+            Flight: A Flight object or None if an error occurred.
+        """
+        try:
+            # Only pick the keys that are accepted by __init__
+            valid_keys = {
+                "origin_terminal",
+                "destinations",
+                "rollcall_time",
+                "seats",
+                "notes",
+                "date",
+                "rollcall_note",
+                "seat_note",
+                "destination_note",
+                "patriot_express",
+            }
+            filtered_data = {k: v for k, v in data.items() if k in valid_keys}
+
+            # Initialize Flight object with filtered dictionary attributes
+            return cls(**filtered_data)
+        except Exception as e:
+            logging.error("Failed to create Flight from dict: %s", e)
             return None
