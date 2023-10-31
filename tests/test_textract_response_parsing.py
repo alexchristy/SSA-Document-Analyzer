@@ -39,10 +39,6 @@ def lambda_test_handler(event, context):
         logging.error("JobId or Status missing in SNS message.")
         return
 
-    # Update the job status in Firestore
-    firestore_client = FirestoreClient()
-    firestore_client.update_job_status(job_id, status)
-
     # If job failed exit program
     if status != "SUCCEEDED":
         raise ("Job did not succeed.")
