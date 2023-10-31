@@ -261,6 +261,11 @@ def reprocess_tables(
                 "Reprocessed table has higher confidence than original table. Replacing original table with reprocessed table."
             )
             reprocessed_tables_list.append(reprocessed_table)
+        else:
+            logging.info(
+                "Reprocessed table has lower confidence than original table. Keeping original table."
+            )
+            reprocessed_tables_list.append(table)
 
     # Remove PDF from local directory
     os.remove(local_pdf_path)
