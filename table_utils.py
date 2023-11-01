@@ -324,13 +324,11 @@ def gen_tables_from_textract_response(textract_response: Dict[str, Any]) -> List
 
     if not tables:
         msg = "No tables returned from convert_textract_response_to_tables."
-        logging.critical("No tables returned from convert_textract_response_to_tables.")
-        raise ValueError(msg)
+        logging.info("No tables returned from convert_textract_response_to_tables.")
 
     if not isinstance(tables, list):
         msg = "Expected a list of tables, got something else."
-        logging.critical(msg)
-        raise ValueError(msg)
+        logging.info(msg)
 
     processed_tables = []
     for table in tables:
