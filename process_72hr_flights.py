@@ -149,7 +149,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         # Get the origin terminal from Firestore
         origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
-        if not origin_terminal or origin_terminal is None:
+        if not origin_terminal:
             msg = f"Could not retrieve terminal name for pdf_hash: {pdf_hash}"
             logging.critical(msg)
             raise ValueError(msg)
@@ -167,12 +167,9 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
                 logging.error("Failed to convert table %d to flights.", i)
 
         if flights is None or not flights:
-            logging.error("Failed to any convert table to flights.")
-            response_msg = f"Failed to convert any tables from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
-            return {
-                "statusCode": 500,
-                "body": json.dumps(response_msg),
-            }
+            response_msg = f"Failed to convert any tables to flights from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
+            logging.critical(response_msg)
+            raise ValueError(response_msg)
 
         logging.info("Converted %d tables to %d flights.", len(tables), len(flights))
 
@@ -202,90 +199,6 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             "body": json.dumps(f"Invoked second lambda asynchronously: {response}"),
         }
     except Exception as e:
-        logger.exception("Error occurred: %s", e)
-        return {"statusCode": 500, "body": json.dumps("Internal Server Error.")}
-
-
-event = {
-    "tables": [
-        {
-            "title": "DEPARTURES FROM: DOVER AFB, DE FRIDAY, 18TH AUGUST 2023",
-            "title_confidence": 99.609375,
-            "footer": "",
-            "footer_confidence": 0.0,
-            "table_confidence": 99.755859375,
-            "page_number": 1,
-            "rows": [
-                [
-                    ["ROLLCALL", 92.822265625],
-                    ["DESTINATION", 95.263671875],
-                    ["SEATS", 90.8203125],
-                ],
-                [
-                    ["1240", 92.87109375],
-                    ["BANGOR, ME / RAMSTEIN AB, GERMANY", 95.361328125],
-                    ["53T", 90.91796875],
-                ],
-                [
-                    ["1605", 93.017578125],
-                    ["RAMSTEIN AB, GERMANY", 95.5078125],
-                    ["73T", 91.015625],
-                ],
-            ],
-            "table_number": 1,
-        },
-        {
-            "title": "DEPARTURES FROM: DOVER AFB, DE SATURDAY, 19TH AUGUST 2023",
-            "title_confidence": 99.4140625,
-            "footer": "",
-            "footer_confidence": 0.0,
-            "table_confidence": 99.853515625,
-            "page_number": 2,
-            "rows": [
-                [
-                    ["ROLLCALL", 92.28515625],
-                    ["DESTINATION", 96.09375],
-                    ["SEATS", 90.771484375],
-                ],
-                [
-                    ["0240", 89.501953125],
-                    ["RAMSTEIN AB, GERMANY", 93.1640625],
-                    ["73T", 87.98828125],
-                ],
-                [
-                    ["2010", 91.748046875],
-                    ["RAMSTEIN AB, GERMANY", 95.5078125],
-                    ["53T", 90.234375],
-                ],
-            ],
-            "table_number": 2,
-        },
-        {
-            "title": "DEPARTURES FROM: DOVER AFB, DE SUNDAY, 20TH AUGUST 2023",
-            "title_confidence": 99.462890625,
-            "footer": "",
-            "footer_confidence": 0.0,
-            "table_confidence": 99.8046875,
-            "page_number": 3,
-            "rows": [
-                [
-                    ["ROLLCALL", 91.9921875],
-                    ["DESTINATION", 95.60546875],
-                    ["SEATS", 89.84375],
-                ],
-                [
-                    ["0005", 91.796875],
-                    ["RAMSTEIN AB, GERMANY", 95.41015625],
-                    ["53T", 89.6484375],
-                ],
-            ],
-            "table_number": 3,
-        },
-    ],
-    "pdf_hash": "177590f6fb7e72a9b211d1c46bc412aa614e6f3b72e9d95515b4e7a0cc2eb5e2",
-    "job_id": "79d6564404f1fb348bf59c229bd324edc0de64d798a9fbc2515cb9beacdabd08",
-}
-
-
-if __name__ == "__main__":
-    lambda_handler(event, {})
+        error_msg = f"Error occurred: {e}"
+        logger.critical(error_msg)
+        raise ValueError(error_msg) from e

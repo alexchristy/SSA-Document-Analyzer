@@ -156,8 +156,8 @@ def convert_textract_response_to_tables(json_response: Dict[str, Any]) -> List[T
                 current_table.footer_confidence = block.get("Confidence", 0.0)
         return tables if tables else []
     except Exception as e:
-        logging.error("An error occurred while converting to table: %s", e)
-        return []
+        logging.critical("An error occurred while converting to table: %s", e)
+        raise e
 
 
 def find_table_title_with_date(
@@ -323,12 +323,14 @@ def gen_tables_from_textract_response(textract_response: Dict[str, Any]) -> List
     tables = convert_textract_response_to_tables(textract_response)
 
     if not tables:
-        logging.error("No tables returned from convert_textract_response_to_tables.")
-        return []
+        msg = "No tables returned from convert_textract_response_to_tables."
+        logging.critical("No tables returned from convert_textract_response_to_tables.")
+        raise ValueError(msg)
 
     if not isinstance(tables, list):
-        logging.error("Expected a list of tables, got something else.")
-        return []
+        msg = "Expected a list of tables, got something else."
+        logging.critical(msg)
+        raise ValueError(msg)
 
     processed_tables = []
     for table in tables:

@@ -81,7 +81,7 @@ class FirestoreClient:
 
         Returns:
         -------
-        Optional[str]: The hash value of the PDF document if it exists in Firestore, otherwise None.
+        str: The hash value of the PDF document if it exists in Firestore, otherwise empty string.
 
         """
         logging.info("Retrieving hash value for S3 object path: %s", s3_object_path)
@@ -123,7 +123,7 @@ class FirestoreClient:
             logging.error(
                 "An error occurred while retrieving pdf hash with s3 object path: %s", e
             )
-            return ""
+            raise e
 
         return ""
 
@@ -145,7 +145,7 @@ class FirestoreClient:
             logging.info("Successfully updated job %s with status %s", job_id, status)
         except Exception as e:
             logging.error("An error occurred while updating the job status: %s", e)
-            raise
+            raise e
 
     def add_job_timestamp(self: "FirestoreClient", job_id: str, timestamp: str) -> None:
         """Add a started timestamp to the job document in the Textract_Jobs collection.
@@ -172,12 +172,9 @@ class FirestoreClient:
                 "Successfully added a %s timestamp to job %s", timestamp, job_id
             )
         except Exception as e:
-            logging.error(
-                "An error occurred while adding the %s timestamp to the job: %s",
-                timestamp,
-                e,
-            )
-            raise
+            msg = f"An error occurred while adding the {timestamp} timestamp to the job: {e}"
+            logging.error(msg)
+            raise Exception(msg) from e
 
     def add_flight_ids_to_job(
         self: "FirestoreClient", job_id: str, flights: List[Flight]
@@ -202,10 +199,9 @@ class FirestoreClient:
                 "Successfully added flight IDs to job %s: %s", job_id, flight_ids
             )
         except Exception as e:
-            logging.error(
-                "An error occurred while adding the flight IDs to the job: %s", e
-            )
-            raise
+            msg = f"An error occurred while adding the flight IDs to the job: {e}"
+            logging.error(msg)
+            raise Exception(msg) from e
 
     def add_flight_ids_to_pdf(
         self: "FirestoreClient", pdf_hash: str, flight_ids: List[str]
@@ -228,10 +224,9 @@ class FirestoreClient:
 
             logging.info("Successfully added flight IDs to PDF %s", pdf_hash)
         except Exception as e:
-            logging.error(
-                "An error occurred while adding the flight IDs to the PDF: %s", e
-            )
-            raise
+            msg = f"An error occurred while adding the flight IDs to the PDF: {e}"
+            logging.error(msg)
+            raise Exception(msg) from e
 
     def store_flight(self: "FirestoreClient", flight: Flight) -> None:
         """Store a flight object into the FLIGHT_CURRENT_COLLECTION.
@@ -263,8 +258,9 @@ class FirestoreClient:
                 flight_collection,
             )
         except Exception as e:
-            logging.error("An error occurred while inserting the flight object: %s", e)
-            raise
+            msg = f"An error occurred while inserting the flight object: {e}"
+            logging.critical(msg)
+            raise Exception(msg) from e
 
     def get_terminal_name_by_pdf_hash(self: "FirestoreClient", pdf_hash: str) -> str:
         """Get name of terminal that owns the PDF identified by the supplied hash.
@@ -307,7 +303,7 @@ class FirestoreClient:
             return terminal_name
 
         # The document does not exist
-        logging.warning(
+        logging.error(
             "Unable to retrieve terminal name. PDF with hash %s does not exist in the database.",
             pdf_hash,
         )
@@ -356,10 +352,9 @@ class FirestoreClient:
             return pdf_type
 
         # The document does not exist
-        logging.warning(
+        logging.critical(
             "Unable to get PDF type. PDF with hash %s does not exist in the database.",
             pdf_hash,
         )
-
-        # Return None to indicate that no PDF was found
-        return ""
+        msg = "Unable to get PDF type from the hash."
+        raise Exception(msg)
