@@ -30,8 +30,9 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
         fs = FirestoreClient()
         logging.info("Firestore client created")
     except Exception as e:
-        logging.error("Error initializing Firestore client: %s", e)
-        raise e
+        logging.critical("Error initializing Firestore client: %s", str(e))
+        msg = "Critical error. Stopping function."
+        raise Exception(msg) from e
 
     try:
         # Get S3 bucket and object from AWS SNS event
@@ -71,5 +72,6 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
         fs.add_job_timestamp(job_id, "textract_started")
 
     except Exception as e:
-        logging.error("Error processing the Textract job: %s", e)
-        raise e
+        logging.critical("Error processing the Textract job: %s", str(e))
+        msg = "Critical error. Stopping function."
+        raise Exception(msg) from e
