@@ -174,8 +174,9 @@ def reprocess_tables(
         try:
             os.makedirs(download_dir, exist_ok=True)
         except Exception as e:
-            logging.error("Failed to create download directory: %s", e)
-            raise
+            logging.critical("Failed to create download directory: %s", e)
+            msg = "Failed to create download directory."
+            raise ValueError(msg) from e
 
     # Get PDF filename from S3 object path
     pdf_filename = os.path.basename(s3_object_path)
@@ -187,8 +188,9 @@ def reprocess_tables(
     try:
         s3_client.download_from_s3(s3_object_path, local_pdf_path)
     except Exception as e:
-        logging.error("Failed to download PDF from S3: %s", e)
-        raise
+        logging.critical("Failed to download PDF from S3: %s", e)
+        msg = "Failed to download PDF from S3"
+        raise ValueError(msg) from e
 
     # Store reporcessed tables
     reprocessed_tables_list = []
@@ -236,7 +238,7 @@ def reprocess_tables(
 
         # Check if more than one table was found
         if len(new_tables) > 1:
-            logging.error("More than one table found in reprocessed table.")
+            logging.critical("More than one table found in reprocessed table.")
             msg = "More than one table found in reprocessed table."
             raise Exception(msg)
 
@@ -305,7 +307,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
 
         if not job_id or not status:
             no_job_status_msg = "JobId or Status missing in SNS message."
-            logging.error(no_job_status_msg)
+            logging.critical(no_job_status_msg)
             raise ValueError(no_job_status_msg)
 
         if not s3_bucket_name:
@@ -314,7 +316,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
                     job_id, status
                 )
             )
-            logging.error(response_msg)
+            logging.critical(response_msg)
             raise ValueError(response_msg)
 
         if not s3_object_path:
@@ -323,7 +325,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
                     job_id, status
                 )
             )
-            logging.error(response_msg)
+            logging.critical(response_msg)
             raise ValueError(response_msg)
 
         # Get extra environment variables
@@ -331,6 +333,20 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         lambda_72hr_flight = os.getenv("LAMBDA_72HR_FLIGHT", "Process-72hr-Flights")
         lambda_30day_flight = os.getenv("LAMBDA_30DAY_FLIGHT", "Process-30day-Flights")
         lambda_rollcall = os.getenv("LAMBDA_ROLLCALL", "Process-Rollcall")
+
+        if min_confidence == 80:  # noqa: PLR2004 (Already a constant)
+            logging.info("Using default minimum confidence of 80.")
+
+        if lambda_72hr_flight == "Process-72hr-Flights":
+            logging.info("Using default lambda for 72hr flights: Process-72hr-Flights.")
+
+        if lambda_30day_flight == "Process-30day-Flights":
+            logging.info(
+                "Using default lambda for 30day flights: Process-30day-Flights."
+            )
+
+        if lambda_rollcall == "Process-Rollcall":
+            logging.info("Using default lambda for rollcall: Process-Rollcall.")
 
         # Initialize S3 client
         s3_client = S3Bucket(bucket_name=s3_bucket_name)
@@ -344,15 +360,12 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
 
         if not pdf_hash:
-            logging.error(
+            logging.critical(
                 "Failed to get PDF hash using s3 object path (%s) from Firestore.",
                 s3_object_path,
             )
             no_pdf_hash_msg = f"Failed to get PDF hash using s3 object path ({s3_object_path}) from Firestore."
-            return {
-                "statusCode": 500,
-                "body": json.dumps(no_pdf_hash_msg),
-            }
+            raise ValueError(no_pdf_hash_msg)
 
         # Get the origin terminal from Firestore
         origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
@@ -363,19 +376,22 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
                 pdf_hash,
             )
             no_origin_terminal_msg = f"Failed to get origin terminal using PDF hash ({pdf_hash}) from Firestore."
-            return {
-                "statusCode": 500,
-                "body": json.dumps(no_origin_terminal_msg),
-            }
+            raise ValueError(no_origin_terminal_msg)
 
         # If job failed exit program
         if status != "SUCCEEDED":
+            logging.critical("Job did not succeed.")
             msg = Exception("Job did not succeed.")
             raise (msg)
 
         # Existing tables
         response = textract_client.get_document_analysis(JobId=job_id)
         tables = gen_tables_from_textract_response(response)
+
+        if not tables:
+            logging.critical("No tables found in Textract response.")
+            no_tables_msg = "No tables found in Textract response."
+            raise ValueError(no_tables_msg)
 
         # Lists to hold tables
         tables_to_reprocess = []
@@ -405,10 +421,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         if not pdf_type:
             logging.critical("Failed to get PDF type from Firestore.")
             no_pdf_type_msg = "Failed to get PDF type from Firestore."
-            return {
-                "statusCode": 500,
-                "body": json.dumps(no_pdf_type_msg),
-            }
+            raise ValueError(no_pdf_type_msg)
 
         if pdf_type == "72_HR":
             func_name = lambda_72hr_flight
@@ -419,10 +432,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         else:
             logging.critical("Invalid PDF type: %s", pdf_type)
             invalid_pdf_type_msg = f"Invalid PDF type: {pdf_type}"
-            return {
-                "statusCode": 500,
-                "body": json.dumps(invalid_pdf_type_msg),
-            }
+            raise ValueError(invalid_pdf_type_msg)
 
         # Serialize tables to dictionaries
         serialized_tables = [table.to_dict() for table in tables]
@@ -453,5 +463,6 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         }
 
     except Exception as e:
-        logger.exception("Error occurred: %s", e)
-        return {"statusCode": 500, "body": json.dumps("Internal Server Error.")}
+        error_msg = "Error occurred."
+        logger.critical("Error occurred: %s", str(e))
+        raise Exception(error_msg) from e
