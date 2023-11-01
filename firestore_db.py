@@ -199,10 +199,9 @@ class FirestoreClient:
                 "Successfully added flight IDs to job %s: %s", job_id, flight_ids
             )
         except Exception as e:
-            logging.error(
-                "An error occurred while adding the flight IDs to the job: %s", e
-            )
-            raise
+            msg = f"An error occurred while adding the flight IDs to the job: {e}"
+            logging.error(msg)
+            raise Exception(msg) from e
 
     def add_flight_ids_to_pdf(
         self: "FirestoreClient", pdf_hash: str, flight_ids: List[str]
@@ -225,10 +224,9 @@ class FirestoreClient:
 
             logging.info("Successfully added flight IDs to PDF %s", pdf_hash)
         except Exception as e:
-            logging.error(
-                "An error occurred while adding the flight IDs to the PDF: %s", e
-            )
-            raise
+            msg = f"An error occurred while adding the flight IDs to the PDF: {e}"
+            logging.error(msg)
+            raise Exception(msg) from e
 
     def store_flight(self: "FirestoreClient", flight: Flight) -> None:
         """Store a flight object into the FLIGHT_CURRENT_COLLECTION.
@@ -260,8 +258,9 @@ class FirestoreClient:
                 flight_collection,
             )
         except Exception as e:
-            logging.error("An error occurred while inserting the flight object: %s", e)
-            raise
+            msg = f"An error occurred while inserting the flight object: {e}"
+            logging.critical(msg)
+            raise Exception(msg) from e
 
     def get_terminal_name_by_pdf_hash(self: "FirestoreClient", pdf_hash: str) -> str:
         """Get name of terminal that owns the PDF identified by the supplied hash.
