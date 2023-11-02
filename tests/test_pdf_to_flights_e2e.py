@@ -2,7 +2,6 @@ import os
 import sys
 import time
 import unittest
-import pickle
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from firestore_db import (  # noqa: E402 (Has to be imported after sys.path.append)
