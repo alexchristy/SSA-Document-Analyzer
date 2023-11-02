@@ -433,3 +433,58 @@ class FirestoreClient:
             msg = f"An error occurred while deleting the flight with document ID {document_id}: {e}"
             logging.error(msg)
             raise Exception(msg) from e
+
+    def insert_document_with_id(
+        self: "FirestoreClient", collection_name: str, doc_id: str, document_data: dict
+    ) -> None:
+        """Insert a document into a specified Firestore collection with a given document ID.
+
+        Args:
+        ----
+            collection_name (str): The name of the Firestore collection.
+            doc_id (str): The ID for the new document.
+            document_data (dict): The data to insert into the document.
+        """
+        try:
+            # Insert the document into the Firestore collection with the specified ID
+            self.db.collection(collection_name).document(doc_id).set(document_data)
+            logging.info(
+                "Document with ID %s inserted into collection %s",
+                doc_id,
+                collection_name,
+            )
+        except Exception as e:
+            logging.error(
+                "Failed to insert document with ID %s into collection %s: %s",
+                doc_id,
+                collection_name,
+                e,
+            )
+            raise e
+
+    def delete_document_by_id(
+        self: "FirestoreClient", collection_name: str, doc_id: str
+    ) -> None:
+        """Delete a document from a specified Firestore collection by document ID.
+
+        Args:
+        ----
+            collection_name (str): The name of the Firestore collection.
+            doc_id (str): The ID of the document to delete.
+        """
+        try:
+            # Delete the document from the Firestore collection
+            self.db.collection(collection_name).document(doc_id).delete()
+            logging.info(
+                "Document with ID %s deleted from collection %s",
+                doc_id,
+                collection_name,
+            )
+        except Exception as e:
+            logging.error(
+                "Failed to delete document with ID %s from collection %s: %s",
+                doc_id,
+                collection_name,
+                e,
+            )
+            raise e
