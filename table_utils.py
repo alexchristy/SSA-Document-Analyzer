@@ -61,7 +61,9 @@ def is_valid_72hr_table(table: Table) -> bool:
     return True
 
 
-def convert_textract_response_to_tables(json_response: Dict[str, Any]) -> List[Table]:
+def convert_textract_response_to_tables(
+    json_response: List[Dict[str, Any]]
+) -> List[Table]:
     """Convert the Textract JSON response to a list of Table objects.
 
     Args:
@@ -309,7 +311,9 @@ def rearrange_columns(table: Table) -> Table:
     return table
 
 
-def gen_tables_from_textract_response(textract_response: Dict[str, Any]) -> List[Table]:
+def gen_tables_from_textract_response(
+    textract_response: List[Dict[str, Any]]
+) -> List[Table]:
     """Generate tables from Textract response.
 
     Args:

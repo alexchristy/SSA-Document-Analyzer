@@ -96,7 +96,9 @@ def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
     return lowest_confidence_row_index, lowest_confidence
 
 
-def get_document_analysis_results(client: boto3.client, job_id: str) -> List[Dict]:
+def get_document_analysis_results(
+    client: boto3.client, job_id: str
+) -> List[Dict[str, Any]]:
     """Get the results of a Textract document analysis job.
 
     Args:
@@ -138,7 +140,10 @@ def get_document_analysis_results(client: boto3.client, job_id: str) -> List[Dic
 
 
 def reprocess_tables(
-    tables: List[Table], s3_client: S3Bucket, s3_object_path: str, response: dict
+    tables: List[Table],
+    s3_client: S3Bucket,
+    s3_object_path: str,
+    response: List[Dict[str, Any]],
 ) -> List[Table]:
     """Reprocess tables with low confidence scores in a Textract document analysis job.
 
@@ -385,7 +390,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             raise (msg)
 
         # Existing tables
-        response = textract_client.get_document_analysis(JobId=job_id)
+        response = get_document_analysis_results(textract_client, job_id)
         tables = gen_tables_from_textract_response(response)
 
         if not tables:

@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from pdf2image import convert_from_path
 
@@ -10,7 +10,7 @@ logging.basicConfig(level=logging.INFO)
 
 def capture_screen_shot_of_table_from_pdf(
     pdf_path: str,
-    textract_response: Dict[str, Any],
+    textract_response: List[Dict[str, Any]],
     page_number: int,
     **kwargs: Any,  # noqa: ANN401 (Ignored to allow using **kwargs)
 ) -> str:
