@@ -175,7 +175,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
 
         # Store flights in Firestore
         for flight in flights:
-            flight.convert_seat_data()
+            flight.make_firestore_compliant()
             firestore_client.store_flight(flight)
 
         # Save flight IDs to Textract Job

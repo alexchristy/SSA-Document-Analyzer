@@ -129,7 +129,7 @@ class Flight:
         """
         return hashlib.sha256(self.as_string.encode()).hexdigest()
 
-    def convert_seat_data(self: "Flight") -> None:
+    def make_firestore_compliant(self: "Flight") -> None:
         """Convert the seat data from a list of lists to a list of dictionaries."""
         # Convert the seat data to a list of dictionaries
         seats = []
@@ -139,6 +139,8 @@ class Flight:
             seat["status"] = data_point[1]
             seats.append(seat)
         self.seats = seats
+        self.as_string = self.generate_as_string()
+        self.flight_id = self.generate_flight_id()
 
     @classmethod
     def load_state(

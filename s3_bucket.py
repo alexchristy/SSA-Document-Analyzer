@@ -4,7 +4,7 @@ from typing import Optional
 
 import boto3  # type: ignore
 from boto3.exceptions import S3UploadFailedError  # type: ignore
-from botocore.exceptions import ParamValidationError  # type: ignore
+from botocore.exceptions import NoCredentialsError, ParamValidationError  # type: ignore
 
 
 class S3Bucket:
@@ -97,5 +97,40 @@ class S3Bucket:
                 "An unexpected error occurred while downloading %s to %s: %s",
                 s3_path,
                 local_path,
+                e,
+            )
+
+    def upload_to_s3(self: "S3Bucket", local_path: str, s3_path: str) -> None:
+        """Upload a file to S3 from a local path.
+
+        Args:
+        ----
+        local_path : str
+            The local path of the file to upload.
+        s3_path : str
+            The S3 path to upload the file to.
+
+        Returns:
+        -------
+        None
+        """
+        try:
+            self.client.upload_file(local_path, self.bucket_name, s3_path)
+            logging.info("Uploaded %s to %s", local_path, s3_path)
+        except S3UploadFailedError as e:
+            logging.error("Upload failed for %s to %s: %s", local_path, s3_path, e)
+        except NoCredentialsError as e:
+            logging.error(
+                "No credentials found for %s to %s: %s", local_path, s3_path, e
+            )
+        except ParamValidationError as e:
+            logging.error(
+                "Parameter validation failed for %s to %s: %s", local_path, s3_path, e
+            )
+        except Exception as e:
+            logging.error(
+                "An unexpected error occurred while uploading %s to %s: %s",
+                local_path,
+                s3_path,
                 e,
             )

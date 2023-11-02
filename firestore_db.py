@@ -358,3 +358,78 @@ class FirestoreClient:
         )
         msg = "Unable to get PDF type from the hash."
         raise Exception(msg)
+
+    def get_flights_by_terminal(self: "FirestoreClient", terminal: str) -> List[Flight]:
+        """Retrieve all flights with a specified origin terminal.
+
+        Args:
+        ----
+        terminal (str): The name of the origin terminal.
+
+        Returns:
+        -------
+        List[Flight]: A list of Flight objects.
+        """
+        flights_list = []  # Initialize an empty list to store Flight objects
+
+        try:
+            # Get the flight collection from environment variable or use default
+            flight_current_collection = os.getenv(
+                "FLIGHT_CURRENT_COLLECTION", "Current_Flights"
+            )
+
+            # Create a query to search for flights originating from the specified terminal
+            query = self.db.collection(flight_current_collection).where(
+                "origin_terminal", "==", terminal
+            )
+
+            # Execute the query and get the results
+            query_results = query.get()
+
+            # Convert query results to list of Flight objects
+            for doc in query_results:
+                doc_dict = doc.to_dict()
+                flight = Flight.from_dict(doc_dict)
+                if flight:
+                    flights_list.append(flight)
+
+            if not flights_list:
+                logging.info("No flights found originating from terminal: %s", terminal)
+                return []
+
+            logging.info(
+                "Successfully retrieved flights originating from terminal: %s", terminal
+            )
+
+            return flights_list
+
+        except Exception as e:
+            logging.critical(
+                "An error occurred while retrieving flights by terminal: %s", e
+            )
+            raise e
+
+    def delete_flight_by_id(self: "FirestoreClient", document_id: str) -> None:
+        """Delete a flight document based on its Firestore document ID.
+
+        Args:
+        ----
+        document_id (str): The Firestore document ID of the flight to be deleted.
+
+        """
+        try:
+            # Determine the collection name from environment variable or use a default
+            flight_current_collection = os.getenv(
+                "FLIGHT_CURRENT_COLLECTION", "Current_Flights"
+            )
+
+            # Create a reference to the document
+            self.db.collection(flight_current_collection).document(document_id).delete()
+
+            logging.info(
+                "Successfully deleted flight with document ID: %s", document_id
+            )
+        except Exception as e:
+            msg = f"An error occurred while deleting the flight with document ID {document_id}: {e}"
+            logging.error(msg)
+            raise Exception(msg) from e
