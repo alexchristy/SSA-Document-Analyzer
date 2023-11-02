@@ -176,6 +176,13 @@ class Flight:
         return vars(self)
 
     @classmethod
+    def _sort_nested_dict(cls: Type["Flight"], d: dict) -> dict:
+        """Recursively sorts a nested dictionary lexicographically by keys."""
+        if isinstance(d, dict):
+            return {k: cls._sort_nested_dict(v) for k, v in sorted(d.items())}
+        return d
+
+    @classmethod
     def from_dict(cls: Type["Flight"], data: Dict[str, Any]) -> Optional["Flight"]:
         """Create a Flight object from a dictionary.
 
@@ -202,6 +209,10 @@ class Flight:
                 "patriot_express",
             }
             filtered_data = {k: v for k, v in data.items() if k in valid_keys}
+
+            # Sort the 'notes' attribute if it exists and is a dictionary
+            if "notes" in filtered_data and isinstance(filtered_data["notes"], dict):
+                filtered_data["notes"] = cls._sort_nested_dict(filtered_data["notes"])
 
             # Initialize Flight object with filtered dictionary attributes
             return cls(**filtered_data)
