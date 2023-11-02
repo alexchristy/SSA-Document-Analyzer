@@ -13,6 +13,15 @@ from s3_bucket import (  # noqa: E402 (Has to be imported after sys.path.append)
     S3Bucket,
 )
 
+# When pickling flights for testing use this snippet:
+# import pickle
+
+# for i, flight in enumerate(test_flights):
+#     filename = f"tests/end-to-end-test-assets/test_flight_convert_al_udeid_1_72hr/al_udeid_1_72hr_{i}.pkl"
+
+#     with open(filename, "wb") as f:
+#         pickle.dump(flight, f)
+
 
 class TestPdfToFlightsE2E(unittest.TestCase):
     """Unit tests that upload PDFs to S3 and check that the flights are properly extracted to Firebase."""
@@ -288,6 +297,96 @@ class TestPdfToFlightsE2E(unittest.TestCase):
 
         # Check equal number of flights
         self.assertEqual(len(test_flights), 2)
+
+        # Sort flights by flight_id
+        test_flights = sorted(test_flights, key=lambda x: x.flight_id)
+        good_flights = sorted(good_flights, key=lambda x: x.flight_id)
+
+        # Check that flights are equal
+        for i, flight in enumerate(test_flights):
+            self.assertEqual(flight, good_flights[i])
+
+    def test_flight_convert_al_udeid_1_72hr(self: unittest.TestCase) -> None:
+        """Test that a PDF properly converted to flights in Firebase."""
+        s3_client = S3Bucket(bucket_name="testing-ssa-pdf-store")
+        fs = FirestoreClient()
+
+        pdf_doc = {
+            "cloud_path": "current/72_HR/al_udeid_1_72hr_test.pdf",
+            "hash": "79404d64c76c2d09aaa97b545cae86eb38d6a48a712fcab556d3072fbf0f0f86",
+            "terminal": "Al Udeid AB Passenger Terminal",
+            "type": "72_HR",
+        }
+
+        fs.insert_document_with_id(
+            collection_name="**TESTING**_PDF_Archive",
+            document_data=pdf_doc,
+            doc_id=pdf_doc["hash"],
+        )
+
+        # Load known good flights
+        good_flights = []
+        for i in range(16):
+            filename = f"tests/end-to-end-test-assets/test_flight_convert_al_udeid_1_72hr/al_udeid_1_72hr_{i}.pkl"
+            flight = Flight.load_state(filename=filename)
+
+            if flight is None:
+                self.fail(f"Failed to load {filename}")
+
+            good_flights.append(flight)
+
+        s3_client.upload_to_s3(
+            local_path="tests/end-to-end-test-assets/test_flight_convert_al_udeid_1_72hr/al_udeid_1_72hr_test.pdf",
+            s3_path="current/72_HR/al_udeid_1_72hr_test.pdf",
+        )
+
+        test_flights = []
+        max_retries = 15
+        incomplete_get_retry = 2
+        while True:
+            max_retries -= 1
+            flights = fs.get_flights_by_terminal("Al Udeid AB Passenger Terminal")
+
+            # Filter out non-test flights
+            if flights:
+                for flight in flights:
+                    flight_dict = flight.to_dict()
+
+                    if (
+                        flight_dict["date"] == "20230818"
+                        or flight_dict["date"] == "20230819"
+                        or flight_dict["date"] == "20230820"
+                    ):
+                        test_flights.append(flight)
+
+            correct_num_flights = 16
+            if len(test_flights) == correct_num_flights:
+                break
+
+            # Only retry once if we have some flights but not all
+            if test_flights and incomplete_get_retry > 0:
+                incomplete_get_retry -= 1
+                time.sleep(15)
+                continue
+
+            if max_retries <= 0:
+                self.fail("No flights found after 15 retries.")
+
+            time.sleep(15)
+
+        # Delete PDF document from Firestore
+        fs.delete_document_by_id(
+            collection_name="**TESTING**_PDF_Archive",
+            doc_id=pdf_doc["hash"],
+        )
+
+        # Delete testing flights from Firestore
+        for flight in test_flights:
+            flight_dict = flight.to_dict()
+            fs.delete_flight_by_id(flight_dict["flight_id"])
+
+        # Check equal number of flights
+        self.assertEqual(len(test_flights), 16)
 
         # Sort flights by flight_id
         test_flights = sorted(test_flights, key=lambda x: x.flight_id)
