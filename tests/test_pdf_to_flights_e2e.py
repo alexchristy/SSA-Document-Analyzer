@@ -1034,4 +1034,8 @@ class TestPdfToFlightsE2E(unittest.TestCase):
 
         # Sort flights by flight_id
         test_flights = sorted(test_flights, key=lambda x: x.flight_id)
-        # good_flights = sorted(good_flights, key=lambda x: x.flight_id)
+        good_flights = sorted(good_flights, key=lambda x: x.flight_id)
+
+        # Check flights are equal
+        for i, flight in enumerate(test_flights):
+            self.assertEqual(flight, good_flights[i])
