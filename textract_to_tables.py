@@ -72,6 +72,7 @@ def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
         tuple: Tuple containing the row index and confidence score.
     """
     lowest_confidence = 100.0
+    lowest_confidence_row_index = 0
 
     for index, _row in enumerate(table.rows):
         # Ignore first row (column headers)
