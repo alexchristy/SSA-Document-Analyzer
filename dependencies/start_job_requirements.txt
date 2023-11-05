@@ -1,3 +1,4 @@
+aws-lambda-typing==2.18.0
 boto3==1.28.73
 botocore==1.31.73
 CacheControl==0.13.1
