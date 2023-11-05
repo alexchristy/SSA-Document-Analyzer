@@ -117,6 +117,18 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         print(f"PDF Hash: {pdf_hash}")
         print(f"Job ID: {job_id}")
 
+        # Append null values to timestamp fields in Textract Job.
+        # This allows us to query for jobs that failed to process completely.
+        null_timestamps = {
+            "started_72hr_processing": None,
+            "finished_72hr_processing": None,
+        }
+        firestore_client.append_to_doc(
+            "Textract_Jobs",
+            job_id,
+            null_timestamps,
+        )
+
         tables = []
         for i, table_dict in enumerate(event_tables):
             curr_table = Table.from_dict(table_dict)
@@ -131,17 +143,14 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
 
         if not tables or tables is None:
             response_msg = f"No tables found in payload: {event}"
-            logging.critical(response_msg)
             raise ValueError(response_msg)
 
         if not pdf_hash or pdf_hash is None:
             response_msg = f"No pdf_hash found in payload: {event}"
-            logging.critical(response_msg)
             raise ValueError(response_msg)
 
         if not job_id or job_id is None:
             response_msg = f"No job_id found in payload: {event}"
-            logging.critical(response_msg)
             raise ValueError(response_msg)
 
         firestore_client.add_job_timestamp(job_id, "started_72hr_processing")
@@ -166,20 +175,25 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             else:
                 logging.error("Failed to convert table %d to flights.", i)
 
-        if flights is None or not flights:
-            response_msg = f"Failed to convert any tables to flights from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
-            logging.critical(response_msg)
-            raise ValueError(response_msg)
+        # Save flight IDs to Textract Job
+        firestore_client.add_flight_ids_to_job(job_id, flights)
 
         logging.info("Converted %d tables to %d flights.", len(tables), len(flights))
+
+        # Append number of flights to Textract Job
+        append_result = {
+            "numFlights": len(flights),
+        }
+        firestore_client.append_to_doc("Textract_Jobs", job_id, append_result)
+
+        if flights is None or not flights:
+            response_msg = f"Failed to convert any tables to flights from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
+            raise ValueError(response_msg)
 
         # Store flights in Firestore
         for flight in flights:
             flight.make_firestore_compliant()
             firestore_client.store_flight(flight)
-
-        # Save flight IDs to Textract Job
-        firestore_client.add_flight_ids_to_job(job_id, flights)
 
         firestore_client.add_job_timestamp(job_id, "finished_72hr_processing")
 

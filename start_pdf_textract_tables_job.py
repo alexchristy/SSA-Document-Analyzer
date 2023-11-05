@@ -69,6 +69,13 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
         fs.add_textract_job(job_id, pdf_hash)
         logging.info("Textract job ID %s and logs stored in Firestore", job_id)
 
+        null_timestamps = {
+            "textract_started": None,
+            "textract_completed": None,
+        }
+
+        fs.append_to_doc("Textract_Jobs", job_id, null_timestamps)
+
         fs.add_job_timestamp(job_id, "textract_started")
 
     except Exception as e:

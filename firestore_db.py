@@ -488,3 +488,38 @@ class FirestoreClient:
                 e,
             )
             raise e
+
+    def append_to_doc(
+        self: "FirestoreClient",
+        collection_name: str,
+        document_id: str,
+        values_to_append: Dict[str, Any],
+    ) -> None:
+        """Append attributes to a Firestore document.
+
+        Args:
+        ----
+        collection_name (str): The name of the collection where the document resides.
+        document_id (str): The ID of the document to append data to.
+        values_to_append (dict): The dictionary of values to append to the document.
+        """
+        try:
+            # Get a reference to the document
+            doc_ref = self.db.collection(collection_name).document(document_id)
+
+            # Append the provided attributes to the document
+            doc_ref.set(values_to_append, merge=True)
+
+            logging.info(
+                "Successfully appended values to document with ID %s in collection %s",
+                document_id,
+                collection_name,
+            )
+        except Exception as e:
+            logging.error(
+                "Failed to append values to document with ID %s in collection %s: %s",
+                document_id,
+                collection_name,
+                e,
+            )
+            raise e

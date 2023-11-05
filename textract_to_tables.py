@@ -334,6 +334,18 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             logging.critical(response_msg)
             raise ValueError(response_msg)
 
+        # Append null values to timestamp fields in Textract Job.
+        # This allows us to query for jobs that failed to process completely.
+        null_timestamps = {
+            "tables_parsed_started": None,
+            "tables_parsed_finished": None,
+        }
+        firestore_client.append_to_doc(
+            "Textract_Jobs",
+            job_id,
+            null_timestamps,
+        )
+
         # Get extra environment variables
         min_confidence = int(os.getenv("MIN_CONFIDENCE", "80"))
         lambda_72hr_flight = os.getenv("LAMBDA_72HR_FLIGHT", "Process-72hr-Flights")
