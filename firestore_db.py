@@ -1,7 +1,9 @@
 import logging
 import os
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
+import pytz  # type: ignore
 from firebase_admin import (  # type: ignore
     credentials,
     firestore,
@@ -521,3 +523,55 @@ class FirestoreClient:
                 e,
             )
             raise e
+
+    def get_all_failed_proc_72_flights(
+        self: "FirestoreClient", lookback_seconds: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """Get all textract jobs that failed to process 72hr tables to flights.
+
+        Query for Textract_Jobs with 'finished_72hr_processing' as null and
+        'started_72hr_processing' not null within the optional lookback time window.
+
+        Args:
+        ----
+        lookback_seconds (int, optional): The number of seconds to look back from now.
+                                        If None, retrieves all matching documents.
+
+        Returns:
+        -------
+        list: A list of dictionaries representing the queried documents.
+        """
+        # Reference to the collection
+        collection_ref = self.db.collection("Textract_Jobs")
+
+        logging.info(
+            "Querying for failed 72hr processing jobs. Lookback: %s", lookback_seconds
+        )
+
+        # Begin constructing the query
+        query = collection_ref.where("finished_72hr_processing", "==", None)
+
+        # If a lookback time is specified, adjust the query
+        if lookback_seconds is not None:
+            lookback_time = datetime.now(tz=pytz.UTC) - timedelta(
+                seconds=lookback_seconds
+            )
+            query = query.where("started_72hr_processing", ">", lookback_time)
+
+        try:
+            # Get the query results
+            results = query.stream()
+
+            # Create a list of dictionaries from the documents
+            jobs = []
+            for doc in results:
+                doc_dict = doc.to_dict()
+                if (
+                    "started_72hr_processing" in doc_dict
+                ):  # This line checks that the field is not None
+                    jobs.append({**doc_dict, "job_id": doc.id})
+            return jobs
+
+        except Exception as e:
+            logging.error("An error occurred while querying the documents: %s", e)
+            return []  # Return an empty list in case of error
