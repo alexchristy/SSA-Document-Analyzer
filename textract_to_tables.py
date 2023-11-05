@@ -5,6 +5,7 @@ import uuid
 from typing import Any, Dict, List, Tuple
 
 import boto3  # type: ignore
+from aws_lambda_typing import context as lambda_context
 
 from firestore_db import FirestoreClient
 from parse_sns import parse_sns_event
@@ -295,7 +296,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
+def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, Any]:
     """Convert textract response to tables.
 
     Args:
@@ -333,6 +334,17 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             )
             logging.critical(response_msg)
             raise ValueError(response_msg)
+
+        request_id = context.aws_request_id
+        function_name = context.function_name
+
+        func_72hr_info = {
+            "func_textract_to_tables_request_id": request_id,
+            "func_textract_to_tables_name": function_name,
+        }
+
+        # Append function info to Textract Job
+        firestore_client.append_to_doc("Textract_Jobs", job_id, func_72hr_info)
 
         # Append null values to timestamp fields in Textract Job.
         # This allows us to query for jobs that failed to process completely.

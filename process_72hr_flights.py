@@ -4,6 +4,7 @@ import os
 from typing import Any, Dict, List, Tuple
 
 import boto3  # type: ignore
+from aws_lambda_typing import context as lambda_context
 
 from firestore_db import FirestoreClient
 from flight import Flight
@@ -95,7 +96,7 @@ def array_to_dict(array: List[Any]) -> dict:
 
 
 # Main Lambda function
-def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
+def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, Any]:
     """Lambda function handler for processing 72-hour flight documents.
 
     Args:
@@ -108,14 +109,25 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
         dict: A dictionary containing the response from the Lambda function.
     """
     try:
-        print(f"Event: {event}")
+        logging.info("Event: %s", event)
         # Get tables from event, if any
         event_tables = event.get("tables", [])
         pdf_hash = event.get("pdf_hash", "")
         job_id = event.get("job_id", "")
 
-        print(f"PDF Hash: {pdf_hash}")
-        print(f"Job ID: {job_id}")
+        logging.info("PDF Hash: %s", pdf_hash)
+        logging.info("Job ID: %s", job_id)
+
+        request_id = context.aws_request_id
+        function_name = context.function_name
+
+        func_72hr_info = {
+            "func_72hr_request_id": request_id,
+            "func_72hr_name": function_name,
+        }
+
+        # Append function info to Textract Job
+        firestore_client.append_to_doc("Textract_Jobs", job_id, func_72hr_info)
 
         # Append null values to timestamp fields in Textract Job.
         # This allows us to query for jobs that failed to process completely.
@@ -123,11 +135,7 @@ def lambda_handler(event: dict, context: dict) -> Dict[str, Any]:
             "started_72hr_processing": None,
             "finished_72hr_processing": None,
         }
-        firestore_client.append_to_doc(
-            "Textract_Jobs",
-            job_id,
-            null_timestamps,
-        )
+        firestore_client.append_to_doc("Textract_Jobs", job_id, null_timestamps)
 
         tables = []
         for i, table_dict in enumerate(event_tables):

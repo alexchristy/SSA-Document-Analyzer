@@ -3,6 +3,7 @@ import os
 from typing import Any, Dict
 
 import boto3  # type: ignore
+from aws_lambda_typing import context as lambda_context
 
 from firestore_db import FirestoreClient
 
@@ -10,7 +11,7 @@ from firestore_db import FirestoreClient
 logging.getLogger().setLevel(logging.INFO)
 
 
-def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
+def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> None:
     """Start a Textract job to extract tables from a PDF document.
 
     Entry point for the AWS Lambda function. Starts a Textract job to extract tables from a PDF document
@@ -68,6 +69,17 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
 
         fs.add_textract_job(job_id, pdf_hash)
         logging.info("Textract job ID %s and logs stored in Firestore", job_id)
+
+        request_id = context.aws_request_id
+        function_name = context.function_name
+
+        func_72hr_info = {
+            "func_start_job_request_id": request_id,
+            "func_start_job_name": function_name,
+        }
+
+        # Append function info to Textract Job
+        fs.append_to_doc("Textract_Jobs", job_id, func_72hr_info)
 
         null_timestamps = {
             "textract_started": None,
