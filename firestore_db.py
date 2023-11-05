@@ -1,4 +1,3 @@
-import datetime
 import logging
 import os
 from typing import Any, Dict, List, Optional
@@ -9,6 +8,7 @@ from firebase_admin import (  # type: ignore
     get_app,
     initialize_app,
 )
+from google.cloud.firestore import SERVER_TIMESTAMP  # type: ignore
 
 from flight import Flight
 
@@ -147,32 +147,30 @@ class FirestoreClient:
             logging.error("An error occurred while updating the job status: %s", e)
             raise e
 
-    def add_job_timestamp(self: "FirestoreClient", job_id: str, timestamp: str) -> None:
-        """Add a started timestamp to the job document in the Textract_Jobs collection.
+    def add_job_timestamp(
+        self: "FirestoreClient", job_id: str, field_name: str
+    ) -> None:
+        """Add a timestamp to the job document in the Textract_Jobs collection.
+
+        The timestamp added is the server's current time.
 
         Args:
         ----
         job_id (str): The ID of the Textract job.
-        timestamp (str): The timestamp to add to the job document.
+        field_name (str): The field name for the timestamp.
 
         """
         try:
             job_ref = self.db.collection("Textract_Jobs").document(job_id)
 
-            # Update the 'finished' field in the job document
-            job_ref.update(
-                {
-                    timestamp: int(
-                        datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M%S")
-                    )
-                }
-            )
+            # Update the specified field in the job document to the server timestamp
+            job_ref.update({field_name: SERVER_TIMESTAMP})
 
             logging.info(
-                "Successfully added a %s timestamp to job %s", timestamp, job_id
+                "Successfully added a %s timestamp to job %s", field_name, job_id
             )
         except Exception as e:
-            msg = f"An error occurred while adding the {timestamp} timestamp to the job: {e}"
+            msg = f"An error occurred while adding the {field_name} timestamp to the job: {e}"
             logging.error(msg)
             raise Exception(msg) from e
 
