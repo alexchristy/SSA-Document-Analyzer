@@ -71,7 +71,7 @@ def lambda_handler(event: Dict[str, Any], context: Dict[str, Any]) -> None:
 
         null_timestamps = {
             "textract_started": None,
-            "textract_completed": None,
+            "textract_finished": None,
         }
 
         fs.append_to_doc("Textract_Jobs", job_id, null_timestamps)
