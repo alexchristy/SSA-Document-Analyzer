@@ -1073,16 +1073,16 @@ class TestPdfToFlightsE2E(unittest.TestCase):
         # Wait for job to finish
         retries = 10
         while True:
-            time.sleep(15)
+            time.sleep(60)
             retries -= 1
-            textract_jobs = fs.get_all_failed_proc_72_flights(600)
+            textract_jobs = fs.get_all_failed_proc_72_flights(
+                lookback_seconds=3600, buffer_seconds=360
+            )
 
             if not textract_jobs:
                 if retries <= 0:
                     self.fail("No failed jobs found after 10 retries.")
                 continue
-
-            time.sleep(360)  # Wait for the lambda retries to finish
 
             for job in textract_jobs:
                 if job.get("pdf_hash", None) == pdf_hash:
