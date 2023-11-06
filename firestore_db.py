@@ -525,17 +525,22 @@ class FirestoreClient:
             raise e
 
     def get_all_failed_proc_72_flights(
-        self: "FirestoreClient", lookback_seconds: Optional[int] = None
+        self: "FirestoreClient",
+        lookback_seconds: Optional[int] = None,
+        buffer_seconds: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """Get all textract jobs that failed to process 72hr tables to flights.
 
         Query for Textract_Jobs with 'finished_72hr_processing' as null and
-        'started_72hr_processing' not null within the optional lookback time window.
+        'started_72hr_processing' not null within the optional lookback time window
+        up until the optional buffer time from now.
 
         Args:
         ----
         lookback_seconds (int, optional): The number of seconds to look back from now.
-                                        If None, retrieves all matching documents.
+                                          If None, retrieves all matching documents.
+        buffer_seconds (int, optional): The number of seconds to look back from the current time
+                                        for the end of the lookback period. Defaults to None.
 
         Returns:
         -------
@@ -545,17 +550,22 @@ class FirestoreClient:
         collection_ref = self.db.collection("Textract_Jobs")
 
         logging.info(
-            "Querying for failed 72hr processing jobs. Lookback: %s", lookback_seconds
+            "Querying for failed 72hr processing jobs with lookback: %s and buffer: %s",
+            lookback_seconds,
+            buffer_seconds,
         )
 
         # Begin constructing the query
         query = collection_ref.where("finished_72hr_processing", "==", None)
 
+        # Determine the current time considering the buffer, if specified
+        current_time = datetime.now(tz=pytz.UTC)
+        if buffer_seconds is not None:
+            current_time -= timedelta(seconds=buffer_seconds)
+
         # If a lookback time is specified, adjust the query
         if lookback_seconds is not None:
-            lookback_time = datetime.now(tz=pytz.UTC) - timedelta(
-                seconds=lookback_seconds
-            )
+            lookback_time = current_time - timedelta(seconds=lookback_seconds)
             query = query.where("started_72hr_processing", ">", lookback_time)
 
         try:
@@ -566,12 +576,12 @@ class FirestoreClient:
             jobs = []
             for doc in results:
                 doc_dict = doc.to_dict()
-                if (
-                    "started_72hr_processing" in doc_dict
-                ):  # This line checks that the field is not None
+                started_processing_time = doc_dict.get("started_72hr_processing")
+                # Ensure the started_processing_time is within the current time considering the buffer
+                if started_processing_time and started_processing_time <= current_time:
                     jobs.append({**doc_dict, "job_id": doc.id})
             return jobs
 
         except Exception as e:
             logging.error("An error occurred while querying the documents: %s", e)
-            return []  # Return an empty list in case of error
+            return []
