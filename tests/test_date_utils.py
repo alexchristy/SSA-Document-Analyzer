@@ -20,10 +20,28 @@ class TestReformatDate(unittest.TestCase):
         expected_output = "20230103"
         self.assertEqual(reformat_date(date_str, current_date), expected_output)
 
-    def test_invalid_date(self):
-        current_date = datetime(2022, 12, 12)
-        date_str = "31st February"
-        expected_output = date_str
+    def test_no_spaces_date(self):
+        current_date = datetime(2023, 11, 7)
+        date_str = "19AUGUST2023"
+        expected_output = "20230819"
+        self.assertEqual(reformat_date(date_str, current_date), expected_output)
+
+    def test_no_spaces_date_2(self):
+        current_date = datetime(2023, 11, 7)
+        date_str = "19AUGUST 2023"
+        expected_output = "20230819"
+        self.assertEqual(reformat_date(date_str, current_date), expected_output)
+
+    def test_no_spaces_date_3(self):
+        current_date = datetime(2023, 11, 7)
+        date_str = "19 AUGUST2023"
+        expected_output = "20230819"
+        self.assertEqual(reformat_date(date_str, current_date), expected_output)
+
+    def test_no_spaces_date_4(self):
+        current_date = datetime(2023, 11, 7)
+        date_str = "AUG19,23"
+        expected_output = "20230819"
         self.assertEqual(reformat_date(date_str, current_date), expected_output)
 
 
@@ -79,3 +97,31 @@ class TestCheckDateString(unittest.TestCase):
     def test_fail_2(self):
         date_str = "2022/12/31"
         self.assertFalse(check_date_string(date_str))
+
+    def test_no_space_day_month(self):
+        date_str = "DEPARTURES JOINT BASE PEARL HARBOR-HICKAM SATURDAY, 19AUGUST 2023"
+        match_str = check_date_string(date_str, return_match=True)
+
+        self.assertEqual(match_str, "19AUGUST 2023")
+        self.assertTrue(check_date_string(date_str))
+
+    def test_no_space_day_month_2(self):
+        date_str = "DEPARTURES JOINT BASE PEARL HARBOR-HICKAM SATURDAY, 19AUGUST2023"
+        match_str = check_date_string(date_str, return_match=True)
+
+        self.assertEqual(match_str, "19AUGUST2023")
+        self.assertTrue(check_date_string(date_str))
+
+    def test_no_space_month_year(self):
+        date_str = "DEPARTURES JOINT BASE PEARL HARBOR-HICKAM SATURDAY, 19 AUGUST2023"
+        match_str = check_date_string(date_str, return_match=True)
+
+        self.assertEqual(match_str, "19 AUGUST2023")
+        self.assertTrue(check_date_string(date_str))
+
+    def test_no_space_month_year_2(self):
+        date_str = "DEPARTURES JOINT BASE PEARL HARBOR-HICKAM SATURDAY, 19 AUGUST23"
+        match_str = check_date_string(date_str, return_match=True)
+
+        self.assertEqual(match_str, "19 AUGUST")
+        self.assertTrue(check_date_string(date_str))
