@@ -585,3 +585,65 @@ class FirestoreClient:
         except Exception as e:
             logging.error("An error occurred while querying the documents: %s", e)
             return []
+
+    def get_all_failed_textract_to_tables(
+        self: "FirestoreClient",
+        lookback_seconds: Optional[int] = None,
+        buffer_seconds: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """Get all textract jobs that failed to turn the textract response to tables.
+
+        Query for Textract_Jobs with 'tables_parsed_finished' as null and
+        'tables_parsed_started' not null within the optional lookback time window
+        up until the optional buffer time from now.
+
+        Args:
+        ----
+        lookback_seconds (int, optional): The number of seconds to look back from now.
+                                          If None, retrieves all matching documents.
+        buffer_seconds (int, optional): The number of seconds to look back from the current time
+                                        for the end of the lookback period. Defaults to None.
+
+        Returns:
+        -------
+        list: A list of dictionaries representing the queried documents.
+        """
+        # Reference to the collection
+        collection_ref = self.db.collection("Textract_Jobs")
+
+        logging.info(
+            "Querying for failed 72hr processing jobs with lookback: %s and buffer: %s",
+            lookback_seconds,
+            buffer_seconds,
+        )
+
+        # Begin constructing the query
+        query = collection_ref.where("tables_parsed_finished", "==", None)
+
+        # Determine the current time considering the buffer, if specified
+        current_time = datetime.now(tz=pytz.UTC)
+        if buffer_seconds is not None:
+            current_time -= timedelta(seconds=buffer_seconds)
+
+        # If a lookback time is specified, adjust the query
+        if lookback_seconds is not None:
+            lookback_time = current_time - timedelta(seconds=lookback_seconds)
+            query = query.where("tables_parsed_started", ">", lookback_time)
+
+        try:
+            # Get the query results
+            results = query.stream()
+
+            # Create a list of dictionaries from the documents
+            jobs = []
+            for doc in results:
+                doc_dict = doc.to_dict()
+                started_processing_time = doc_dict.get("tables_parsed_started")
+                # Ensure the started_processing_time is within the current time considering the buffer
+                if started_processing_time and started_processing_time <= current_time:
+                    jobs.append({**doc_dict, "job_id": doc.id})
+            return jobs
+
+        except Exception as e:
+            logging.error("An error occurred while querying the documents: %s", e)
+            return []
