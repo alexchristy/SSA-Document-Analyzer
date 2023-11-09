@@ -1548,3 +1548,51 @@ class TestPdfToFlightsE2E(unittest.TestCase):
                     self.assertEqual(job["tables_parsed_finished"], None)
                     break
             break
+
+    def test_flight_convert_macdill_1_72hr(self: unittest.TestCase) -> None:
+        """Test that a valid 72hr pdf with no flights is logged and able to be caught in Firestore."""
+        s3_client = S3Bucket(bucket_name="testing-ssa-pdf-store")
+        fs = FirestoreClient()
+
+        pdf_hash = "b36644af30645fd279fd9f5f1d4d3991af0c40d70f9d08386e4dd9841acfa602"
+
+        pdf_doc = {
+            "cloud_path": "current/72_HR/macdill_1_72hr_test.pdf",
+            "hash": pdf_hash,
+            "terminal": "MacDill AFB Air Transportation Function",
+            "type": "72_HR",
+        }
+
+        fs.insert_document_with_id(
+            collection_name="**TESTING**_PDF_Archive",
+            document_data=pdf_doc,
+            doc_id=pdf_hash,
+        )
+
+        s3_client.upload_to_s3(
+            local_path="tests/end-to-end-test-assets/test_flight_convert_macdill_1_72hr/macdill_1_72hr_test.pdf",
+            s3_path="current/72_HR/macdill_1_72hr_test.pdf",
+        )
+
+        # Wait for job to finish
+        retries = 10
+        while True:
+            time.sleep(60)
+            retries -= 1
+            textract_jobs = fs.get_all_failed_proc_72_flights(
+                lookback_seconds=3600, buffer_seconds=360
+            )
+
+            if not textract_jobs:
+                if retries <= 0:
+                    self.fail("No failed jobs found after 10 retries.")
+                continue
+
+            for job in textract_jobs:
+                if job.get("pdf_hash", None) == pdf_hash:
+                    # Delete job from Firestore
+                    fs.delete_document_by_id("Textract_Jobs", job["job_id"])
+
+                    self.assertEqual(job["finished_72hr_processing"], None)
+                    break
+            break
