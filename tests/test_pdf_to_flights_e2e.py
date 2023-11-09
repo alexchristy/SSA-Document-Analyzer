@@ -1737,3 +1737,88 @@ class TestPdfToFlightsE2E(unittest.TestCase):
                     self.assertEqual(job["finished_72hr_processing"], None)
                     break
             break
+
+    def test_flight_convert_mcconnell_2_72hr(self: unittest.TestCase) -> None:
+        """Test that a PDF properly converted to flights in Firestore."""
+        s3_client = S3Bucket(bucket_name="testing-ssa-pdf-store")
+        fs = FirestoreClient()
+
+        pdf_doc = {
+            "cloud_path": "current/72_HR/mcconnell_2_72hr_test.pdf",
+            "hash": "6bd17c5fee5c770cb5d4629203d601e568009e3b71e0bef6c560eb028f32bad1",
+            "terminal": "McConnell AFB Air Transportation Function",
+            "type": "72_HR",
+        }
+
+        fs.insert_document_with_id(
+            collection_name="**TESTING**_PDF_Archive",
+            document_data=pdf_doc,
+            doc_id=pdf_doc["hash"],
+        )
+
+        # Load known good flights
+        good_flights = []
+        for i in range(1):
+            filename = f"tests/end-to-end-test-assets/test_flight_convert_mcconnell_2_72hr/mcconnell_2_72hr_{i}.pkl"
+            flight = Flight.load_state(filename=filename)
+
+            if flight is None:
+                self.fail(f"Failed to load {filename}")
+
+            good_flights.append(flight)
+
+        if not good_flights:
+            self.fail("No good flights loaded.")
+
+        s3_client.upload_to_s3(
+            local_path="tests/end-to-end-test-assets/test_flight_convert_mcconnell_2_72hr/mcconnell_2_72hr_test.pdf",
+            s3_path="current/72_HR/mcconnell_2_72hr_test.pdf",
+        )
+
+        test_flights = []
+        max_retries = 15
+        incomplete_get_retry = 2
+        while True:
+            max_retries -= 1
+            flights = fs.get_flights_by_terminal(
+                "McConnell AFB Air Transportation Function"
+            )
+
+            # Filter out non-test flights
+            if flights:
+                for flight in flights:
+                    flight_dict = flight.to_dict()
+
+                    if flight_dict["date"] == "20231012":
+                        test_flights.append(flight)
+
+            correct_num_flights = 1
+            if len(test_flights) == correct_num_flights:
+                break
+
+            if test_flights and incomplete_get_retry > 0:
+                incomplete_get_retry -= 1
+                time.sleep(15)
+                continue
+
+            time.sleep(15)
+
+        # Delete PDF document from Firestore
+        fs.delete_document_by_id(
+            collection_name="**TESTING**_PDF_Archive", doc_id=pdf_doc["hash"]
+        )
+
+        # # Delete testing flights from Firestore
+        for flight in test_flights:
+            flight_dict = flight.to_dict()
+            fs.delete_flight_by_id(flight_dict["flight_id"])
+
+        # Check that flights are equal
+        self.assertEqual(len(test_flights), 1)
+
+        # Sort flights by flight_id
+        test_flights = sorted(test_flights, key=lambda x: x.flight_id)
+        good_flights = sorted(good_flights, key=lambda x: x.flight_id)
+
+        for i, flight in enumerate(test_flights):
+            self.assertEqual(flight, good_flights[i])
