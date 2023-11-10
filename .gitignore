@@ -44,6 +44,9 @@ to_tables_env
 # process_72hr_flights
 convert_72hr_env
 
+# store flights
+store_flights_env
+
 # Unstored pickled objects in root directory
 /*.pkl
 
