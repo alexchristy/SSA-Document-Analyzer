@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from typing import Any, Dict
@@ -9,6 +10,10 @@ from firestore_db import FirestoreClient
 
 # Set up logging
 logging.getLogger().setLevel(logging.INFO)
+
+
+STORE_FLIGHT_LAMBDA = os.getenv("STORE_FLIGHT_LAMBDA", "Store-Flights")
+lambda_client = boto3.client("lambda")
 
 
 def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> None:
@@ -55,9 +60,22 @@ def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> No
             msg = f"Could not find PDF hash for S3 object: {s3_object}"
             raise Exception(msg)
 
+        # Update Firestore terminal document to indicate that flights are being processed
         terminal_collection = os.getenv("TERMINAL_COLLECTION", "Terminals")
         terminal_name = fs.get_terminal_name_by_pdf_hash(pdf_hash)
         fs.append_to_doc(terminal_collection, terminal_name, {"updating": True})
+
+        # Call store_flights lambda function
+        response = lambda_client.invoke(
+            FunctionName=STORE_FLIGHT_LAMBDA,
+            InvocationType="RequestResponse",
+            Payload=json.dumps({"terminal": terminal_name}),
+        )
+
+        # Check if lambda function was invoked successfully
+        if response["status"] != "success":
+            msg = f"Failed to invoke lambda function: {STORE_FLIGHT_LAMBDA}"
+            raise Exception(msg)
 
         # Start Textract job
         client = boto3.client("textract")
