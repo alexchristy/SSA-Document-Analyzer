@@ -237,12 +237,48 @@ class FirestoreClient:
 
         """
         try:
-            flight_collection = os.getenv("FLIGHT_CURRENT_COLLECTION")
-            if not flight_collection:
-                logging.error(
-                    "FLIGHT_CURRENT_COLLECTION environment variable is not set."
+            flight_collection = os.getenv(
+                "FLIGHT_CURRENT_COLLECTION", "Current_Flights"
+            )
+
+            if flight_collection == "Current_Flights":
+                logging.warning(
+                    "FLIGHT_CURRENT_COLLECTION environment variable not set. Using default value: Current_Flights"
                 )
-                return
+
+            # Convert the Flight object to a dictionary
+            flight_data = flight.to_dict()
+
+            # Insert the flight object into the Firestore collection
+            self.db.collection(flight_collection).document(flight.flight_id).set(
+                flight_data
+            )
+
+            logging.info(
+                "Successfully inserted flight with ID %s into %s",
+                flight.flight_id,
+                flight_collection,
+            )
+        except Exception as e:
+            msg = f"An error occurred while inserting the flight object: {e}"
+            logging.critical(msg)
+            raise Exception(msg) from e
+
+    def archive_flight(self: "FirestoreClient", flight: Flight) -> None:
+        """Archive a flight object into the FLIGHT_ARCHIVE_COLLECTION.
+
+        Args:
+        ----
+        flight (Flight): The Flight object to insert.
+
+        """
+        try:
+            flight_collection = os.getenv("FLIGHT_ARCHIVE_COLLECTION", "Flight_Archive")
+
+            if flight_collection == "Flight_Archive":
+                logging.warning(
+                    "FLIGHT_ARCHIVE_COLLECTION environment variable not set. Using default value: Flight_Archive"
+                )
 
             # Convert the Flight object to a dictionary
             flight_data = flight.to_dict()
@@ -648,7 +684,7 @@ class FirestoreClient:
             logging.error("An error occurred while querying the documents: %s", e)
             return []
 
-    def get_terminal_by_name(
+    def get_terminal_dict_by_name(
         self: "FirestoreClient", terminal_name: str
     ) -> Dict[str, Any]:
         """Get a terminal document from Firestore by name.
