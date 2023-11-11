@@ -55,6 +55,10 @@ def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> No
             msg = f"Could not find PDF hash for S3 object: {s3_object}"
             raise Exception(msg)
 
+        terminal_collection = os.getenv("TERMINAL_COLLECTION", "Terminals")
+        terminal_name = fs.get_terminal_name_by_pdf_hash(pdf_hash)
+        fs.append_to_doc(terminal_collection, terminal_name, {"updating": True})
+
         # Start Textract job
         client = boto3.client("textract")
         response = client.start_document_analysis(
