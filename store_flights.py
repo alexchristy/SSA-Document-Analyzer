@@ -83,9 +83,8 @@ def lambda_handler(event: str, context: lambda_context.Context) -> Dict[str, str
         return {"status": "success", "body": "Flights archived."}
 
     except json.JSONDecodeError:
-        logging.error("Failed to decode JSON payload.")
+        logging.critical("Failed to decode JSON payload.")
         return {"status": "failed", "body": "Invalid JSON payload."}
     except Exception as e:
-        logging.error("An unexpected error occurred: %s", e)
+        logging.critical("An unexpected error occurred: %s", e)
         return {"status": "failed", "body": str(e)}
-        raise e
