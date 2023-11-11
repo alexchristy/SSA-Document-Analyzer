@@ -63,7 +63,24 @@ def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> No
         # Update Firestore terminal document to indicate that flights are being processed
         terminal_collection = os.getenv("TERMINAL_COLLECTION", "Terminals")
         terminal_name = fs.get_terminal_name_by_pdf_hash(pdf_hash)
-        fs.append_to_doc(terminal_collection, terminal_name, {"updating": True})
+        pdf_type = fs.get_pdf_type_by_hash(pdf_hash)
+
+        payload = {}
+        if pdf_type == "72_HR":
+            payload = {"updating": pdf_type, "pdf72Hour": s3_object}
+        elif pdf_type == "30_DAY":
+            payload = {"updating": pdf_type, "pdf30Day": s3_object}
+        elif pdf_type == "ROLLCALL":
+            payload = {"updating": pdf_type, "pdfRollCall": s3_object}
+        else:
+            msg = f"Could not find PDF type for S3 object: {s3_object}"
+            raise Exception(msg)
+
+        fs.append_to_doc(
+            terminal_collection,
+            terminal_name,
+            payload,
+        )
 
         # Call store_flights lambda function
         response = lambda_client.invoke(
