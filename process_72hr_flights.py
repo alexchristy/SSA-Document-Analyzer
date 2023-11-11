@@ -10,6 +10,7 @@ from firestore_db import FirestoreClient
 from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
 from table import Table
+from time_utils import get_local_time, pad_time_string
 
 MIN_CONFIDENCE = 80
 
@@ -198,27 +199,57 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             response_msg = f"Failed to convert any tables to flights from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
             raise ValueError(response_msg)
 
+        # Get localtime for the terminal to avoid inserting flights that have already departed
+        terminal = firestore_client.get_terminal_dict_by_name(origin_terminal)
+
+        timezone = terminal.get("timezone", "")
+
+        if not timezone:
+            msg = "Timezone is not set for terminal."
+            raise ValueError(msg)
+
+        local_time = get_local_time(timezone)
+
+        # Create date time string for lexographical comparison
+        current_time_str = local_time.strftime("%Y%m%d%H%M")
+
         # Store flights in Firestore
         for flight in flights:
             flight.make_firestore_compliant()
-            firestore_client.store_flight(flight)
+
+            flight_dict = flight.to_dict()
+
+            flight_date = flight_dict.get("date", "")
+
+            if not flight_date:
+                logging.critical("Flight date is not set for flight: %s", flight)
+                continue
+
+            flight_time = flight_dict.get("time", "")
+
+            if not flight_time:
+                logging.critical("Flight time is not set for flight: %s", flight)
+                continue
+
+            # Make sure the time has 4 characters to prevent incorrect comparisons
+            # 327 becomes 0327
+            flight_time = pad_time_string(flight_time)
+
+            flight_time_str = f"{flight_date}{flight_time}"
+
+            if flight_time_str > current_time_str:
+                firestore_client.store_flight(flight)
+            else:
+                logging.info(
+                    "Flight %s has already departed. Not storing in Firestore.",
+                    flight,
+                )
 
         firestore_client.add_job_timestamp(job_id, "finished_72hr_processing")
 
-        payload = {
-            "terminal": origin_terminal,
-        }
-
-        # Invoke second lambda asynchronously
-        response = lambda_client.invoke(
-            FunctionName=STORE_FLIGHTS_LAMBDA,
-            InvocationType="Event",
-            Payload=json.dumps(payload),
-        )
-
         return {
             "statusCode": 200,
-            "body": json.dumps(f"Invoked second lambda asynchronously: {response}"),
+            "body": json.dumps("Finished processing 72-hour flights."),
         }
     except Exception as e:
         error_msg = f"Error occurred: {e}"
