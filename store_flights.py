@@ -20,6 +20,11 @@ def lambda_handler(event: str, context: lambda_context.Context) -> Dict[str, str
 
         flights = fs.get_flights_by_terminal(terminal_name)
 
+        if not flights:
+            msg = "No flights found."
+            logging.info(msg)
+            return {"status": "success", "body": msg}
+
         terminal = fs.get_terminal_dict_by_name(terminal_name)
 
         timezone = terminal.get("timezone", "")
