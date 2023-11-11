@@ -647,3 +647,37 @@ class FirestoreClient:
         except Exception as e:
             logging.error("An error occurred while querying the documents: %s", e)
             return []
+
+    def get_terminal_by_name(
+        self: "FirestoreClient", terminal_name: str
+    ) -> Dict[str, Any]:
+        """Get a terminal document from Firestore by name.
+
+        Args:
+        ----
+        terminal_name (str): The name of the terminal to retrieve.
+
+        Returns:
+        -------
+        dict: A dictionary representing the terminal document.
+        """
+        terminal_collection = os.getenv("TERMINAL_COLLECTION", "Terminals")
+
+        if terminal_collection == "Terminals":
+            logging.warning(
+                "TERMINAL_COLLECTION environment variable not set. Using default value: Terminals"
+            )
+
+        # Create a reference to the document
+        doc_ref = self.db.collection(terminal_collection).document(terminal_name)
+
+        # Try to retrieve the document
+        doc = doc_ref.get()
+
+        # Check if the document exists
+        if doc.exists:
+            return doc.to_dict()
+
+        msg = f"Terminal {terminal_name} does not exist."
+        logging.critical(msg)
+        raise Exception(msg)
