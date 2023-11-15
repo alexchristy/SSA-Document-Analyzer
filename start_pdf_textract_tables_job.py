@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 from typing import Any, Dict
@@ -27,7 +26,6 @@ sentry_sdk.init(
 logging.getLogger().setLevel(logging.INFO)
 
 
-STORE_FLIGHT_LAMBDA = os.getenv("STORE_FLIGHT_LAMBDA", "Store-Flights")
 lambda_client = boto3.client("lambda")
 
 
@@ -96,18 +94,6 @@ def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> No
             terminal_name,
             payload,
         )
-
-        # Call store_flights lambda function
-        response = lambda_client.invoke(
-            FunctionName=STORE_FLIGHT_LAMBDA,
-            InvocationType="RequestResponse",
-            Payload=json.dumps({"terminal": terminal_name}),
-        )
-
-        # Check if lambda function was invoked successfully
-        if response["status"] != "success":
-            msg = f"Failed to invoke lambda function: {STORE_FLIGHT_LAMBDA}"
-            raise Exception(msg)
 
         # Start Textract job
         client = boto3.client("textract")
