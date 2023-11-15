@@ -4,9 +4,24 @@ import os
 from typing import Any, Dict
 
 import boto3  # type: ignore
+import sentry_sdk
 from aws_lambda_typing import context as lambda_context
+from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
 from firestore_db import FirestoreClient
+
+# Set up sentry
+sentry_sdk.init(
+    dsn="https://5cd0afbfc9ad23474f63e76f5dc199c0@o4506224652713984.ingest.sentry.io/4506224655597568",
+    integrations=[AwsLambdaIntegration(timeout_warning=True)],
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)
 
 # Set up logging
 logging.getLogger().setLevel(logging.INFO)
@@ -130,6 +145,4 @@ def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> No
         fs.add_job_timestamp(job_id, "textract_started")
 
     except Exception as e:
-        logging.critical("Error processing the Textract job: %s", str(e))
-        msg = "Critical error. Stopping function."
-        raise Exception(msg) from e
+        raise e
