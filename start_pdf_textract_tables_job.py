@@ -29,7 +29,9 @@ logging.getLogger().setLevel(logging.INFO)
 lambda_client = boto3.client("lambda")
 
 
-def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> None:
+def lambda_handler(
+    event: Dict[str, Any], context: lambda_context.Context
+) -> Dict[str, Any]:
     """Start a Textract job to extract tables from a PDF document.
 
     Entry point for the AWS Lambda function. Starts a Textract job to extract tables from a PDF document
@@ -129,6 +131,12 @@ def lambda_handler(event: Dict[str, Any], context: lambda_context.Context) -> No
         fs.append_to_doc("Textract_Jobs", job_id, null_timestamps)
 
         fs.add_job_timestamp(job_id, "textract_started")
+
+        return {
+            "statusCode": 200,
+            "body": "Job started successfully.",
+            "job_id": job_id,
+        }
 
     except Exception as e:
         raise e
