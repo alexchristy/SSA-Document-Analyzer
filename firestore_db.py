@@ -547,7 +547,8 @@ class FirestoreClient:
             doc_ref.set(values_to_append, merge=True)
 
             logging.info(
-                "Successfully appended values to document with ID %s in collection %s",
+                "Successfully appended %s to document with ID %s in collection %s",
+                values_to_append,
                 document_id,
                 collection_name,
             )
