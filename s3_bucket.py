@@ -6,6 +6,8 @@ import boto3  # type: ignore
 from boto3.exceptions import S3UploadFailedError  # type: ignore
 from botocore.exceptions import NoCredentialsError, ParamValidationError  # type: ignore
 
+from package.botocore.exceptions import ClientError  # type: ignore
+
 
 class S3Bucket:
     """A class representing an S3 bucket.
@@ -134,3 +136,27 @@ class S3Bucket:
                 s3_path,
                 e,
             )
+
+    def file_exists(self: "S3Bucket", s3_path: str) -> bool:
+        """Check if a file exists in the S3 bucket.
+
+        Args:
+        ----
+        s3_path : str
+            The S3 path of the file to check.
+
+        Returns:
+        -------
+        bool
+            True if the file exists, False otherwise.
+        """
+        try:
+            self.client.head_object(Bucket=self.bucket_name, Key=s3_path)
+            return True
+        except ClientError as e:
+            # The error code will be a 404 if the object does not exist
+            if e.response["Error"]["Code"] == "404":
+                return False
+
+            logging.error("Error checking if file exists in S3: %s", e)
+            raise
