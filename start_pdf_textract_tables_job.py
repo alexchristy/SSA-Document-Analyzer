@@ -80,6 +80,30 @@ def lambda_handler(
         terminal_name = fs.get_terminal_name_by_pdf_hash(pdf_hash)
         pdf_type = fs.get_pdf_type_by_hash(pdf_hash)
 
+        # Check if request is a test
+        test = event.get("test", False)
+
+        if test:
+            logging.info("Test.")
+            test_params = event.get("testParameters", {})
+
+            if not test_params:
+                msg = "Test parameters not found"
+                raise Exception(msg)
+
+            if test_params.get("testTerminalColl", ""):
+                logging.info(
+                    "Test terminal collection: %s", test_params["testTerminalColl"]
+                )
+                terminal_collection = test_params["testTerminalColl"]
+            else:
+                msg = "Test terminal collection not found"
+                raise Exception(msg)
+
+            test_payload = {"test": True, "testParameters": test_params}
+
+        logging.info("Not a test.")
+
         payload = {}
         if pdf_type == "72_HR":
             payload = {"updating": pdf_type, "pdf72Hour": s3_object}
@@ -131,6 +155,9 @@ def lambda_handler(
         fs.append_to_doc("Textract_Jobs", job_id, null_timestamps)
 
         fs.add_job_timestamp(job_id, "textract_started")
+
+        if test:
+            fs.append_to_doc("Textract_Jobs", job_id, test_payload)
 
         return {
             "statusCode": 200,
