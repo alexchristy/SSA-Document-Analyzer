@@ -122,16 +122,22 @@ def lambda_handler(
         )
 
         # Start Textract job
-        client = boto3.client("textract")
-        response = client.start_document_analysis(
-            DocumentLocation={"S3Object": {"Bucket": s3_bucket, "Name": s3_object}},
-            NotificationChannel={"SNSTopicArn": sns_topic_arn, "RoleArn": sns_role_arn},
-            FeatureTypes=["TABLES"],
-        )
-
-        # Get job ID
-        job_id = response["JobId"]
-        logging.info("Textract job started with ID: %s", job_id)
+        if not test:
+            client = boto3.client("textract")
+            response = client.start_document_analysis(
+                DocumentLocation={"S3Object": {"Bucket": s3_bucket, "Name": s3_object}},
+                NotificationChannel={
+                    "SNSTopicArn": sns_topic_arn,
+                    "RoleArn": sns_role_arn,
+                },
+                FeatureTypes=["TABLES"],
+            )
+            # Get job ID
+            job_id = response["JobId"]
+            logging.info("Textract job started with ID: %s", job_id)
+        else:
+            job_id = "111111111111111111111111111111111111"
+            logging.info("Test job started with ID: %s", job_id)
 
         fs.add_textract_job(job_id, pdf_hash)
         logging.info("Textract job ID %s and logs stored in Firestore", job_id)
