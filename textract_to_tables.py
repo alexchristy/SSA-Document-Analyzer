@@ -5,8 +5,11 @@ import uuid
 from typing import Any, Dict, List, Tuple
 
 import boto3  # type: ignore
+import sentry_sdk
 from aws_lambda_typing import context as lambda_context
+from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
+from aws_utils import initialize_client
 from firestore_db import FirestoreClient
 from parse_sns import parse_sns_event
 from s3_bucket import S3Bucket
@@ -14,51 +17,18 @@ from screenshot_table import capture_screen_shot_of_table_from_pdf
 from table import Table
 from table_utils import gen_tables_from_textract_response
 
-
-def initialize_clients() -> Tuple[boto3.client, boto3.client]:
-    """Initialize the Textract and Lambda clients.
-
-    Returns
-    -------
-        Tuple[boto3.client, boto3.client]: The Textract and Lambda clients.
-    """
-    # Initialize logging
-    logging.basicConfig(level=logging.INFO)
-
-    textract_client = None
-    lambda_client = None
-
-    try:
-        if os.getenv("RUN_LOCAL"):
-            logging.info("Running in a local environment.")
-
-            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
-            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-            aws_region = os.getenv("AWS_REGION")
-
-            if not all([aws_access_key, aws_secret_key, aws_region]):
-                logging.error(
-                    "Missing AWS credentials or region for local environment."
-                )
-                msg = "Missing AWS credentials or region for local environment."
-                raise ValueError(msg)
-
-            boto3.setup_default_session(
-                aws_access_key_id=aws_access_key,
-                aws_secret_access_key=aws_secret_key,
-                region_name=aws_region,
-            )
-        else:
-            logging.info("Running in a cloud environment.")
-
-        textract_client = boto3.client("textract")
-        lambda_client = boto3.client("lambda")
-
-    except Exception as e:
-        logging.error("Failed to initialize AWS clients: %s", e)
-        raise e
-
-    return textract_client, lambda_client
+# Set up sentry
+sentry_sdk.init(
+    dsn="https://5cd0afbfc9ad23474f63e76f5dc199c0@o4506224652713984.ingest.sentry.io/4506224655597568",
+    integrations=[AwsLambdaIntegration(timeout_warning=True)],
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)
 
 
 def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
@@ -286,7 +256,9 @@ def reprocess_tables(
 
 
 # Initialize Textract client
-textract_client, lambda_client = initialize_clients()
+textract_client = initialize_client("textract")
+lambda_client = initialize_client("lambda")
+
 
 # Initialize Firestore client
 firestore_client = FirestoreClient()
@@ -490,9 +462,9 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         return {
             "statusCode": 200,
             "body": json.dumps("Successfully parsed textract to tables."),
+            payload: payload,
         }
 
     except Exception as e:
-        error_msg = "Error occurred."
         logger.critical("Error occurred: %s", str(e))
-        raise Exception(error_msg) from e
+        raise e
