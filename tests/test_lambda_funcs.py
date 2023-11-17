@@ -228,6 +228,9 @@ class TestStartPdfTextractJob(unittest.TestCase):
         self.assertEqual(textract_job["func_start_job_request_id"], request_id)
 
         # Clean up
+        # Delete the PDF document from the archive
         fs.delete_document_by_id(
             collection_name="**TESTING**_PDF_Archive", doc_id=pdf_doc["hash"]
         )
+        # Delete the Textract job
+        fs.delete_document_by_id("Textract_Jobs", doc_id=str(returned_job_id))

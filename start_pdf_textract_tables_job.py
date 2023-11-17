@@ -101,8 +101,8 @@ def lambda_handler(
                 raise Exception(msg)
 
             test_payload = {"test": True, "testParameters": test_params}
-
-        logging.info("Not a test.")
+        else:
+            logging.info("Not a test.")
 
         payload = {}
         if pdf_type == "72_HR":
