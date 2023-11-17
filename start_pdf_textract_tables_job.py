@@ -51,8 +51,8 @@ def lambda_handler(
         fs = FirestoreClient()
         logging.info("Firestore client created")
     except Exception as e:
+        msg = "Error initializing Firestore client"
         logging.critical("Error initializing Firestore client: %s", str(e))
-        msg = "Critical error. Stopping function."
         raise Exception(msg) from e
 
     try:
@@ -139,13 +139,13 @@ def lambda_handler(
         request_id = context.aws_request_id
         function_name = context.function_name
 
-        func_72hr_info = {
+        start_job_info = {
             "func_start_job_request_id": request_id,
             "func_start_job_name": function_name,
         }
 
         # Append function info to Textract Job
-        fs.append_to_doc("Textract_Jobs", job_id, func_72hr_info)
+        fs.append_to_doc("Textract_Jobs", job_id, start_job_info)
 
         null_timestamps = {
             "textract_started": None,
