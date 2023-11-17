@@ -100,6 +100,14 @@ def lambda_handler(
                 msg = "Test terminal collection not found"
                 raise Exception(msg)
 
+            # Check for the presence of 'sendPdf' key in test_params
+            if "sendPdf" in test_params:
+                logging.info("Sending Pdf: %s", test_params["sendPdf"])
+                send_pdf = test_params["sendPdf"]
+            else:
+                msg = "sendPdf key not found in testParameters"
+                raise Exception(msg)
+
             test_payload = {"test": True, "testParameters": test_params}
         else:
             logging.info("Not a test.")
@@ -121,8 +129,9 @@ def lambda_handler(
             payload,
         )
 
-        # Start Textract job
-        if not test:
+        # Start Textract job if not a test or
+        # if test and we want to send the PDF to Textract
+        if (not test) or (test and send_pdf):
             client = boto3.client("textract")
             response = client.start_document_analysis(
                 DocumentLocation={"S3Object": {"Bucket": s3_bucket, "Name": s3_object}},
