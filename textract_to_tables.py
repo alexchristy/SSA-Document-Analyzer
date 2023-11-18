@@ -56,7 +56,7 @@ def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
 
         invalid_confidence = -1.0
         if row_confidence < invalid_confidence:
-            logging.error(
+            logging.warning(
                 "Failed to get average row confidence for row index %s.", index
             )
             continue
@@ -137,7 +137,6 @@ def reprocess_tables(
 
     download_dir = os.getenv("DOWNLOAD_DIR")
     if not download_dir:
-        logging.error("Download directory is not set.")
         msg = "Download directory is not set."
         raise EnvironmentError(msg)
 
@@ -151,7 +150,6 @@ def reprocess_tables(
         try:
             os.makedirs(download_dir, exist_ok=True)
         except Exception as e:
-            logging.critical("Failed to create download directory: %s", e)
             msg = "Failed to create download directory."
             raise ValueError(msg) from e
 
@@ -165,7 +163,6 @@ def reprocess_tables(
     try:
         s3_client.download_from_s3(s3_object_path, local_pdf_path)
     except Exception as e:
-        logging.critical("Failed to download PDF from S3: %s", e)
         msg = "Failed to download PDF from S3"
         raise ValueError(msg) from e
 
@@ -190,7 +187,7 @@ def reprocess_tables(
         )
 
         if not table_screen_shot_with_title:
-            logging.error(
+            logging.warning(
                 "Failed to capture screen shot of table %d in s3 at: %s.",
                 i,
                 s3_object_path,
@@ -215,7 +212,6 @@ def reprocess_tables(
 
         # Check if more than one table was found
         if len(new_tables) > 1:
-            logging.critical("More than one table found in reprocessed table.")
             msg = "More than one table found in reprocessed table."
             raise Exception(msg)
 
@@ -286,7 +282,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         if not job_id or not status:
             no_job_status_msg = "JobId or Status missing in SNS message."
-            logging.critical(no_job_status_msg)
             raise ValueError(no_job_status_msg)
 
         if not s3_bucket_name:
@@ -295,7 +290,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     job_id, status
                 )
             )
-            logging.critical(response_msg)
             raise ValueError(response_msg)
 
         if not s3_object_path:
@@ -304,7 +298,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     job_id, status
                 )
             )
-            logging.critical(response_msg)
             raise ValueError(response_msg)
 
         request_id = context.aws_request_id
@@ -362,10 +355,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
 
         if not pdf_hash:
-            logging.critical(
-                "Failed to get PDF hash using s3 object path (%s) from Firestore.",
-                s3_object_path,
-            )
             no_pdf_hash_msg = f"Failed to get PDF hash using s3 object path ({s3_object_path}) from Firestore."
             raise ValueError(no_pdf_hash_msg)
 
@@ -373,16 +362,11 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
         if not origin_terminal:
-            logging.error(
-                "Failed to get origin terminal using PDF hash (%s) from Firestore.",
-                pdf_hash,
-            )
             no_origin_terminal_msg = f"Failed to get origin terminal using PDF hash ({pdf_hash}) from Firestore."
             raise ValueError(no_origin_terminal_msg)
 
         # If job failed exit program
         if status != "SUCCEEDED":
-            logging.critical("Job did not succeed.")
             msg = Exception("Job did not succeed.")
             raise (msg)
 
@@ -391,7 +375,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         tables = gen_tables_from_textract_response(response)
 
         if not tables:
-            logging.critical("No tables found in Textract response.")
             no_tables_msg = "No tables found in Textract response."
             raise ValueError(no_tables_msg)
 
@@ -421,7 +404,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         pdf_type = firestore_client.get_pdf_type_by_hash(pdf_hash)
 
         if not pdf_type:
-            logging.critical("Failed to get PDF type from Firestore.")
             no_pdf_type_msg = "Failed to get PDF type from Firestore."
             raise ValueError(no_pdf_type_msg)
 
@@ -432,7 +414,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         elif pdf_type == "ROLLCALL":
             func_name = lambda_rollcall
         else:
-            logging.critical("Invalid PDF type: %s", pdf_type)
             invalid_pdf_type_msg = f"Invalid PDF type: {pdf_type}"
             raise ValueError(invalid_pdf_type_msg)
 

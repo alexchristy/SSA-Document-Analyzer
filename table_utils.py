@@ -158,8 +158,8 @@ def convert_textract_response_to_tables(
                 current_table.footer_confidence = block.get("Confidence", 0.0)
         return tables if tables else []
     except Exception as e:
-        logging.critical("An error occurred while converting to table: %s", e)
-        raise e
+        msg = f"An error occurred while converting to table: {e}"
+        raise RuntimeError(msg) from e
 
 
 def find_table_title_with_date(
@@ -327,12 +327,10 @@ def gen_tables_from_textract_response(
     tables = convert_textract_response_to_tables(textract_response)
 
     if not tables:
-        msg = "No tables returned from convert_textract_response_to_tables."
         logging.info("No tables returned from convert_textract_response_to_tables.")
 
     if not isinstance(tables, list):
-        msg = "Expected a list of tables, got something else."
-        logging.info(msg)
+        logging.info("Expected a list of tables, got something else.")
 
     processed_tables = []
     for table in tables:

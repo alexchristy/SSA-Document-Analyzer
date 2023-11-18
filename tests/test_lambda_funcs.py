@@ -375,3 +375,9 @@ class TestStartPdfTextractJob(unittest.TestCase):
         )
         # Delete the Textract job
         fs.delete_document_by_id("Textract_Jobs", doc_id=str(returned_job_id))
+
+
+class TestTextractToTables(unittest.TestCase):
+    def test_correct_function(self: unittest.TestCase) -> None:
+        """Test that the Textract-To-Tables function correctly converts a Textract job to tables."""
+        # If this test fails, check that the Textract job exists in Firestore
