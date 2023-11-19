@@ -443,7 +443,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         return {
             "statusCode": 200,
             "body": "Successfully parsed textract to tables.",
-            payload: payload,
+            "payload": payload,
         }
 
     except Exception as e:
