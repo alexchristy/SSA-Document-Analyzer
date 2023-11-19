@@ -442,7 +442,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         return {
             "statusCode": 200,
-            "body": json.dumps("Successfully parsed textract to tables."),
+            "body": "Successfully parsed textract to tables.",
             payload: payload,
         }
 
