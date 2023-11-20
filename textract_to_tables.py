@@ -300,6 +300,11 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             )
             raise ValueError(response_msg)
 
+        # If job failed exit program
+        if status != "SUCCEEDED":
+            msg = Exception("Job did not succeed.")
+            raise (msg)
+
         request_id = context.aws_request_id
         function_name = context.function_name
 
@@ -364,11 +369,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         if not origin_terminal:
             no_origin_terminal_msg = f"Failed to get origin terminal using PDF hash ({pdf_hash}) from Firestore."
             raise ValueError(no_origin_terminal_msg)
-
-        # If job failed exit program
-        if status != "SUCCEEDED":
-            msg = Exception("Job did not succeed.")
-            raise (msg)
 
         # Existing tables
         response = get_document_analysis_results(textract_client, job_id)
