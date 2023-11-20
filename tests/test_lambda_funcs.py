@@ -393,7 +393,7 @@ class TestTextractToTables(unittest.TestCase):
         the returned job ID.
 
         NOTE: When checking logs there will be two log streams for the Textract-to-Tables as
-        one will be invoked from Textract finishing the job and the other will be invoked from the test function.
+        one will be invoked from Textract finishing the job and the other will be invoked from this test function.
         """
         lambda_client = initialize_client("lambda")
         s3 = S3Bucket(bucket_name="testing-ssa-pdf-store")
