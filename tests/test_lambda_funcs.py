@@ -1,6 +1,9 @@
 import json
 import logging
+import time
 import unittest
+from datetime import datetime
+from typing import List
 
 from aws_utils import initialize_client
 from firestore_db import FirestoreClient
@@ -467,7 +470,7 @@ class TestTextractToTables(unittest.TestCase):
 
         returned_job_id = start_job_payload.get("job_id", "")
 
-        if not returned_job_id:
+        if not returned_job_id or not isinstance(returned_job_id, str):
             self.fail("Job ID not returned")
 
         textract_message = {
@@ -504,7 +507,20 @@ class TestTextractToTables(unittest.TestCase):
             ]
         }
 
-        # TODO: Wait until the Textract job is finished before invoking Textract-to-Tables
+        # Wait for the Textract job to finish
+        while True:
+            # Check if the Textract job has been created in Firestore
+            textract_job = fs.get_textract_job(returned_job_id)
+
+            if not textract_job:
+                self.fail("Textract job not found in Firestore")
+
+            status = textract_job.get("status", "")
+
+            if status == "SUCCEEDED":
+                break
+
+            time.sleep(5)
 
         textract_to_tables_response = lambda_client.invoke(
             FunctionName="Textract-to-Tables",
@@ -531,9 +547,11 @@ class TestTextractToTables(unittest.TestCase):
             "Successfully parsed textract to tables.",
         )
 
-        event_tables = textract_to_tables_payload.get("tables", [])
-        pdf_hash = textract_to_tables_payload.get("pdf_hash", "")
-        job_id = textract_to_tables_payload.get("job_id", "")
+        tables_payload = json.loads(textract_to_tables_payload["payload"])
+
+        event_tables = tables_payload.get("tables", [])
+        pdf_hash = tables_payload.get("pdf_hash", "")
+        job_id = tables_payload.get("job_id", "")
 
         if not event_tables:
             self.fail("No tables found in Textract-to-Tables payload")
@@ -552,11 +570,33 @@ class TestTextractToTables(unittest.TestCase):
         if not textract_doc:
             self.fail("Textract job not found in Firestore")
 
+        # Verify that the textract_finished timestamp exists and is set properly
+        textract_finished = textract_doc.get("textract_finished")
+
+        if not textract_finished or not isinstance(textract_finished, datetime):
+            self.fail("Textract finished timestamp not found in Textract job")
+
         # Verfiy the pdf_hash is the same from the start job payload and original pdf_doc
         self.assertEqual(pdf_hash, pdf_doc["hash"])
         self.assertEqual(pdf_hash, textract_doc["pdf_hash"])
 
-        tables = []
+        # Verify that the timestamps for the Textract-to-Tables exist
+        # and are set properly in the textract job document
+        start_time = textract_doc.get("tables_parsed_started")
+        end_time = textract_doc.get("tables_parsed_finished")
+
+        if not start_time or not isinstance(start_time, datetime):
+            self.fail("Start time not found in Textract job")
+
+        if not end_time or not isinstance(end_time, datetime):
+            self.fail("End time not found in Textract job")
+
+        # Verify that the debug info for the Textract-to-Tables function exists
+        # in the textract job document
+        self.assertTrue(textract_doc.get("func_textract_to_tables_request_id"))
+        self.assertTrue(textract_doc.get("func_textract_to_tables_name"))
+
+        tables: List[Table] = []
         for i, table_dict in enumerate(event_tables):
             curr_table = Table.from_dict(table_dict)  # type: ignore[arg-type]
 
@@ -569,3 +609,11 @@ class TestTextractToTables(unittest.TestCase):
         # In this specific PDF, there are 5 tables
         # PDF: tests/lambda-func-tests/textract-to-tables-iwakuni.pdf
         self.assertEqual(len(tables), 5)
+
+        for i, table in enumerate(tables):
+            print(table.to_markdown())
+            test_table_path = f"tests/lambda-func-tests/TestTextractToTables/test_correct_function/osan_1_72hr_table-{i+1}.pkl"
+
+            test_table = table.load_state(test_table_path)
+
+            self.assertEqual(test_table, table)
