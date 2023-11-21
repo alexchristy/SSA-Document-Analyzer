@@ -84,7 +84,7 @@ def search_key_recursive_dict(
             if found_key != "":
                 return found_key, found_value
 
-    logging.error("Key '%s' not found in dictionary.", search_key)
+    logging.info("Key '%s' not found in dictionary.", search_key)
     return "", ""
 
 
@@ -244,31 +244,33 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
     # Check that there are at least 3 columns in table
     min_num_of_columns = 3
     if table.get_num_of_columns() < min_num_of_columns:
-        logging.error(
+        logging.warning(
             "There are not enough columns in the table. Only %s columns found. Expected at least 3. Exiting...",
             table.get_num_of_columns(),
         )
         return flights
 
     # Get column indices
+    # All are set to return warnings to avoid a lot of false positives
+    # when non 72-hour tables are passed in.
     roll_call_column_index = infer_roll_call_column_index(table)
 
     if roll_call_column_index == -1:
-        logging.error("Failed to get roll call column index. Exiting...")
+        logging.warning("Failed to get roll call column index. Exiting...")
         return flights
     logging.info("Roll call column index: %s", roll_call_column_index)
 
     seats_column_index = infer_seats_column_index(table)
 
     if seats_column_index == -1:
-        logging.error("Failed to get seats column index. Exiting...")
+        logging.warning("Failed to get seats column index. Exiting...")
         return flights
     logging.info("Seats column index: %s", seats_column_index)
 
     destination_column_index = infer_destinations_column_index(table)
 
     if destination_column_index == -1:
-        logging.error("Failed to get destination column index. Exiting...")
+        logging.warning("Failed to get destination column index. Exiting...")
         return flights
     logging.info("Destination column index: %s", destination_column_index)
 

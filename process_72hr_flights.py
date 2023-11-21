@@ -116,17 +116,17 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
             tables.append(curr_table)
 
-        print(f"Recieved {len(tables)} tables from event.")
+        logging.info("Received %d tables from event.", len(tables))
 
-        if not tables or tables is None:
+        if not tables:
             response_msg = f"No tables found in payload: {event}"
             raise ValueError(response_msg)
 
-        if not pdf_hash or pdf_hash is None:
+        if not pdf_hash:
             response_msg = f"No pdf_hash found in payload: {event}"
             raise ValueError(response_msg)
 
-        if not job_id or job_id is None:
+        if not job_id:
             response_msg = f"No job_id found in payload: {event}"
             raise ValueError(response_msg)
 
@@ -137,7 +137,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         if not origin_terminal:
             msg = f"Could not retrieve terminal name for pdf_hash: {pdf_hash}"
-            logging.critical(msg)
             raise ValueError(msg)
 
         flights: List[Flight] = []
@@ -150,7 +149,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             if curr_flights:
                 flights.extend(curr_flights)
             else:
-                logging.error("Failed to convert table %d to flights.", i)
+                logging.warning("Failed to convert table %d to flights.", i)
 
         # Save flight IDs to Textract Job
         firestore_client.add_flight_ids_to_job(job_id, flights)
@@ -163,9 +162,9 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         }
         firestore_client.append_to_doc("Textract_Jobs", job_id, append_result)
 
-        if flights is None or not flights:
+        if not flights:
             response_msg = f"Failed to convert any tables to flights from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
-            raise ValueError(response_msg)
+            raise Exception(response_msg)
 
         # Get localtime for the terminal to avoid inserting flights that have already departed
         terminal = firestore_client.get_terminal_dict_by_name(origin_terminal)
