@@ -122,10 +122,10 @@ class FirestoreClient:
                 return ""
 
         except Exception as e:
-            logging.error(
-                "An error occurred while retrieving pdf hash with s3 object path: %s", e
+            msg = (
+                f"An error occurred while retrieving pdf hash with s3 object path: {e}"
             )
-            raise e
+            raise RuntimeError(msg) from e
 
         return ""
 
@@ -146,8 +146,8 @@ class FirestoreClient:
 
             logging.info("Successfully updated job %s with status %s", job_id, status)
         except Exception as e:
-            logging.error("An error occurred while updating the job status: %s", e)
-            raise e
+            msg = f"An error occurred while updating the job status: {e}"
+            raise RuntimeError(msg) from e
 
     def add_job_timestamp(
         self: "FirestoreClient", job_id: str, field_name: str
@@ -387,11 +387,6 @@ class FirestoreClient:
             logging.info("PDF type: %s", pdf_type)
             return pdf_type
 
-        # The document does not exist
-        logging.critical(
-            "Unable to get PDF type. PDF with hash %s does not exist in the database.",
-            pdf_hash,
-        )
         msg = "Unable to get PDF type from the hash."
         raise Exception(msg)
 

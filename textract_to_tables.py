@@ -5,8 +5,11 @@ import uuid
 from typing import Any, Dict, List, Tuple
 
 import boto3  # type: ignore
+import sentry_sdk
 from aws_lambda_typing import context as lambda_context
+from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
+from aws_utils import initialize_client
 from firestore_db import FirestoreClient
 from parse_sns import parse_sns_event
 from s3_bucket import S3Bucket
@@ -14,51 +17,18 @@ from screenshot_table import capture_screen_shot_of_table_from_pdf
 from table import Table
 from table_utils import gen_tables_from_textract_response
 
-
-def initialize_clients() -> Tuple[boto3.client, boto3.client]:
-    """Initialize the Textract and Lambda clients.
-
-    Returns
-    -------
-        Tuple[boto3.client, boto3.client]: The Textract and Lambda clients.
-    """
-    # Initialize logging
-    logging.basicConfig(level=logging.INFO)
-
-    textract_client = None
-    lambda_client = None
-
-    try:
-        if os.getenv("RUN_LOCAL"):
-            logging.info("Running in a local environment.")
-
-            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
-            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-            aws_region = os.getenv("AWS_REGION")
-
-            if not all([aws_access_key, aws_secret_key, aws_region]):
-                logging.error(
-                    "Missing AWS credentials or region for local environment."
-                )
-                msg = "Missing AWS credentials or region for local environment."
-                raise ValueError(msg)
-
-            boto3.setup_default_session(
-                aws_access_key_id=aws_access_key,
-                aws_secret_access_key=aws_secret_key,
-                region_name=aws_region,
-            )
-        else:
-            logging.info("Running in a cloud environment.")
-
-        textract_client = boto3.client("textract")
-        lambda_client = boto3.client("lambda")
-
-    except Exception as e:
-        logging.error("Failed to initialize AWS clients: %s", e)
-        raise e
-
-    return textract_client, lambda_client
+# Set up sentry
+sentry_sdk.init(
+    dsn="https://5cd0afbfc9ad23474f63e76f5dc199c0@o4506224652713984.ingest.sentry.io/4506224655597568",
+    integrations=[AwsLambdaIntegration(timeout_warning=True)],
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)
 
 
 def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
@@ -86,7 +56,7 @@ def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
 
         invalid_confidence = -1.0
         if row_confidence < invalid_confidence:
-            logging.error(
+            logging.warning(
                 "Failed to get average row confidence for row index %s.", index
             )
             continue
@@ -167,7 +137,6 @@ def reprocess_tables(
 
     download_dir = os.getenv("DOWNLOAD_DIR")
     if not download_dir:
-        logging.error("Download directory is not set.")
         msg = "Download directory is not set."
         raise EnvironmentError(msg)
 
@@ -181,7 +150,6 @@ def reprocess_tables(
         try:
             os.makedirs(download_dir, exist_ok=True)
         except Exception as e:
-            logging.critical("Failed to create download directory: %s", e)
             msg = "Failed to create download directory."
             raise ValueError(msg) from e
 
@@ -195,7 +163,6 @@ def reprocess_tables(
     try:
         s3_client.download_from_s3(s3_object_path, local_pdf_path)
     except Exception as e:
-        logging.critical("Failed to download PDF from S3: %s", e)
         msg = "Failed to download PDF from S3"
         raise ValueError(msg) from e
 
@@ -220,7 +187,7 @@ def reprocess_tables(
         )
 
         if not table_screen_shot_with_title:
-            logging.error(
+            logging.warning(
                 "Failed to capture screen shot of table %d in s3 at: %s.",
                 i,
                 s3_object_path,
@@ -245,7 +212,6 @@ def reprocess_tables(
 
         # Check if more than one table was found
         if len(new_tables) > 1:
-            logging.critical("More than one table found in reprocessed table.")
             msg = "More than one table found in reprocessed table."
             raise Exception(msg)
 
@@ -286,7 +252,9 @@ def reprocess_tables(
 
 
 # Initialize Textract client
-textract_client, lambda_client = initialize_clients()
+textract_client = initialize_client("textract")
+lambda_client = initialize_client("lambda")
+
 
 # Initialize Firestore client
 firestore_client = FirestoreClient()
@@ -314,7 +282,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         if not job_id or not status:
             no_job_status_msg = "JobId or Status missing in SNS message."
-            logging.critical(no_job_status_msg)
             raise ValueError(no_job_status_msg)
 
         if not s3_bucket_name:
@@ -323,7 +290,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     job_id, status
                 )
             )
-            logging.critical(response_msg)
             raise ValueError(response_msg)
 
         if not s3_object_path:
@@ -332,8 +298,12 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     job_id, status
                 )
             )
-            logging.critical(response_msg)
             raise ValueError(response_msg)
+
+        # If job failed exit program
+        if status != "SUCCEEDED":
+            msg = "Job did not succeed."
+            raise Exception(msg)
 
         request_id = context.aws_request_id
         function_name = context.function_name
@@ -357,6 +327,37 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             job_id,
             null_timestamps,
         )
+
+        # Set testing values
+        textract_doc = firestore_client.get_textract_job(job_id)
+
+        test = False
+        if textract_doc:
+            test = textract_doc.get("test", False)
+
+            if test:
+                logging.info("Using test values.")
+                test_params: Dict[str, Any] = textract_doc.get("testParameters", {})
+
+                if not test_params:
+                    msg = "Test parameters not found"
+                    raise Exception(msg)
+
+                # Set testing terminal and pdf collections
+                if "testPdfArchiveColl" in test_params:
+                    os.environ["PDF_ARCHIVE_COLLECTION"] = test_params[
+                        "testPdfArchiveColl"
+                    ]
+                else:
+                    logging.error("Failed to get test pdf archive collection.")
+
+                if "testTerminalColl" in test_params:
+                    os.environ["TERMINAL_COLLECTION"] = test_params["testTerminalColl"]
+                else:
+                    logging.error("Failed to get test terminal collection.")
+
+            else:
+                logging.error("Failed to get textract job document for testing values.")
 
         # Get extra environment variables
         min_confidence = int(os.getenv("MIN_CONFIDENCE", "80"))
@@ -390,10 +391,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         pdf_hash = firestore_client.get_pdf_hash_with_s3_path(s3_object_path)
 
         if not pdf_hash:
-            logging.critical(
-                "Failed to get PDF hash using s3 object path (%s) from Firestore.",
-                s3_object_path,
-            )
             no_pdf_hash_msg = f"Failed to get PDF hash using s3 object path ({s3_object_path}) from Firestore."
             raise ValueError(no_pdf_hash_msg)
 
@@ -401,25 +398,14 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         origin_terminal = firestore_client.get_terminal_name_by_pdf_hash(pdf_hash)
 
         if not origin_terminal:
-            logging.error(
-                "Failed to get origin terminal using PDF hash (%s) from Firestore.",
-                pdf_hash,
-            )
             no_origin_terminal_msg = f"Failed to get origin terminal using PDF hash ({pdf_hash}) from Firestore."
             raise ValueError(no_origin_terminal_msg)
-
-        # If job failed exit program
-        if status != "SUCCEEDED":
-            logging.critical("Job did not succeed.")
-            msg = Exception("Job did not succeed.")
-            raise (msg)
 
         # Existing tables
         response = get_document_analysis_results(textract_client, job_id)
         tables = gen_tables_from_textract_response(response)
 
         if not tables:
-            logging.critical("No tables found in Textract response.")
             no_tables_msg = "No tables found in Textract response."
             raise ValueError(no_tables_msg)
 
@@ -449,7 +435,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         pdf_type = firestore_client.get_pdf_type_by_hash(pdf_hash)
 
         if not pdf_type:
-            logging.critical("Failed to get PDF type from Firestore.")
             no_pdf_type_msg = "Failed to get PDF type from Firestore."
             raise ValueError(no_pdf_type_msg)
 
@@ -460,7 +445,6 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         elif pdf_type == "ROLLCALL":
             func_name = lambda_rollcall
         else:
-            logging.critical("Invalid PDF type: %s", pdf_type)
             invalid_pdf_type_msg = f"Invalid PDF type: {pdf_type}"
             raise ValueError(invalid_pdf_type_msg)
 
@@ -489,10 +473,10 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         return {
             "statusCode": 200,
-            "body": json.dumps("Successfully parsed textract to tables."),
+            "body": "Successfully parsed textract to tables.",
+            "payload": payload,
         }
 
     except Exception as e:
-        error_msg = "Error occurred."
         logger.critical("Error occurred: %s", str(e))
-        raise Exception(error_msg) from e
+        raise e

@@ -4,9 +4,11 @@ from typing import Optional
 
 import boto3  # type: ignore
 from boto3.exceptions import S3UploadFailedError  # type: ignore
-from botocore.exceptions import NoCredentialsError, ParamValidationError  # type: ignore
-
-from package.botocore.exceptions import ClientError  # type: ignore
+from botocore.exceptions import (  # type: ignore
+    ClientError,  # type: ignore
+    NoCredentialsError,
+    ParamValidationError,
+)
 
 
 class S3Bucket:
