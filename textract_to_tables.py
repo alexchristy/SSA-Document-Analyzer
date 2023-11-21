@@ -302,8 +302,8 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         # If job failed exit program
         if status != "SUCCEEDED":
-            msg = Exception("Job did not succeed.")
-            raise (msg)
+            msg = "Job did not succeed."
+            raise Exception(msg)
 
         request_id = context.aws_request_id
         function_name = context.function_name
@@ -327,6 +327,37 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             job_id,
             null_timestamps,
         )
+
+        # Set testing values
+        textract_doc = firestore_client.get_textract_job(job_id)
+
+        test = False
+        if textract_doc:
+            test = textract_doc.get("test", False)
+
+            if test:
+                logging.info("Using test values.")
+                test_params: Dict[str, Any] = textract_doc.get("testParameters", {})
+
+                if not test_params:
+                    msg = "Test parameters not found"
+                    raise Exception(msg)
+
+                # Set testing terminal and pdf collections
+                if "testPdfArchiveColl" in test_params:
+                    os.environ["PDF_ARCHIVE_COLLECTION"] = test_params[
+                        "testPdfArchiveColl"
+                    ]
+                else:
+                    logging.error("Failed to get test pdf archive collection.")
+
+                if "testTerminalColl" in test_params:
+                    os.environ["TERMINAL_COLLECTION"] = test_params["testTerminalColl"]
+                else:
+                    logging.error("Failed to get test terminal collection.")
+
+            else:
+                logging.error("Failed to get textract job document for testing values.")
 
         # Get extra environment variables
         min_confidence = int(os.getenv("MIN_CONFIDENCE", "80"))
