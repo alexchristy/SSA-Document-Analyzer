@@ -12,7 +12,6 @@ from firestore_db import FirestoreClient
 from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
 from table import Table
-from time_utils import get_local_time, pad_time_string
 
 # Set up sentry
 sentry_sdk.init(
@@ -166,51 +165,29 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             response_msg = f"Failed to convert any tables to flights from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
             raise Exception(response_msg)
 
-        # Get localtime for the terminal to avoid inserting flights that have already departed
-        terminal = firestore_client.get_terminal_dict_by_name(origin_terminal)
-
-        timezone = terminal.get("timezone", "")
-
-        if not timezone:
-            msg = "Timezone is not set for terminal."
-            raise ValueError(msg)
-
-        local_time = get_local_time(timezone)
-
-        # Create date time string for lexographical comparison
-        current_time_str = local_time.strftime("%Y%m%d%H%M")
-
-        # Store flights in Firestore
+        # Pass flights to store_flights Lambda function
+        payload_flights = []
         for flight in flights:
             flight.make_firestore_compliant()
 
             flight_dict = flight.to_dict()
 
-            flight_date = flight_dict.get("date", "")
+            payload_flights.append(flight_dict)
 
-            if not flight_date:
-                logging.critical("Flight date is not set for flight: %s", flight)
-                continue
+        # Payload for store_flights Lambda function
+        payload = {
+            "flights": json.dumps(payload_flights),
+            "pdf_hash": pdf_hash,
+            "job_id": job_id,
+            "terminal": origin_terminal,
+        }
 
-            flight_time = flight_dict.get("time", "")
-
-            if not flight_time:
-                logging.critical("Flight time is not set for flight: %s", flight)
-                continue
-
-            # Make sure the time has 4 characters to prevent incorrect comparisons
-            # 327 becomes 0327
-            flight_time = pad_time_string(flight_time)
-
-            flight_time_str = f"{flight_date}{flight_time}"
-
-            if flight_time_str > current_time_str:
-                firestore_client.store_flight(flight)
-            else:
-                logging.info(
-                    "Flight %s has already departed. Not storing in Firestore.",
-                    flight,
-                )
+        # Invoke store_flights Lambda function
+        lambda_client.invoke(
+            FunctionName=STORE_FLIGHTS_LAMBDA,
+            InvocationType="Event",
+            Payload=json.dumps(payload),
+        )
 
         firestore_client.add_job_timestamp(job_id, "finished_72hr_processing")
 
