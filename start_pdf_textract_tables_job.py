@@ -67,19 +67,6 @@ def lambda_handler(
         logging.info("SNS topic ARN for Textract: %s", sns_topic_arn)
         logging.info("SNS role ARN for Textract: %s", sns_role_arn)
 
-        # Store document with job ID and log contents
-        pdf_hash = fs.get_pdf_hash_with_s3_path(s3_object)
-
-        # Check if hash was successfully retrieved
-        if not pdf_hash or pdf_hash == "" or pdf_hash is None:
-            msg = f"Could not find PDF hash for S3 object: {s3_object}"
-            raise Exception(msg)
-
-        # Update Firestore terminal document to indicate that flights are being processed
-        terminal_collection = os.getenv("TERMINAL_COLLECTION", "Terminals")
-        terminal_name = fs.get_terminal_name_by_pdf_hash(pdf_hash)
-        pdf_type = fs.get_pdf_type_by_hash(pdf_hash)
-
         # Check if request is a test
         test = event.get("test", False)
 
@@ -91,11 +78,22 @@ def lambda_handler(
                 msg = "Test parameters not found"
                 raise Exception(msg)
 
-            if test_params.get("testTerminalColl", ""):
+            # Set testing terminal and pdf collections
+            if "testPdfArchiveColl" in test_params:
+                logging.info(
+                    "Test PDF archive collection: %s", test_params["testPdfArchiveColl"]
+                )
+                os.environ["PDF_ARCHIVE_COLLECTION"] = test_params["testPdfArchiveColl"]
+            else:
+                msg = "Test PDF archive collection not found"
+                raise Exception(msg)
+
+            if "testTerminalColl" in test_params:
                 logging.info(
                     "Test terminal collection: %s", test_params["testTerminalColl"]
                 )
                 terminal_collection = test_params["testTerminalColl"]
+                os.environ["TERMINAL_COLLECTION"] = test_params["testTerminalColl"]
             else:
                 msg = "Test terminal collection not found"
                 raise Exception(msg)
@@ -111,6 +109,19 @@ def lambda_handler(
             test_payload = {"test": True, "testParameters": test_params}
         else:
             logging.info("Not a test.")
+
+        # Store document with job ID and log contents
+        pdf_hash = fs.get_pdf_hash_with_s3_path(s3_object)
+
+        # Check if hash was successfully retrieved
+        if not pdf_hash or pdf_hash == "" or pdf_hash is None:
+            msg = f"Could not find PDF hash for S3 object: {s3_object}"
+            raise Exception(msg)
+
+        # Update Firestore terminal document to indicate that flights are being processed
+        terminal_collection = os.getenv("TERMINAL_COLLECTION", "Terminals")
+        terminal_name = fs.get_terminal_name_by_pdf_hash(pdf_hash)
+        pdf_type = fs.get_pdf_type_by_hash(pdf_hash)
 
         payload = {}
         if pdf_type == "72_HR":
