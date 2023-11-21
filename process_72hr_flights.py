@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Tuple
 import boto3  # type: ignore
 from aws_lambda_typing import context as lambda_context
 
+from aws_utils import initialize_client
 from firestore_db import FirestoreClient
 from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
@@ -14,55 +15,8 @@ from time_utils import get_local_time, pad_time_string
 
 MIN_CONFIDENCE = 80
 
-
-def initialize_clients() -> Tuple[boto3.client, boto3.client]:
-    """Initialize the Textract and Lambda clients.
-
-    Returns
-    -------
-        Tuple[boto3.client, boto3.client]: The Textract and Lambda clients.
-    """
-    # Initialize logging
-    logging.basicConfig(level=logging.INFO)
-
-    textract_client = None
-    lambda_client = None
-
-    try:
-        if os.getenv("RUN_LOCAL"):
-            logging.info("Running in a local environment.")
-
-            aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
-            aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
-            aws_region = os.getenv("AWS_REGION")
-
-            if not all([aws_access_key, aws_secret_key, aws_region]):
-                logging.error(
-                    "Missing AWS credentials or region for local environment."
-                )
-                msg = "Missing AWS credentials or region for local environment."
-                raise ValueError(msg)
-
-            boto3.setup_default_session(
-                aws_access_key_id=aws_access_key,
-                aws_secret_access_key=aws_secret_key,
-                region_name=aws_region,
-            )
-        else:
-            logging.info("Running in a cloud environment.")
-
-        textract_client = boto3.client("textract")
-        lambda_client = boto3.client("lambda")
-
-    except Exception as e:
-        logging.error("Failed to initialize AWS clients: %s", e)
-        raise e
-
-    return textract_client, lambda_client
-
-
-# Initialize Textract client
-textract_client, lambda_client = initialize_clients()
+lambda_client = initialize_client("lambda")
+textract_client = initialize_client("textract")
 
 # Initialize Firestore client
 firestore_client = FirestoreClient()
