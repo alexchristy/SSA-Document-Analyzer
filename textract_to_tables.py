@@ -355,9 +355,10 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     os.environ["TERMINAL_COLLECTION"] = test_params["testTerminalColl"]
                 else:
                     logging.error("Failed to get test terminal collection.")
-
-            else:
-                logging.error("Failed to get textract job document for testing values.")
+        else:
+            logging.error(
+                "Failed to get textract job document when checking for testing values."
+            )
 
         # Get extra environment variables
         min_confidence = int(os.getenv("MIN_CONFIDENCE", "80"))
