@@ -1,10 +1,11 @@
 import json
 import logging
 import os
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
-import boto3  # type: ignore
+import sentry_sdk
 from aws_lambda_typing import context as lambda_context
+from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
 from aws_utils import initialize_client
 from firestore_db import FirestoreClient
@@ -12,6 +13,19 @@ from flight import Flight
 from flight_utils import convert_72hr_table_to_flights
 from table import Table
 from time_utils import get_local_time, pad_time_string
+
+# Set up sentry
+sentry_sdk.init(
+    dsn="https://5cd0afbfc9ad23474f63e76f5dc199c0@o4506224652713984.ingest.sentry.io/4506224655597568",
+    integrations=[AwsLambdaIntegration(timeout_warning=True)],
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)
 
 MIN_CONFIDENCE = 80
 
