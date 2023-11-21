@@ -302,7 +302,7 @@ class FirestoreClient:
         """Get name of terminal that owns the PDF identified by the supplied hash.
 
         This function returns the name of the terminal that owns the PDF that is
-        identified by the supplied hash.
+        identified by the supplied hash. Search is performed in the PDF_ARCHIVE_COLLECTION.
 
         Args:
         ----
