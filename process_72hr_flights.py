@@ -176,7 +176,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         # Payload for store_flights Lambda function
         payload = {
-            "flights": json.dumps(payload_flights),
+            "flights": payload_flights,
             "pdf_hash": pdf_hash,
             "job_id": job_id,
             "terminal": origin_terminal,
@@ -194,7 +194,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         return {
             "statusCode": 200,
             "body": "Finished processing 72-hour flights.",
-            "payload": payload,
+            "payload": json.dumps(payload),
         }
     except Exception as e:
         error_msg = f"Error occurred: {e}"
