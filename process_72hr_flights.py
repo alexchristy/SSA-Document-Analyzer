@@ -150,14 +150,11 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             else:
                 logging.warning("Failed to convert table %d to flights.", i)
 
-        # Save flight IDs to Textract Job
-        firestore_client.add_flight_ids_to_job(job_id, flights)
-
         logging.info("Converted %d tables to %d flights.", len(tables), len(flights))
 
         # Append number of flights to Textract Job
         append_result = {
-            "numFlights": len(flights),
+            "num_flights": len(flights),
         }
         firestore_client.append_to_doc("Textract_Jobs", job_id, append_result)
 
@@ -173,6 +170,9 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             flight_dict = flight.to_dict()
 
             payload_flights.append(flight_dict)
+
+        # Save flight IDs to Textract Job
+        firestore_client.add_flight_ids_to_job(job_id, flights)
 
         # Payload for store_flights Lambda function
         payload = {
