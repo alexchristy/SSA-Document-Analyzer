@@ -48,7 +48,7 @@ def lambda_handler(
     """
     # Initialize Firestore client
     try:
-        fs = FirestoreClient()
+        fs = FirestoreClient(textract_jobs_coll="Textract_Jobs")
         logging.info("Firestore client created")
     except Exception as e:
         msg = "Error initializing Firestore client"
@@ -80,20 +80,23 @@ def lambda_handler(
 
             # Set testing terminal and pdf collections
             if "testPdfArchiveColl" in test_params:
-                logging.info(
-                    "Test PDF archive collection: %s", test_params["testPdfArchiveColl"]
-                )
-                os.environ["PDF_ARCHIVE_COLLECTION"] = test_params["testPdfArchiveColl"]
+                pdf_archive_collection = test_params["testPdfArchiveColl"]
+
+                if isinstance(pdf_archive_collection, str):
+                    fs.set_pdf_archive_coll(pdf_archive_collection)
+                    logging.info(
+                        "Test PDF archive collection: %s", pdf_archive_collection
+                    )
             else:
                 msg = "Test PDF archive collection not found"
                 raise Exception(msg)
 
             if "testTerminalColl" in test_params:
-                logging.info(
-                    "Test terminal collection: %s", test_params["testTerminalColl"]
-                )
                 terminal_collection = test_params["testTerminalColl"]
-                os.environ["TERMINAL_COLLECTION"] = test_params["testTerminalColl"]
+
+                if isinstance(terminal_collection, str):
+                    fs.set_terminal_coll(terminal_collection)
+                    logging.info("Test terminal collection: %s", terminal_collection)
             else:
                 msg = "Test terminal collection not found"
                 raise Exception(msg)
