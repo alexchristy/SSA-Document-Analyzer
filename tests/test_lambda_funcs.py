@@ -183,6 +183,8 @@ class TestStartPdfTextractJob(unittest.TestCase):
                 "testDateTime": "197001010000",  # January 1, 1970 at 00:00
                 "testPdfArchiveColl": "**TESTING**_PDF_Archive",
                 "testTerminalColl": "**TESTING**_Terminals",
+                "testCurrentFlightsColl": "**TESTING**_Current_Flights",
+                "testArchiveFlightsColl": "**TESTING**_Archive_Flights",
             },
         }
 
@@ -315,6 +317,8 @@ class TestStartPdfTextractJob(unittest.TestCase):
                 "testDateTime": "197001010000",  # January 1, 1970 at 00:00
                 "testPdfArchiveColl": "**TESTING**_PDF_Archive",
                 "testTerminalColl": "**TESTING**_Terminals",
+                "testCurrentFlightsColl": "**TESTING**_Current_Flights",
+                "testArchiveFlightsColl": "**TESTING**_Archive_Flights",
             },
         }
 
