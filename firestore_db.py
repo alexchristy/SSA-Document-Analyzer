@@ -18,12 +18,13 @@ from flight import Flight
 class FirestoreClient:
     """A client for interacting with Firestore."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913 (Args neede for testing)
         self: "FirestoreClient",
         pdf_archive_coll: Optional[str] = None,
         terminal_coll: Optional[str] = None,
         textract_jobs_coll: Optional[str] = None,
         flight_current_coll: Optional[str] = None,
+        flight_archive_coll: Optional[str] = None,
     ) -> None:
         """Initialize a FirestoreClient object.
 
@@ -84,6 +85,17 @@ class FirestoreClient:
             logging.info(
                 "Using ENV vars for firestore FLIGHT_CURRENT_COLLECTION: %s",
                 self.flight_current_coll,
+            )
+
+        if flight_archive_coll:
+            self.flight_archive_coll = flight_archive_coll
+        else:
+            self.flight_archive_coll = os.getenv(
+                "FLIGHT_ARCHIVE_COLLECTION", "Archived_Flights"
+            )
+            logging.info(
+                "Using ENV vars for firestore FLIGHT_ARCHIVE_COLLECTION: %s",
+                self.flight_archive_coll,
             )
 
     def set_pdf_archive_coll(self: "FirestoreClient", pdf_archive_coll: str) -> None:
@@ -707,3 +719,67 @@ class FirestoreClient:
         msg = f"Terminal {terminal_name} does not exist."
         logging.critical(msg)
         raise Exception(msg)
+
+    def archive_flight(self: "FirestoreClient", flight: Flight) -> None:
+        """Archive a flight document.
+
+        Args:
+        ----
+        flight (Flight): The Flight object to archive.
+        """
+        try:
+            # Convert the Flight object to a dictionary
+            doc_dict = flight.to_dict()
+
+            # Set the 'archived' and 'archived_timestamp' attributes
+            doc_dict["archived"] = True
+            doc_dict["archived_timestamp"] = SERVER_TIMESTAMP
+
+            # Create a reference to the document
+            self.db.collection(self.flight_archive_coll).document(flight.flight_id).set(
+                doc_dict
+            )
+
+            logging.info("Successfully archived flight %s", flight.flight_id)
+        except Exception as e:
+            msg = f"An error occurred while archiving flight {flight.flight_id}: {e}"
+            raise Exception(msg) from e
+
+    def delete_current_flight(self: "FirestoreClient", flight: Flight) -> None:
+        """Delete a flight document from the Current_Flights collection.
+
+        Args:
+        ----
+        flight (Flight): The Flight object to delete.
+        """
+        try:
+            # Create a reference to the document
+            self.db.collection(self.flight_current_coll).document(
+                flight.flight_id
+            ).delete()
+
+            logging.info("Successfully deleted flight %s", flight.flight_id)
+        except Exception as e:
+            msg = f"An error occurred while deleting flight {flight.flight_id}: {e}"
+            raise Exception(msg) from e
+
+    def store_flight_as_current(self: "FirestoreClient", flight: Flight) -> None:
+        """Store a flight document in the Current_Flights collection.
+
+        Args:
+        ----
+        flight (Flight): The Flight object to store.
+        """
+        try:
+            # Convert the Flight object to a dictionary
+            doc_dict = flight.to_dict()
+
+            # Create a reference to the document
+            self.db.collection(self.flight_current_coll).document(flight.flight_id).set(
+                doc_dict
+            )
+
+            logging.info("Successfully stored flight %s", flight.flight_id)
+        except Exception as e:
+            msg = f"An error occurred while storing flight {flight.flight_id}: {e}"
+            raise Exception(msg) from e
