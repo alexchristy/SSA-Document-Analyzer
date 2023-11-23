@@ -30,6 +30,9 @@ sentry_sdk.init(
     profiles_sample_rate=1.0,
 )
 
+textract_client = initialize_client("textract")
+lambda_client = initialize_client("lambda")
+
 
 def get_lowest_confidence_row(table: Table) -> Tuple[int, float]:
     """Get the row index and confidence score of the row with the lowest confidence in a table.
@@ -251,14 +254,6 @@ def reprocess_tables(
     return reprocessed_tables_list
 
 
-# Initialize Textract client
-textract_client = initialize_client("textract")
-lambda_client = initialize_client("lambda")
-
-
-# Initialize Firestore client
-firestore_client = FirestoreClient()
-
 # Initialize logger and set log level
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -276,6 +271,8 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
     -------
         dict: A dictionary containing the status code and response body.
     """
+    # Initialize Firestore client
+    firestore_client = FirestoreClient(textract_jobs_coll="Textract_Jobs")
     try:
         # Parse the SNS message
         job_id, status, s3_object_path, s3_bucket_name = parse_sns_event(event)
@@ -345,19 +342,24 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
                 # Set testing terminal and pdf collections
                 if "testPdfArchiveColl" in test_params:
-                    os.environ["PDF_ARCHIVE_COLLECTION"] = test_params[
-                        "testPdfArchiveColl"
-                    ]
+                    pdf_archive_coll = test_params["testPdfArchiveColl"]
+
+                    if isinstance(pdf_archive_coll, str):
+                        firestore_client.set_pdf_archive_coll(pdf_archive_coll)
                 else:
                     logging.error("Failed to get test pdf archive collection.")
 
                 if "testTerminalColl" in test_params:
-                    os.environ["TERMINAL_COLLECTION"] = test_params["testTerminalColl"]
+                    terminal_coll = test_params["testTerminalColl"]
+
+                    if isinstance(terminal_coll, str):
+                        firestore_client.set_terminal_coll(terminal_coll)
                 else:
                     logging.error("Failed to get test terminal collection.")
-
-            else:
-                logging.error("Failed to get textract job document for testing values.")
+        else:
+            logging.error(
+                "Failed to get textract job document when checking for testing values."
+            )
 
         # Get extra environment variables
         min_confidence = int(os.getenv("MIN_CONFIDENCE", "80"))

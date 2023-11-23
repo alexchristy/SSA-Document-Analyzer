@@ -18,8 +18,17 @@ from flight import Flight
 class FirestoreClient:
     """A client for interacting with Firestore."""
 
-    def __init__(self: "FirestoreClient") -> None:
-        """Initialize a FirestoreClient object."""
+    def __init__(
+        self: "FirestoreClient",
+        pdf_archive_coll: Optional[str] = None,
+        terminal_coll: Optional[str] = None,
+        textract_jobs_coll: Optional[str] = None,
+        flight_current_coll: Optional[str] = None,
+    ) -> None:
+        """Initialize a FirestoreClient object.
+
+        Use environment variables to initialize the Firestore client if no arguments are provided.
+        """
         # Initialize app only if it hasn't been initialized yet
         try:
             self.app = get_app()
@@ -36,6 +45,91 @@ class FirestoreClient:
         # Create the Firestore client
         self.db = firestore.client(app=self.app)
 
+        # Get the name of the collections from environment variables
+        if pdf_archive_coll:
+            self.pdf_archive_coll = pdf_archive_coll
+        else:
+            self.pdf_archive_coll = os.getenv("PDF_ARCHIVE_COLLECTION", "PDF_Archive")
+            logging.info(
+                "Using ENV vars for firestore PDF_ARCHIVE_COLLECTION: %s",
+                self.pdf_archive_coll,
+            )
+
+        if terminal_coll:
+            self.terminal_coll = terminal_coll
+        else:
+            self.terminal_coll = os.getenv("TERMINAL_COLLECTION", "Terminals")
+            logging.info(
+                "Using ENV vars for firestore TERMINAL_COLLECTION: %s",
+                self.terminal_coll,
+            )
+
+        if textract_jobs_coll:
+            self.textract_jobs_coll = textract_jobs_coll
+        else:
+            self.textract_jobs_coll = os.getenv(
+                "TEXTRACT_JOBS_COLLECTION", "Textract_Jobs"
+            )
+            logging.info(
+                "Using ENV vars for firestore TEXTRACT_JOBS_COLLECTION: %s",
+                self.textract_jobs_coll,
+            )
+
+        if flight_current_coll:
+            self.flight_current_coll = flight_current_coll
+        else:
+            self.flight_current_coll = os.getenv(
+                "FLIGHT_CURRENT_COLLECTION", "Current_Flights"
+            )
+            logging.info(
+                "Using ENV vars for firestore FLIGHT_CURRENT_COLLECTION: %s",
+                self.flight_current_coll,
+            )
+
+    def set_pdf_archive_coll(self: "FirestoreClient", pdf_archive_coll: str) -> None:
+        """Set the name of the PDF Archive collection.
+
+        Args:
+        ----
+        pdf_archive_coll (str): The name of the PDF Archive collection.
+
+        """
+        self.pdf_archive_coll = pdf_archive_coll
+
+    def set_terminal_coll(self: "FirestoreClient", terminal_coll: str) -> None:
+        """Set the name of the Terminal collection.
+
+        Args:
+        ----
+        terminal_coll (str): The name of the Terminal collection.
+
+        """
+        self.terminal_coll = terminal_coll
+
+    def set_textract_jobs_coll(
+        self: "FirestoreClient", textract_jobs_coll: str
+    ) -> None:
+        """Set the name of the Textract Jobs collection.
+
+        Args:
+        ----
+        textract_jobs_coll (str): The name of the Textract Jobs collection.
+
+        """
+        self.textract_jobs_coll = textract_jobs_coll
+
+    def set_flight_current_coll(
+        self: "FirestoreClient", flight_current_coll: str
+    ) -> None:
+        """Set the name of the Flight Current collection.
+
+        Args:
+        ----
+        flight_current_coll (str): The name of the Flight Current collection.
+
+        """
+        self.flight_current_coll = flight_current_coll
+
     def add_textract_job(self: "FirestoreClient", job_id: str, pdf_hash: str) -> None:
         """Add a Textract job to the Firestore database.
 
@@ -46,7 +140,7 @@ class FirestoreClient:
 
         """
         # Add the job ID to the Firestore database in a single set operation
-        self.db.collection("Textract_Jobs").document(job_id).set(
+        self.db.collection(self.textract_jobs_coll).document(job_id).set(
             {"status": "STARTED", "pdf_hash": pdf_hash}
         )
 
@@ -65,7 +159,7 @@ class FirestoreClient:
 
         """
         # Get the Textract job from Firestore
-        job = self.db.collection("Textract_Jobs").document(job_id).get()
+        job = self.db.collection(self.textract_jobs_coll).document(job_id).get()
 
         # Check if the job exists
         if job.exists:
@@ -88,14 +182,9 @@ class FirestoreClient:
         """
         logging.info("Retrieving hash value for S3 object path: %s", s3_object_path)
         try:
-            pdf_archive = os.getenv("PDF_ARCHIVE_COLLECTION")
-            if not pdf_archive:
-                logging.error("PDF_ARCHIVE_COLLECTION environment variable is not set.")
-                return ""
-
             # Fetch the document(s) from Firestore
             query_result = (
-                self.db.collection(pdf_archive)
+                self.db.collection(self.pdf_archive_coll)
                 .where("cloud_path", "==", str(s3_object_path))
                 .get()
             )
@@ -139,7 +228,7 @@ class FirestoreClient:
 
         """
         try:
-            job_ref = self.db.collection("Textract_Jobs").document(job_id)
+            job_ref = self.db.collection(self.textract_jobs_coll).document(job_id)
 
             # Update the 'status' field in the job document
             job_ref.update({"status": status})
@@ -163,7 +252,7 @@ class FirestoreClient:
 
         """
         try:
-            job_ref = self.db.collection("Textract_Jobs").document(job_id)
+            job_ref = self.db.collection(self.textract_jobs_coll).document(job_id)
 
             # Update the specified field in the job document to the server timestamp
             job_ref.update({field_name: SERVER_TIMESTAMP})
@@ -187,7 +276,7 @@ class FirestoreClient:
         flights (list): The list of Flight objects.
         """
         try:
-            job_ref = self.db.collection("Textract_Jobs").document(job_id)
+            job_ref = self.db.collection(self.textract_jobs_coll).document(job_id)
 
             # Create a list of flight IDs from the list of Flight objects
             flight_ids = [flight.flight_id for flight in flights]
@@ -215,9 +304,7 @@ class FirestoreClient:
 
         """
         try:
-            pdf_ref = self.db.collection(os.getenv("PDF_ARCHIVE_COLLECTION")).document(
-                pdf_hash
-            )
+            pdf_ref = self.db.collection(self.pdf_archive_coll).document(pdf_hash)
 
             # Add the list of flight IDs to the 'flight_ids' array in the PDF document
             pdf_ref.update({"flight_ids": firestore.ArrayUnion(flight_ids)})
@@ -228,81 +315,11 @@ class FirestoreClient:
             logging.error(msg)
             raise Exception(msg) from e
 
-    def store_flight(self: "FirestoreClient", flight: Flight) -> None:
-        """Store a flight object into the FLIGHT_CURRENT_COLLECTION.
-
-        Args:
-        ----
-        flight (Flight): The Flight object to insert.
-
-        """
-        try:
-            flight_collection = os.getenv(
-                "FLIGHT_CURRENT_COLLECTION", "Current_Flights"
-            )
-
-            if flight_collection == "Current_Flights":
-                logging.warning(
-                    "FLIGHT_CURRENT_COLLECTION environment variable not set. Using default value: Current_Flights"
-                )
-
-            # Convert the Flight object to a dictionary
-            flight_data = flight.to_dict()
-
-            # Insert the flight object into the Firestore collection
-            self.db.collection(flight_collection).document(flight.flight_id).set(
-                flight_data
-            )
-
-            logging.info(
-                "Successfully inserted flight with ID %s into %s",
-                flight.flight_id,
-                flight_collection,
-            )
-        except Exception as e:
-            msg = f"An error occurred while inserting the flight object: {e}"
-            logging.critical(msg)
-            raise Exception(msg) from e
-
-    def archive_flight(self: "FirestoreClient", flight: Flight) -> None:
-        """Archive a flight object into the FLIGHT_ARCHIVE_COLLECTION.
-
-        Args:
-        ----
-        flight (Flight): The Flight object to insert.
-
-        """
-        try:
-            flight_collection = os.getenv("FLIGHT_ARCHIVE_COLLECTION", "Flight_Archive")
-
-            if flight_collection == "Flight_Archive":
-                logging.warning(
-                    "FLIGHT_ARCHIVE_COLLECTION environment variable not set. Using default value: Flight_Archive"
-                )
-
-            # Convert the Flight object to a dictionary
-            flight_data = flight.to_dict()
-
-            # Insert the flight object into the Firestore collection
-            self.db.collection(flight_collection).document(flight.flight_id).set(
-                flight_data
-            )
-
-            logging.info(
-                "Successfully inserted flight with ID %s into %s",
-                flight.flight_id,
-                flight_collection,
-            )
-        except Exception as e:
-            msg = f"An error occurred while inserting the flight object: {e}"
-            logging.critical(msg)
-            raise Exception(msg) from e
-
     def get_terminal_name_by_pdf_hash(self: "FirestoreClient", pdf_hash: str) -> str:
         """Get name of terminal that owns the PDF identified by the supplied hash.
 
         This function returns the name of the terminal that owns the PDF that is
-        identified by the supplied hash.
+        identified by the supplied hash. Search is performed in the PDF_ARCHIVE_COLLECTION.
 
         Args:
         ----
@@ -314,11 +331,8 @@ class FirestoreClient:
         """
         logging.info("Retrieving terminal name by PDF hash.")
 
-        # Get the name of the collections from environment variables
-        pdf_archive_coll = os.getenv("PDF_ARCHIVE_COLLECTION")
-
         # Create a reference to the document using the SHA-256 hash as the document ID
-        doc_ref = self.db.collection(pdf_archive_coll).document(pdf_hash)
+        doc_ref = self.db.collection(self.pdf_archive_coll).document(pdf_hash)
 
         # Try to retrieve the document
         doc = doc_ref.get()
@@ -363,11 +377,8 @@ class FirestoreClient:
         """
         logging.info("Retrieving PDF type by hash.")
 
-        # Get the name of the collections from environment variables
-        pdf_archive_coll = os.getenv("PDF_ARCHIVE_COLLECTION", "PDF_Archive")
-
         # Create a reference to the document using the SHA-256 hash as the document ID
-        doc_ref = self.db.collection(pdf_archive_coll).document(pdf_hash)
+        doc_ref = self.db.collection(self.pdf_archive_coll).document(pdf_hash)
 
         # Try to retrieve the document
         doc = doc_ref.get()
@@ -404,13 +415,8 @@ class FirestoreClient:
         flights_list = []  # Initialize an empty list to store Flight objects
 
         try:
-            # Get the flight collection from environment variable or use default
-            flight_current_collection = os.getenv(
-                "FLIGHT_CURRENT_COLLECTION", "Current_Flights"
-            )
-
             # Create a query to search for flights originating from the specified terminal
-            query = self.db.collection(flight_current_collection).where(
+            query = self.db.collection(self.flight_current_coll).where(
                 "origin_terminal", "==", terminal
             )
 
@@ -449,13 +455,8 @@ class FirestoreClient:
 
         """
         try:
-            # Determine the collection name from environment variable or use a default
-            flight_current_collection = os.getenv(
-                "FLIGHT_CURRENT_COLLECTION", "Current_Flights"
-            )
-
             # Create a reference to the document
-            self.db.collection(flight_current_collection).document(document_id).delete()
+            self.db.collection(self.flight_current_coll).document(document_id).delete()
 
             logging.info(
                 "Successfully deleted flight with document ID: %s", document_id
@@ -579,7 +580,7 @@ class FirestoreClient:
         list: A list of dictionaries representing the queried documents.
         """
         # Reference to the collection
-        collection_ref = self.db.collection("Textract_Jobs")
+        collection_ref = self.db.collection(self.textract_jobs_coll)
 
         logging.info(
             "Querying for failed 72hr processing jobs with lookback: %s and buffer: %s",
@@ -641,7 +642,7 @@ class FirestoreClient:
         list: A list of dictionaries representing the queried documents.
         """
         # Reference to the collection
-        collection_ref = self.db.collection("Textract_Jobs")
+        collection_ref = self.db.collection(self.textract_jobs_coll)
 
         logging.info(
             "Querying for failed 72hr processing jobs with lookback: %s and buffer: %s",
@@ -693,15 +694,8 @@ class FirestoreClient:
         -------
         dict: A dictionary representing the terminal document.
         """
-        terminal_collection = os.getenv("TERMINAL_COLLECTION", "Terminals")
-
-        if terminal_collection == "Terminals":
-            logging.warning(
-                "TERMINAL_COLLECTION environment variable not set. Using default value: Terminals"
-            )
-
         # Create a reference to the document
-        doc_ref = self.db.collection(terminal_collection).document(terminal_name)
+        doc_ref = self.db.collection(self.terminal_coll).document(terminal_name)
 
         # Try to retrieve the document
         doc = doc_ref.get()

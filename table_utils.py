@@ -29,7 +29,7 @@ def is_valid_72hr_table(table: Table) -> bool:
         True if the table is a valid 72-hour table, False otherwise.
     """
     if table.title is None:
-        logging.error(
+        logging.info(
             "Table title is empty. Not enough information to determine if table is a 72-hour table. Exiting..."
         )
         return False
@@ -38,7 +38,7 @@ def is_valid_72hr_table(table: Table) -> bool:
     match = check_date_string(table.title, return_match=True)
 
     if match is None:
-        logging.error(
+        logging.info(
             "Failed to get date from table title. Not enough information to determine if table is a 72-hour table. Exiting..."
         )
         return False
@@ -356,15 +356,15 @@ def get_destination_column_index(table: Table) -> int:
     logging.info("Retrieving destination column index.")
 
     if table is None:
-        logging.error("Exiting function! Table is empty.")
+        logging.info("Exiting function! Table is empty.")
         return -1
 
     if table.rows is None:
-        logging.error("Exiting function! There are no rows in the table.")
+        logging.info("Exiting function! There are no rows in the table.")
         return -1
 
     if table.get_num_of_columns() == 0:
-        logging.error("Exiting function! There are no columns in the table.")
+        logging.info("Exiting function! There are no columns in the table.")
         return -1
 
     # Define regex pattern to match destination
@@ -395,15 +395,15 @@ def get_seats_column_index(table: Table) -> int:
     logging.info("Retrieving seat data column index.")
 
     if table is None:
-        logging.error("Exiting function! Table is empty.")
+        logging.info("Exiting function! Table is empty.")
         return -1
 
     if table.rows is None:
-        logging.error("Exiting function! There are no rows in the table.")
+        logging.info("Exiting function! There are no rows in the table.")
         return -1
 
     if table.get_num_of_columns() == 0:
-        logging.error("Exiting function! There are no columns in the table.")
+        logging.info("Exiting function! There are no columns in the table.")
         return -1
 
     # Define regex pattern to match seats
@@ -485,15 +485,15 @@ def get_roll_call_column_index(table: Table) -> int:
     logging.info("Retrieving roll call column index.")
 
     if table is None:
-        logging.error("Exiting function! Table is empty.")
+        logging.info("Exiting function! Table is empty.")
         return -1
 
     if table.rows is None:
-        logging.error("Exiting function! There are no rows in the table.")
+        logging.info("Exiting function! There are no rows in the table.")
         return -1
 
     if table.get_num_of_columns() == 0:
-        logging.error("Exiting function! There are no columns in the table.")
+        logging.info("Exiting function! There are no columns in the table.")
         return -1
 
     # Define regex pattern to match roll call time
