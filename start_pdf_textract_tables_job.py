@@ -128,11 +128,11 @@ def lambda_handler(
 
         payload = {}
         if pdf_type == "72_HR":
-            payload = {"updating": pdf_type, "pdf72Hour": s3_object}
+            payload = {"updating72Hour": True, "pdf72Hour": s3_object}
         elif pdf_type == "30_DAY":
-            payload = {"updating": pdf_type, "pdf30Day": s3_object}
+            payload = {"updating30Day": True, "pdf30Day": s3_object}
         elif pdf_type == "ROLLCALL":
-            payload = {"updating": pdf_type, "pdfRollCall": s3_object}
+            payload = {"updatingRollcall": True, "pdfRollCall": s3_object}
         else:
             msg = f"Could not find PDF type for S3 object: {s3_object}"
             raise Exception(msg)
