@@ -1,12 +1,31 @@
 import json
 import logging
-from typing import Dict, Optional
+from typing import Any, Dict, List, Optional
 
+import sentry_sdk
 from aws_lambda_typing import context as lambda_context
+from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
 from firestore_db import FirestoreClient
 from flight import Flight
 from time_utils import get_local_time
+
+# Set up sentry
+sentry_sdk.init(
+    dsn="https://5cd0afbfc9ad23474f63e76f5dc199c0@o4506224652713984.ingest.sentry.io/4506224655597568",
+    integrations=[AwsLambdaIntegration(timeout_warning=True)],
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    traces_sample_rate=1.0,
+    # Set profiles_sample_rate to 1.0 to profile 100%
+    # of sampled transactions.
+    # We recommend adjusting this value in production.
+    profiles_sample_rate=1.0,
+)
+
+# Initialize logger and set log level
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def get_terminal_timezone(firestore_client: FirestoreClient, terminal_name: str) -> str:
@@ -38,12 +57,12 @@ def get_current_time(
     return local_time.strftime("%Y%m%d%H%M")
 
 
-def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, str]:
+def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, Any]:
     """Archive flights that have departed and delete all old flights current flights collection."""
     try:
         firestore_client = FirestoreClient(textract_jobs_coll="Textract_Jobs")
 
-        event = json.loads(event["payload"])
+        logging.info("Received event: %s", event)
 
         job_id = event.get("job_id", "")
         pdf_hash = event.get("pdf_hash", "")
@@ -91,7 +110,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, st
                     if isinstance(pdf_archive_coll, str):
                         firestore_client.set_pdf_archive_coll(pdf_archive_coll)
                 else:
-                    logging.error("Failed to get test pdf archive collection.")
+                    logging.warning("Failed to get test pdf archive collection.")
 
                 if "testTerminalColl" in test_params:
                     terminal_coll = test_params["testTerminalColl"]
@@ -99,7 +118,23 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, st
                     if isinstance(terminal_coll, str):
                         firestore_client.set_terminal_coll(terminal_coll)
                 else:
-                    logging.error("Failed to get test terminal collection.")
+                    logging.warning("Failed to get test terminal collection.")
+
+                if "testCurrentFlightsColl" in test_params:
+                    current_flights_coll = test_params["testCurrentFlightsColl"]
+
+                    if isinstance(current_flights_coll, str):
+                        firestore_client.set_flight_current_coll(current_flights_coll)
+                else:
+                    logging.warning("Failed to get test current flights collection.")
+
+                if "testArchiveFlightsColl" in test_params:
+                    archive_flights_coll = test_params["testArchiveFlightsColl"]
+
+                    if isinstance(archive_flights_coll, str):
+                        firestore_client.set_flight_archive_coll(archive_flights_coll)
+                else:
+                    logging.warning("Failed to get test archive flights collection.")
 
                 valid_date_time_length = 12
                 if (
@@ -109,7 +144,31 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, st
                     test_date = test_params["testDateTime"]
                     use_test_date = True
                 else:
-                    logging.error("Failed to get testDateTime.")
+                    logging.warning("Failed to get testDateTime.")
+
+        else:
+            logging.error("Failed to get textract job when checking for test values.")
+
+        request_id = context.aws_request_id
+        function_name = context.function_name
+
+        func_store_flights_info = {
+            "func_store_flights_request_id": request_id,
+            "func_store_flights_name": function_name,
+        }
+
+        firestore_client.append_to_doc("Textract_Jobs", job_id, func_store_flights_info)
+
+        # Append null values to timestamp fields in Textract Job.
+        # This allows us to query for jobs that failed to process completely.
+        null_timestamps = {
+            "started_store_flights": None,
+            "finished_store_flights": None,
+        }
+        firestore_client.append_to_doc("Textract_Jobs", job_id, null_timestamps)
+
+        # Set timestamp for when store_flights function started
+        firestore_client.add_job_timestamp(job_id, "started_store_flights")
 
         terminal_timezone = get_terminal_timezone(
             firestore_client=firestore_client, terminal_name=terminal
@@ -127,16 +186,17 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, st
         if not old_flights:
             logging.info("No flights found to archive.")
 
+        archived_flights: List[str] = []
         for old_flight in old_flights:
             if old_flight.get_departure_datetime() < current_time:
                 firestore_client.archive_flight(old_flight)
-                logging.info("Archived flight: %s", old_flight.flight_id)
+                archived_flights.append(old_flight.flight_id)
 
             # Delete all old flights
             firestore_client.delete_current_flight(old_flight)
-            logging.info("Deleted flight: %s", old_flight.flight_id)
 
         # Store new flights
+        stored_flights: List[str] = []
         for flight_dict in new_flights_dicts:
             new_flight = Flight.from_dict(flight_dict)
 
@@ -146,17 +206,46 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, st
 
             if new_flight.get_departure_datetime() >= current_time:
                 firestore_client.store_flight_as_current(new_flight)
-                logging.info("Stored flight: %s", new_flight.flight_id)
+                stored_flights.append(new_flight.flight_id)
             else:
                 logging.info(
                     "Flight %s has already departed. Not storing.",
                     new_flight.flight_id,
                 )
 
-        return {"test": "test"}
+        # Update Terminal document with new flights
+        logging.info("Updating Terminal document with new flights.")
+        pdf_type = firestore_client.get_pdf_type_by_hash(pdf_hash=pdf_hash)
+        terminal_name = terminal  # "terminal" is the name of the terminal that was passed from Process-72HR-Flights
+
+        if not pdf_type:
+            msg = "Failed to get pdf type."
+            raise ValueError(msg)
+
+        firestore_client.set_terminal_flights(
+            terminal_name=terminal_name, pdf_type=pdf_type, flight_ids=stored_flights
+        )
+
+        # Set to False to indicate that the terminal is no longer being updated
+        firestore_client.set_terminal_update_status(
+            terminal_name=terminal_name, pdf_type=pdf_type, status=False
+        )
+
+        # Update Textract Job with timestamp for when store_flights function finished
+        firestore_client.add_job_timestamp(job_id, "finished_store_flights")
+
+        return {
+            "statusCode": 200,
+            "status": "success",
+            "body": "Successfully stored flights.",
+            "dateTime": current_time,
+            "terminal": terminal,
+            "archivedFlights": json.dumps(archived_flights),
+            "storedFlights": json.dumps(stored_flights),
+        }
     except json.JSONDecodeError:
         logging.critical("Failed to decode JSON payload.")
         return {"status": "failed", "body": "Invalid JSON payload."}
     except Exception as e:
-        logging.critical("An unexpected error occurred: %s", e)
+        logging.critical("An unexpected error occurred: %s, %s", type(e).__name__, e)
         return {"status": "failed", "body": str(e)}
