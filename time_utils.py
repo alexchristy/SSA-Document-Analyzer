@@ -1,6 +1,8 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Optional
 
 import pytz
+from dateutil.relativedelta import relativedelta  # type: ignore
 
 
 def get_local_time(timezone_key: str) -> datetime:
@@ -53,3 +55,26 @@ def pad_time_string(time_str: str) -> str:
         time_str = time_str.zfill(4)
 
     return time_str
+
+
+def modify_datetime(
+    dt: datetime, **kwargs  # noqa: ANN003 (Ignore for kwargs)
+) -> Optional[datetime]:
+    """Modify the given datetime by adding/subtracting years, months, days, hours, minutes, and seconds.
+
+    Args:
+    ----
+        dt (datetime): The datetime object to modify.
+        **kwargs: Time units to modify the datetime by. Can include years, months, days, hours, minutes, and seconds.
+
+    Returns:
+    -------
+        datetime: The modified datetime object, or None if an error occurs.
+    """
+    try:
+        # Extract seconds from kwargs if present, as relativedelta does not handle seconds
+        seconds = kwargs.pop("seconds", 0)
+        return dt + relativedelta(**kwargs) + timedelta(seconds=seconds)
+    except Exception as e:
+        print(f"Error occurred while modifying datetime: {e}")
+        return None
