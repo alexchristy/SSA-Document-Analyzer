@@ -142,6 +142,18 @@ class FirestoreClient:
         """
         self.flight_current_coll = flight_current_coll
 
+    def set_flight_archive_coll(
+        self: "FirestoreClient", flight_archive_coll: str
+    ) -> None:
+        """Set the name of the Flight Archive collection.
+
+        Args:
+        ----
+        flight_archive_coll (str): The name of the Flight Archive collection.
+
+        """
+        self.flight_archive_coll = flight_archive_coll
+
     def add_textract_job(self: "FirestoreClient", job_id: str, pdf_hash: str) -> None:
         """Add a Textract job to the Firestore database.
 
@@ -782,4 +794,146 @@ class FirestoreClient:
             logging.info("Successfully stored flight %s", flight.flight_id)
         except Exception as e:
             msg = f"An error occurred while storing flight {flight.flight_id}: {e}"
+            raise Exception(msg) from e
+
+    def get_doc_by_id(
+        self: "FirestoreClient", collection_name: str, doc_id: str
+    ) -> Dict[str, Any]:
+        """Get a document from a specified collection by its ID.
+
+        Args:
+        ----
+        collection_name (str): The name of the collection where the document resides.
+        doc_id (str): The ID of the document to retrieve.
+
+        Returns:
+        -------
+        dict: A dictionary representing the retrieved document.
+        """
+        try:
+            # Create a reference to the document
+            doc_ref = self.db.collection(collection_name).document(doc_id)
+
+            # Try to retrieve the document
+            doc = doc_ref.get()
+
+            # Check if the document exists
+            if doc.exists:
+                return doc.to_dict()
+
+            msg = f"Document with ID {doc_id} does not exist."
+            raise Exception(msg)
+
+        except Exception as e:
+            msg = f"An error occurred while retrieving document with ID {doc_id}: {e}"
+            raise Exception(msg) from e
+
+    def set_terminal_flights(
+        self: "FirestoreClient",
+        terminal_name: str,
+        pdf_type: str,
+        flight_ids: List[str],
+    ) -> None:
+        """Set the flights for a terminal in the Terminals collection.
+
+        Args:
+        ----
+        terminal_name (str): The name of the terminal.
+        pdf_type (str): The type of PDF document.
+        flight_ids (list): A list of flight IDs.
+        """
+        try:
+            # Create a reference to the document
+            doc_ref = self.db.collection(self.terminal_coll).document(terminal_name)
+
+            # Set the flights for the terminal
+            if pdf_type == "72_HR":
+                doc_ref.update({"flights72Hour": flight_ids})
+            elif pdf_type == "30_DAY":
+                doc_ref.update({"flights30Day": flight_ids})
+            elif pdf_type == "ROLLCALL":
+                doc_ref.update({"flightsRollcall": flight_ids})
+            else:
+                msg = f"Invalid PDF type: {pdf_type}"
+                raise Exception(msg)
+
+            logging.info(
+                "Successfully set %s flights for terminal %s", pdf_type, terminal_name
+            )
+        except Exception as e:
+            msg = f"An error occurred while setting {pdf_type} flights for terminal {terminal_name}: {e}"
+            raise Exception(msg) from e
+
+    def set_terminal_update_status(
+        self: "FirestoreClient",
+        terminal_name: str,
+        pdf_type: str,
+        status: bool,
+    ) -> None:
+        """Set the update status for a terminal in the Terminals collection.
+
+        Args:
+        ----
+        terminal_name (str): The name of the terminal.
+        pdf_type (str): The type of PDF document.
+        status (bool): The status to set.
+        """
+        try:
+            # Create a reference to the document
+            doc_ref = self.db.collection(self.terminal_coll).document(terminal_name)
+
+            # Set the update status for the terminal
+            if pdf_type == "72_HR":
+                doc_ref.update({"updating72Hour": status})
+            elif pdf_type == "30_DAY":
+                doc_ref.update({"updating30Day": status})
+            elif pdf_type == "ROLLCALL":
+                doc_ref.update({"updatingRollcall": status})
+            else:
+                msg = f"Invalid PDF type: {pdf_type}"
+                raise Exception(msg)
+
+            logging.info(
+                "Successfully set %s update status for terminal %s",
+                pdf_type,
+                terminal_name,
+            )
+        except Exception as e:
+            msg = f"An error occurred while setting {pdf_type} update status for terminal {terminal_name}: {e}"
+            raise Exception(msg) from e
+
+    def set_terminal_pdf(
+        self: "FirestoreClient",
+        terminal_name: str,
+        pdf_type: str,
+        pdf_cloud_path: str,
+    ) -> None:
+        """Set the PDF for a terminal in the Terminals collection.
+
+        Args:
+        ----
+        terminal_name (str): The name of the terminal.
+        pdf_type (str): The type of PDF document.
+        pdf_cloud_path (str): The cloud path of the PDF document.
+        """
+        try:
+            # Create a reference to the document
+            doc_ref = self.db.collection(self.terminal_coll).document(terminal_name)
+
+            # Set the PDF for the terminal
+            if pdf_type == "72_HR":
+                doc_ref.update({"pdf72Hour": pdf_cloud_path})
+            elif pdf_type == "30_DAY":
+                doc_ref.update({"pdf30Day": pdf_cloud_path})
+            elif pdf_type == "ROLLCALL":
+                doc_ref.update({"pdfRollcall": pdf_cloud_path})
+            else:
+                msg = f"Invalid PDF type: {pdf_type}"
+                raise Exception(msg)
+
+            logging.info(
+                "Successfully set %s PDF for terminal %s", pdf_type, terminal_name
+            )
+        except Exception as e:
+            msg = f"An error occurred while setting {pdf_type} PDF for terminal {terminal_name}: {e}"
             raise Exception(msg) from e
