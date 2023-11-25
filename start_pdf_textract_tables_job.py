@@ -88,8 +88,7 @@ def lambda_handler(
                         "Test PDF archive collection: %s", pdf_archive_collection
                     )
             else:
-                msg = "Test PDF archive collection not found"
-                raise Exception(msg)
+                logging.warning("Test PDF archive collection not found. Using default.")
 
             if "testTerminalColl" in test_params:
                 terminal_collection = test_params["testTerminalColl"]
@@ -98,16 +97,16 @@ def lambda_handler(
                     fs.set_terminal_coll(terminal_collection)
                     logging.info("Test terminal collection: %s", terminal_collection)
             else:
-                msg = "Test terminal collection not found"
-                raise Exception(msg)
+                logging.warning("Test terminal collection not found. Using default.")
 
             # Check for the presence of 'sendPdf' key in test_params
             if "sendPdf" in test_params:
                 logging.info("Sending Pdf: %s", test_params["sendPdf"])
                 send_pdf = test_params["sendPdf"]
             else:
-                msg = "sendPdf key not found in testParameters"
-                raise Exception(msg)
+                logging.warning(
+                    "sendPdf key not found in testParameters. Assuming True."
+                )
 
             test_payload = {"test": True, "testParameters": test_params}
         else:
@@ -122,26 +121,20 @@ def lambda_handler(
             raise Exception(msg)
 
         # Update Firestore terminal document to indicate that flights are being processed
-        terminal_collection = os.getenv("TERMINAL_COLLECTION", "Terminals")
         terminal_name = fs.get_terminal_name_by_pdf_hash(pdf_hash)
         pdf_type = fs.get_pdf_type_by_hash(pdf_hash)
 
-        payload = {}
-        if pdf_type == "72_HR":
-            payload = {"updating72Hour": True, "pdf72Hour": s3_object}
-        elif pdf_type == "30_DAY":
-            payload = {"updating30Day": True, "pdf30Day": s3_object}
-        elif pdf_type == "ROLLCALL":
-            payload = {"updatingRollcall": True, "pdfRollCall": s3_object}
-        else:
-            msg = f"Could not find PDF type for S3 object: {s3_object}"
+        if not terminal_name:
+            msg = f"Could not find terminal name for PDF hash: {pdf_hash}"
             raise Exception(msg)
 
-        fs.append_to_doc(
-            terminal_collection,
-            terminal_name,
-            payload,
-        )
+        if not pdf_type:
+            msg = f"Could not find PDF type for PDF hash: {pdf_hash}"
+            raise Exception(msg)
+
+        # Update terminal document
+        fs.set_terminal_update_status(terminal_name, pdf_type, True)
+        fs.set_terminal_pdf(terminal_name, pdf_type, s3_object)
 
         # Start Textract job if not a test or
         # if test and we want to send the PDF to Textract

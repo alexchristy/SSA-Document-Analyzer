@@ -119,7 +119,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     if isinstance(pdf_archive_coll, str):
                         firestore_client.set_pdf_archive_coll(pdf_archive_coll)
                 else:
-                    logging.error("Failed to get test pdf archive collection.")
+                    logging.warning("Failed to get test pdf archive collection.")
 
                 if "testTerminalColl" in test_params:
                     terminal_coll = test_params["testTerminalColl"]
@@ -127,7 +127,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     if isinstance(terminal_coll, str):
                         firestore_client.set_terminal_coll(terminal_coll)
                 else:
-                    logging.error("Failed to get test terminal collection.")
+                    logging.warning("Failed to get test terminal collection.")
 
                 valid_date_time_length = 12
                 if (
@@ -138,7 +138,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     use_test_date = True
                     test_date = time_data[0:8]
                 else:
-                    logging.error("Failed to get testDateTime.")
+                    logging.warning("Failed to get testDateTime.")
         else:
             logging.error(
                 "Failed to get textract job document when checking for testing values."
