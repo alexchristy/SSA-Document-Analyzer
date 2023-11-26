@@ -347,7 +347,9 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     if isinstance(pdf_archive_coll, str):
                         firestore_client.set_pdf_archive_coll(pdf_archive_coll)
                 else:
-                    logging.error("Failed to get test pdf archive collection.")
+                    logging.warning(
+                        "Failed to get test pdf archive collection. Using default collection."
+                    )
 
                 if "testTerminalColl" in test_params:
                     terminal_coll = test_params["testTerminalColl"]
@@ -355,7 +357,9 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     if isinstance(terminal_coll, str):
                         firestore_client.set_terminal_coll(terminal_coll)
                 else:
-                    logging.error("Failed to get test terminal collection.")
+                    logging.warning(
+                        "Failed to get test terminal collection. Using default collection."
+                    )
         else:
             logging.error(
                 "Failed to get textract job document when checking for testing values."

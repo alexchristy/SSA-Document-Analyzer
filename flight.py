@@ -142,6 +142,34 @@ class Flight:
         self.as_string = self.generate_as_string()
         self.flight_id = self.generate_flight_id()
 
+    def get_departure_datetime(self: "Flight") -> str:
+        """Get the departure day and time in the format YYYYMMDDHHMM.
+
+        Returns
+        -------
+            str: The departure day and time.
+        """
+        valid_rollcall_time_length = 4
+
+        if not self.date:
+            msg = "Date is missing"
+            raise ValueError(msg)
+
+        if not self.rollcall_time:
+            msg = "Rollcall time is missing"
+            raise ValueError(msg)
+
+        # Ensure rollcall_time is in HHMM format
+        if (
+            len(self.rollcall_time) != valid_rollcall_time_length
+            or not self.rollcall_time.isdigit()
+        ):
+            msg = "Invalid rollcall time format"
+            raise ValueError(msg)
+
+        # Combine date and rollcall time
+        return f"{self.date}{self.rollcall_time}"
+
     @classmethod
     def load_state(
         cls: Type["Flight"], filename: str = "flight_state.pkl"
