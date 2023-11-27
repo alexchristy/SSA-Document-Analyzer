@@ -234,7 +234,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         # Update Textract Job with timestamp for when store_flights function finished
         firestore_client.add_job_timestamp(job_id, "finished_store_flights")
 
-        return {
+        return_payload = {
             "statusCode": 200,
             "status": "success",
             "body": "Successfully stored flights.",
@@ -243,6 +243,11 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             "archivedFlights": json.dumps(archived_flights),
             "storedFlights": json.dumps(stored_flights),
         }
+
+        logging.info("Returning payload: %s", return_payload)
+
+        return return_payload
+
     except json.JSONDecodeError:
         logging.critical("Failed to decode JSON payload.")
         return {"status": "failed", "body": "Invalid JSON payload."}
