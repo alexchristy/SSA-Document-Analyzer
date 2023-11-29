@@ -19,10 +19,10 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_e2e_macdill_2_72hr(self: unittest.TestCase) -> None:
         """Tests the end to end functionality for parsing the macdill_2_72hr PDF."""
-        pdf_archive_coll = "**TESTING-E2E**_PDF_Archive"
-        terminal_coll = "**TESTING-E2E**_Terminals"
-        current_flights_coll = "**TESTING-E2E**_Current_Flights"
-        archive_flights_coll = "**TESTING-E2E**_Archive_Flights"
+        pdf_archive_coll = "**TESTING-E2E**_PDF_Archive-MDILL"
+        terminal_coll = "**TESTING-E2E**_Terminals-MDILL"
+        current_flights_coll = "**TESTING-E2E**_Current_Flights-MDILL"
+        archive_flights_coll = "**TESTING-E2E**_Archive_Flights-MDILL"
         textract_jobs_coll = "Textract_Jobs"
 
         test_date = "202310050347"  # 2023-10-05 03:47:00
@@ -450,10 +450,10 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_e2e_kadena_1_72hr(self: unittest.TestCase) -> None:
         """Tests the end to end functionality for parsing the macdill_2_72hr PDF."""
-        pdf_archive_coll = "**TESTING-E2E**_PDF_Archive"
-        terminal_coll = "**TESTING-E2E**_Terminals"
-        current_flights_coll = "**TESTING-E2E**_Current_Flights"
-        archive_flights_coll = "**TESTING-E2E**_Archive_Flights"
+        pdf_archive_coll = "**TESTING-E2E**_PDF_Archive-KAD"
+        terminal_coll = "**TESTING-E2E**_Terminals-KAD"
+        current_flights_coll = "**TESTING-E2E**_Current_Flights-KAD"
+        archive_flights_coll = "**TESTING-E2E**_Archive_Flights-KAD"
         textract_jobs_coll = "Textract_Jobs"
 
         test_date = "202308190658"  # 2023-08-19 06:58:00
@@ -932,10 +932,10 @@ class TestEndToEnd(unittest.TestCase):
 
     def test_e2e_sigonella_1_72hr(self: unittest.TestCase) -> None:
         """Tests the end to end functionality for parsing the macdill_2_72hr PDF."""
-        pdf_archive_coll = "**TESTING-E2E**_PDF_Archive"
-        terminal_coll = "**TESTING-E2E**_Terminals"
-        current_flights_coll = "**TESTING-E2E**_Current_Flights"
-        archive_flights_coll = "**TESTING-E2E**_Archive_Flights"
+        pdf_archive_coll = "**TESTING-E2E**_PDF_Archive-SIG"
+        terminal_coll = "**TESTING-E2E**_Terminals-SIG"
+        current_flights_coll = "**TESTING-E2E**_Current_Flights-SIG"
+        archive_flights_coll = "**TESTING-E2E**_Archive_Flights-SIG"
         textract_jobs_coll = "Textract_Jobs"
 
         test_date = "202308181104"  # 2023-08-18 11:04:00
