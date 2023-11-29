@@ -158,7 +158,7 @@ class TestStartPdfTextractJob(unittest.TestCase):
             collection_name=terminal_coll, doc_id=terminal_doc["name"]
         )
 
-    def test_testing_paramters_no_send(self: unittest.TestCase) -> None:
+    def test_testing_parameters_no_send(self: unittest.TestCase) -> None:
         """Test that the Start-PDF-Textract-Job function correctly handles the testing parameters.
 
         In this test, the PDF is not sent to Textract because the sendPdf parameter is set to False. The
@@ -324,7 +324,7 @@ class TestStartPdfTextractJob(unittest.TestCase):
             collection_name=terminal_coll, doc_id=terminal_doc["name"]
         )
 
-    def test_testing_paramters_send(self: unittest.TestCase) -> None:
+    def test_testing_parameters_send(self: unittest.TestCase) -> None:
         """Test that the Start-PDF-Textract-Job function correctly handles the testing parameters.
 
         This test is the same as the previous test, except that the sendPdf parameter is set to True. This
