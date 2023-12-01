@@ -87,6 +87,10 @@ def lambda_handler(
                     logging.info(
                         "Test PDF archive collection: %s", pdf_archive_collection
                     )
+                else:
+                    logging.warning(
+                        "Test PDF archive collection is not a string. Using default."
+                    )
             else:
                 logging.warning("Test PDF archive collection not found. Using default.")
 
@@ -96,6 +100,10 @@ def lambda_handler(
                 if isinstance(terminal_collection, str):
                     fs.set_terminal_coll(terminal_collection)
                     logging.info("Test terminal collection: %s", terminal_collection)
+                else:
+                    logging.warning(
+                        "Test terminal collection is not a string. Using default."
+                    )
             else:
                 logging.warning("Test terminal collection not found. Using default.")
 
