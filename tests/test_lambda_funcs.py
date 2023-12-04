@@ -334,6 +334,8 @@ class TestStartPdfTextractJob(unittest.TestCase):
         pdf_archive_coll = "**TESTING**_PDF_Archive"
         terminal_coll = "**TESTING**_Terminals"
         textract_job_coll = "Textract_Jobs"
+        current_flights_coll = "**TESTING**_Current_Flights"
+        archive_flights_coll = "**TESTING**_Archive_Flights"
 
         # If this test fails, check that the S3 bucket and object exist
         # S3 bucket: testing-ssa-pdf-store
@@ -406,6 +408,8 @@ class TestStartPdfTextractJob(unittest.TestCase):
                 "sendPdf": True,
                 "testPdfArchiveColl": pdf_archive_coll,
                 "testTerminalColl": terminal_coll,
+                "testCurrentFlightsColl": current_flights_coll,
+                "testArchiveFlightsColl": archive_flights_coll,
             },
         }
 
@@ -489,6 +493,10 @@ class TestStartPdfTextractJob(unittest.TestCase):
             collection_name=terminal_coll, doc_id=terminal_doc["name"]
         )
 
+        # Delete any possible flights
+        fs.delete_collection(current_flights_coll)
+        fs.delete_collection(archive_flights_coll)
+
 
 class TestTextractToTables(unittest.TestCase):
     """Test the Textract-to-Tables function."""
@@ -506,6 +514,8 @@ class TestTextractToTables(unittest.TestCase):
         pdf_archive_coll = "**TESTING**_PDF_Archive"
         terminal_coll = "**TESTING**_Terminals"
         textract_job_coll = "Textract_Jobs"
+        current_flights_coll = "**TESTING**_Current_Flights"
+        archive_flights_coll = "**TESTING**_Archive_Flights"
 
         lambda_client = initialize_client("lambda")
         s3 = S3Bucket(bucket_name="testing-ssa-pdf-store")
@@ -579,6 +589,8 @@ class TestTextractToTables(unittest.TestCase):
                 "sendPdf": True,
                 "testPdfArchiveColl": pdf_archive_coll,
                 "testTerminalColl": terminal_coll,
+                "testCurrentFlightsColl": current_flights_coll,
+                "testArchiveFlightsColl": archive_flights_coll,
             },
         }
 
@@ -762,6 +774,10 @@ class TestTextractToTables(unittest.TestCase):
             collection_name=terminal_coll, doc_id=terminal_doc["name"]
         )
 
+        # Delete any possible flights
+        fs.delete_collection(current_flights_coll)
+        fs.delete_collection(archive_flights_coll)
+
     def test_correct_testing_params(self: unittest.TestCase) -> None:
         """Test that the Textract-To-Tables function correctly handles the testing parameters and can find the documents.
 
@@ -771,6 +787,8 @@ class TestTextractToTables(unittest.TestCase):
         """
         pdf_archive_coll = "FAKE_PDF_Archive"
         terminal_coll = "FAKE_Terminals"
+        current_flights_coll = "FAKE_Current_Flights"
+        archive_flights_coll = "FAKE_Archive_Flights"
         textract_job_coll = "Textract_Jobs"
 
         lambda_client = initialize_client("lambda")
@@ -852,6 +870,8 @@ class TestTextractToTables(unittest.TestCase):
                 "testDateTime": "197001010000",  # January 1, 1970 at 00:00
                 "testPdfArchiveColl": pdf_archive_coll,
                 "testTerminalColl": terminal_coll,
+                "testCurrentFlightsColl": current_flights_coll,
+                "testArchiveFlightsColl": archive_flights_coll,
             },
         }
 
@@ -1033,6 +1053,10 @@ class TestTextractToTables(unittest.TestCase):
         fs.delete_document_by_id(
             collection_name=terminal_coll, doc_id=str(terminal_doc["name"])
         )
+
+        # Delete any possible created flights
+        fs.delete_collection(current_flights_coll)
+        fs.delete_collection(archive_flights_coll)
 
     def test_bad_test_testing_params_fails(self: unittest.TestCase) -> None:
         """Send incorrect testing parameters to the Textract-to-Tables function and verify it fails.
