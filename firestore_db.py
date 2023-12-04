@@ -937,3 +937,27 @@ class FirestoreClient:
         except Exception as e:
             msg = f"An error occurred while setting {pdf_type} PDF for terminal {terminal_name}: {e}"
             raise Exception(msg) from e
+
+    def delete_collection(
+        self: "FirestoreClient", collection_name: str, batch_size: int = 5
+    ) -> None:
+        """Delete all documents in a Firestore collection.
+
+        Args:
+        ----
+            collection_name (str): The name of the collection to delete.
+            batch_size (int): The size of the batch for each deletion round.
+        """
+        collection_ref = self.db.collection(collection_name)
+        docs = collection_ref.limit(batch_size).stream()
+        deleted = 0
+
+        for doc in docs:
+            doc.reference.delete()
+            deleted += 1
+
+        if deleted >= batch_size:
+            return self.delete_collection(collection_name, batch_size)
+
+        logging.info("Deleted all documents from collection '%s'", collection_name)
+        return None
