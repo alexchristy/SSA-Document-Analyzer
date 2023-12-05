@@ -1289,6 +1289,8 @@ class TestProcess72HrFlights(unittest.TestCase):
         """
         pdf_archive_coll = "**TESTING**_PDF_Archive"
         terminal_coll = "**TESTING**_Terminals"
+        current_flight_coll = "**TESTING**_Current_Flights"
+        archive_flight_coll = "**TESTING**_Archive_Flights"
         textract_job_coll = "Textract_Jobs"
 
         lambda_client = initialize_client("lambda")
@@ -1319,6 +1321,8 @@ class TestProcess72HrFlights(unittest.TestCase):
             "testParameters": {
                 "testPdfArchiveColl": pdf_archive_coll,
                 "testTerminalColl": terminal_coll,
+                "testCurrentFlightsColl": current_flight_coll,
+                "testArchiveFlightsColl": archive_flight_coll,
             },
         }
 
@@ -1535,6 +1539,10 @@ class TestProcess72HrFlights(unittest.TestCase):
         # Delete the Textract job document
         fs.delete_document_by_id(collection_name=textract_job_coll, doc_id=job_id)
 
+        # Delete any possible created flights
+        fs.delete_collection(current_flight_coll)
+        fs.delete_collection(archive_flight_coll)
+
     def test_correct_testing_parameters_no_date(self: unittest.TestCase) -> None:
         """Test that the Process-72HR-Flights function correctly handles the testing collection parameters processes the 72 hour flights.
 
@@ -1547,6 +1555,8 @@ class TestProcess72HrFlights(unittest.TestCase):
         """
         fake_pdf_archive_coll = "FAKE_PDF_Archive"
         fake_terminal_coll = "FAKE_Terminals"
+        fake_current_flights_coll = "FAKE_Current_Flights"
+        fake_archive_flights_coll = "FAKE_Archive_Flights"
         textract_job_coll = "Textract_Jobs"
 
         lambda_client = initialize_client("lambda")
@@ -1578,6 +1588,8 @@ class TestProcess72HrFlights(unittest.TestCase):
                 "sendPdf": True,
                 "testPdfArchiveColl": fake_pdf_archive_coll,
                 "testTerminalColl": fake_terminal_coll,
+                "testCurrentFlightsColl": fake_current_flights_coll,
+                "testArchiveFlightsColl": fake_archive_flights_coll,
             },
         }
 
@@ -1794,6 +1806,10 @@ class TestProcess72HrFlights(unittest.TestCase):
         # Delete the Textract job document
         fs.delete_document_by_id(collection_name=textract_job_coll, doc_id=job_id)
 
+        # Delete any possible created flights
+        fs.delete_collection(fake_current_flights_coll)
+        fs.delete_collection(fake_archive_flights_coll)
+
     def test_correct_testing_parameters_no_date_fail(self: unittest.TestCase) -> None:
         """Test that the Process-72HR-Flights function correctly handles the testing collection parameters processes the 72 hour flights.
 
@@ -1808,6 +1824,8 @@ class TestProcess72HrFlights(unittest.TestCase):
         """
         fake_pdf_archive_coll = "FAKE_PDF_Archive"
         fake_terminal_coll = "FAKE_Terminals"
+        fake_current_flights_coll = "FAKE_Current_Flights"
+        fake_archive_flights_coll = "FAKE_Archive_Flights"
         textract_job_coll = "Textract_Jobs"
 
         lambda_client = initialize_client("lambda")
@@ -1839,6 +1857,8 @@ class TestProcess72HrFlights(unittest.TestCase):
                 "sendPdf": True,
                 "testPdfArchiveColl": fake_pdf_archive_coll + "888",
                 "testTerminalColl": fake_terminal_coll,
+                "testCurrentFlightsColl": fake_current_flights_coll,
+                "testArchiveFlightsColl": fake_archive_flights_coll,
             },
         }
 
@@ -1932,6 +1952,10 @@ class TestProcess72HrFlights(unittest.TestCase):
         # Delete the Textract job document
         fs.delete_document_by_id(collection_name=textract_job_coll, doc_id=job_id)
 
+        # Delete any possible created flights
+        fs.delete_collection(fake_current_flights_coll)
+        fs.delete_collection(fake_archive_flights_coll)
+
     def test_correct_testing_parameters_with_date(self: unittest.TestCase) -> None:
         """Test that the Process-72HR-Flights function correctly handles the testing collection parameters processes the 72 hour flights.
 
@@ -1948,6 +1972,8 @@ class TestProcess72HrFlights(unittest.TestCase):
         """
         fake_pdf_archive_coll = "FAKE_PDF_Archive"
         fake_terminal_coll = "FAKE_Terminals"
+        fake_current_flights_coll = "FAKE_Current_Flights"
+        fake_archive_flights_coll = "FAKE_Archive_Flights"
         textract_job_coll = "Textract_Jobs"
 
         lambda_client = initialize_client("lambda")
@@ -1976,6 +2002,8 @@ class TestProcess72HrFlights(unittest.TestCase):
                 "testPdfArchiveColl": fake_pdf_archive_coll,
                 "testTerminalColl": fake_terminal_coll,
                 "testDateTime": "210007101755",  # July 10, 2100 at 17:55
+                "testCurrentFlightsColl": fake_current_flights_coll,
+                "testArchiveFlightsColl": fake_archive_flights_coll,
             },
         }
 
@@ -2191,6 +2219,10 @@ class TestProcess72HrFlights(unittest.TestCase):
 
         # Delete the Textract job document
         fs.delete_document_by_id(collection_name=textract_job_coll, doc_id=job_id)
+
+        # Delete any possible created flights
+        fs.delete_collection(fake_current_flights_coll)
+        fs.delete_collection(fake_archive_flights_coll)
 
 
 class TestStoreFlights(unittest.TestCase):
