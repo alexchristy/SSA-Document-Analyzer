@@ -30,6 +30,7 @@ MANIFEST
 start_job.zip
 recieve_job.zip
 package/
+deploy/scripts/*.zip
 
 # Virtual envs:
 # Development
