@@ -47,7 +47,7 @@ class Flight:
         self.destination_note = destination_note
         self.patriot_express = patriot_express
         self.creation_time = int(
-            datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M")
+            datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y%m%d%H%M")
         )
         self.as_string = self.generate_as_string()
 
