@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import uuid
+import shutil
 from typing import Any, Dict, List, Tuple
 
 import boto3  # type: ignore
@@ -249,7 +250,7 @@ def reprocess_tables(
     os.remove(local_pdf_path)
 
     # Remove the local directory
-    os.rmdir(download_dir)
+    shutil.rmtree(download_dir)
 
     return reprocessed_tables_list
 
