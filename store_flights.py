@@ -195,6 +195,18 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             # Delete all old flights
             firestore_client.delete_current_flight(old_flight)
 
+        # Log num of flights archived and in Firestore Textract_Jobs
+        logging.info("Archived %s flights.", len(archived_flights))
+        firestore_client.append_to_doc(
+            "Textract_Jobs", job_id, {"numArchivedFlights": len(archived_flights)}
+        )
+
+        # Log flight ids of flights that were archived and in Firestore Textract_Jobs
+        logging.info("Archived flights: %s", archived_flights)
+        firestore_client.append_to_doc(
+            "Textract_Jobs", job_id, {"archivedFlights": archived_flights}
+        )
+
         # Store new flights
         stored_flights: List[str] = []
         for flight_dict in new_flights_dicts:
