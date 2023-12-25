@@ -214,7 +214,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         if not flights:
             response_msg = f"Failed to convert any tables to flights from terminal: {origin_terminal} in pdf: {pdf_hash} to flights."
-            raise Exception(response_msg)
+            logging.critical(response_msg)
 
         # Pass flights to store_flights Lambda function
         payload_flights = []
