@@ -83,7 +83,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         if not new_flights_dicts:
             response_msg = f"No flights found in payload: {event}"
-            raise ValueError(response_msg)
+            logging.warning(response_msg)
 
         textract_doc = firestore_client.get_textract_job(job_id)
 
