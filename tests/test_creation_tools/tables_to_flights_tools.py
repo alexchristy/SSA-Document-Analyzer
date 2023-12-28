@@ -2,8 +2,9 @@ import json
 import logging
 import os
 import pickle
+import re
 import sys
-from typing import List
+from typing import List, Optional
 
 # Current file's directory
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -86,5 +87,89 @@ def create_tables_from_lambda_event(event_dict_str: str, output_path: str) -> No
             f.write(table.to_markdown())
 
 
-event_tables_string = """{"tables": [{"title": "DEPARTURES FROM: RAMSTEIN AB, Germany (RMS) Wednesday, December 27th 2023", "title_confidence": 62.060546875, "footer": "Seats: T - Tentative, F - Firm, TBD - To Be Determined", "footer_confidence": 86.71875, "table_confidence": 99.853515625, "page_number": 3, "rows": [[["ROLL CALL", 94.189453125], ["DESTINATION", 96.484375], ["SEATS", 92.919921875]], [["0540", 91.259765625], ["Al Udeid AB, Qatar", 93.505859375], ["19F", 90.0390625]], [["0545", 95.1171875], ["Baltimore Washington INT'L, MD Early Check-in available starting 26 December 2023, @0930L for Pre-Booked passengers on mission 1LT2 destined Baltimore Washington International, MD", 97.412109375], ["178T", 93.84765625]], [["0815", 89.84375], ["Kuwait INT'L, Kuwait", 92.041015625], ["324T", 88.671875]], [["0815", 94.62890625], ["Al Udeid AB, Qatar", 96.923828125], ["324T 1 Stop", 93.408203125]], [["0935", 89.2578125], ["Sigonella, Italy", 91.40625], ["TBD", 88.0859375]], [["", 95.068359375], ["Early Check-in available December 27,2023 @1835L ; for Pre- Booked passengers on mission VLY6 destined Baltimore Washington International, MD", 97.36328125], ["", 93.798828125]], [["0935", 92.3828125], ["Signolla, Italy", 94.62890625], ["19F", 91.162109375]]], "table_number": 1}, {"title": "Thursday, December 28th 2023", "title_confidence": 99.94161987304688, "footer": "TBD - To Be Determined", "footer_confidence": 63.134765625, "table_confidence": 99.853515625, "page_number": 4, "rows": [[["ROLL CALL", 94.3359375], ["DESTINATION", 96.77734375], ["SEATS", 94.482421875]], [["0440", 92.28515625], ["Rota, Spain", 94.677734375], ["TBD", 92.48046875]], [["0510", 91.748046875], ["Muwaffaq Salti AB, Jordan", 94.091796875], ["TBD", 91.89453125]], [["0510", 94.189453125], ["Al Udeid AB, Qatar", 96.630859375], ["TBD 1 Stop", 94.384765625]], [["0650", 94.04296875], ["Joint Base McGuire-Dix-Lakehurst, NJ", 96.484375], ["TBD 1 Stop", 94.23828125]], [["0830", 88.8671875], ["Muwaffaq Salti AB, Qatar", 91.162109375], ["TBD", 89.0625]], [["0830", 94.53125], ["Rota, Spain", 96.97265625], ["TBD 1 Stop", 94.7265625]], [["0912", 88.623046875], ["Joint Base Andrews, MD", 90.91796875], ["TBD", 88.818359375]], [["1415", 95.166015625], ["Baltimore Washington INT'L, MD Early Check-in available December 27, 2023 @1835L for Pre- Booked passengers on mission VLY6 destined Baltimore Washington International, MD", 97.607421875], ["TBD", 95.361328125]]], "table_number": 2}, {"title": "Friday, December 29th 2023", "title_confidence": 73.095703125, "footer": "Seats : T - Tentative, F - - Firm, TBD - To Be Determined", "footer_confidence": 76.953125, "table_confidence": 99.853515625, "page_number": 5, "rows": [[["ROLL CALL", 94.580078125], ["DESTINATION", 97.265625], ["SEATS", 93.9453125]], [["0230", 90.673828125], ["Muwaffaq Salti AB, Jordan", 93.26171875], ["TBD", 90.0390625]], [["0326", 91.89453125], ["Al Udeid AB, Qatar", 94.482421875], ["TBD", 91.259765625]], [["0336", 92.138671875], ["Al Udeid AB, Qatar", 94.775390625], ["TBD", 91.552734375]], [["0340", 91.845703125], ["Powidz, Poland", 94.43359375], ["TBD", 91.2109375]], [["0346", 91.796875], ["Al Udeid AB, Qatar", 94.384765625], ["TBD", 91.162109375]], [["0356", 91.845703125], ["Al Udeid AB, Qatar", 94.43359375], ["TBD", 91.2109375]], [["0540", 91.50390625], ["Powidz, Poland", 94.091796875], ["TBD", 90.869140625]], [["0720", 91.6015625], ["Agades, Niger", 94.189453125], ["TBD", 90.966796875]], [["1320", 90.869140625], ["Djibouti, Djibouti", 93.505859375], ["TBD", 90.283203125]], [["1320", 94.482421875], ["Al Udeid AB, Qatar", 97.16796875], ["TBD 1 Stop", 93.84765625]]], "table_number": 3}, {"title": "ARRIVALS TO: RAMSTEIN AB, Germany (RMS) Wednesday, December 27th 2023", "title_confidence": 95.166015625, "footer": "", "footer_confidence": 0.0, "table_confidence": 99.8046875, "page_number": 6, "rows": [[["DESTINATION", 96.2890625], ["PICK UP TIME", 93.359375]], [["Adana AB, Turkey", 93.408203125], ["0720L", 90.576171875]], [["Baltimore Washington Int'l, MD", 96.142578125], ["0945L", 93.212890625]]], "table_number": 4}], "pdf_hash": "9e6ac4d8da9087c6175cbd71e5739c2262d7c1ed3335e60b8509f96d61640042", "job_id": "8e52772203e691a915b799720ba5af723efd62cf26b0ca8ebf15d8dd3bbfaffd"}"""
-create_tables_from_lambda_event(event_tables_string, "./")
+def convert_to_dict(data_str: str) -> Optional[dict]:
+    """Convert a string that looks like a dictionary into a Python dictionary.
+
+    This function replaces single quotes with double quotes, except for single quotes within strings already enclosed in double quotes.
+
+    Args:
+    ----
+        data_str (str): The string to convert to a dictionary.
+
+    Returns:
+    -------
+        dict: The converted dictionary.
+    """
+
+    # Function to replace single quotes with double quotes, ignoring already double-quoted strings
+    def replace_outside_quotes(match: re.Match) -> str:
+        # Check if the matched string is within double quotes
+        if '"' in match.group(0):
+            return match.group(
+                0
+            )  # Return the original string if it's within double quotes
+        return match.group(0).replace(
+            "'", '"'
+        )  # Replace single quotes with double quotes otherwise
+
+    # Regular expression to match all instances of single quotes, considering the presence of double quotes
+    pattern = r"(\".*?\"|'.*?')"
+
+    # Replace single quotes with double quotes where appropriate
+    formatted_str = re.sub(pattern, replace_outside_quotes, data_str, flags=re.DOTALL)
+
+    # Convert the string to a dictionary
+    try:
+        return json.loads(formatted_str)
+    except json.JSONDecodeError as e:
+        print(f"Error in converting to dictionary: {e}")
+        return None
+
+
+def remove_cloudwatch_prefix(data_str: str) -> str:
+    """Remove the CloudWatch prefix from the beginning of the string.
+
+    Args:
+    ----
+        data_str (str): The string to remove the CloudWatch prefix from.
+
+    Returns:
+    -------
+        str: The string with the CloudWatch prefix removed.
+    """
+    # Regular expression to match the CloudWatch prefix
+    pattern = (
+        r"\[INFO\]\t\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\t[a-f0-9-]+\tEvent: "
+    )
+
+    # Remove the CloudWatch prefix
+    return re.sub(pattern, "", data_str)
+
+
+def create_tables_from_cloudwatch_log(
+    data_str: str, output_path: str = current_dir
+) -> None:
+    """Create pickled table objects and creates pretty printed table representations in text files."""
+    if not data_str:
+        msg = "No data string provided"
+        raise ValueError(msg)
+
+    # Remove the CloudWatch prefix from the data string
+    data_str = remove_cloudwatch_prefix(data_str)
+
+    # Convert the data string to a dictionary
+    event_dict = convert_to_dict(data_str)
+
+    if event_dict is None:
+        msg = "Error in converting to dictionary"
+        raise ValueError(msg)
+
+    # Create the tables from the event dictionary
+    create_tables_from_lambda_event(
+        event_dict_str=json.dumps(event_dict), output_path=current_dir
+    )
+
+
+create_tables_from_cloudwatch_log(
+    """[INFO]	2023-12-28T12:17:28.126Z	a54e08a1-ff7a-4ef3-9cc8-0a8f37f8fce0	Event: {'tables': [{'title': 'DEPARTURES FROM: YOKOTAAB, JAPAN (OKO) SUNDAY, DEC 31ST', 'title_confidence': 65.771484375, 'footer': '', 'footer_confidence': 0.0, 'table_confidence': 99.609375, 'page_number': 7, 'rows': [[['ROLL CALL', 89.697265625], ['DESTINATION', 96.337890625], ['SEATS', 87.255859375]], [['-', 89.55078125], ['**PASSENGER TERMINAL WILL BE CLOSED** **NORMAL OPERATIONS WILL RESUME ON TUESDAY, JAN 2ND AT 0600L**', 96.142578125], ['-', 87.109375]]], 'table_number': 3}, {'title': 'DEPARTURES FROM : YOKOTAAB, JAPAN (OKO) FRIDAY, DEC 29TH', 'title_confidence': 82.275390625, 'footer': '', 'footer_confidence': 0.0, 'table_confidence': 99.853515625, 'page_number': 1, 'rows': [[['ROLL CALL', 94.23828125], ['DESTINATION', 96.240234375], ['SEATS', 92.041015625]], [['', 82.91015625], ['MCAS IWAKUNI, JAPAN **PATRIOT EXPRESS** **PRE-BOOK PASSENGERS REPORT NO LATER THAN 1200(L)** **EARLY BIRD CHECK-IN IS ONLY AVAILABLE FOR PRE-BOOKED PASSENGERS @ 1800-2000L (Day prior to departure) BRING ALL CHECKED BAGGAGE (PET w/KENNEL)**', 92.333984375], ['TBD', 88.28125]], [['1035L', 82.91015625], ['KADENA AIR BASE, JAPAN **PATRIOT EXPRESS** **PRE-BOOK PASSENGERS REPORT NO LATER THAN 1200(L)** **EARLY BIRD CHECK-IN IS ONLY AVAILABLE FOR PRE-BOOKED PASSENGERS @ 1800-2000L (Day prior to departure) BRING ALL CHECKED BAGGAGE (PET w/KENNEL)**', 77.099609375], ['TBD', 73.779296875]], [['', 87.939453125], ['JB ELMENDORF-RICHARDSON, ALASKA **ORGANIC FLIGHT** **ALL PASSENGERS ARE REQUIRED TO WEAR CLOSED TOED SHOES ON BOARD THIS AIRCRAFT**', 51.123046875], ['25F', 82.080078125]], [['1500L', 87.939453125], ['TRAVIS AIR FORCE BASE, CALIFORNIA **ORGANIC FLIGHT** **ALL PASSENGERS ARE REQUIRED TO WEAR CLOSED TOED SHOES ON BOARD THIS AIRCRAFT**', 58.837890625], ['', 82.080078125]]], 'table_number': 1}, {'title': 'DEPARTURES FROM: YOKOTAAB, JAPAN (OKO) SATURDAY, DEC 30TH', 'title_confidence': 78.125, 'footer': '', 'footer_confidence': 0.0, 'table_confidence': 99.853515625, 'page_number': 6, 'rows': [[['ROLL CALL', 89.35546875], ['DESTINATION', 94.7265625], ['SEATS', 88.232421875]], [['1305L', 63.330078125], ["SEATTLE-TACOMA INT'L, WASHINGTON **PATRIOT EXPRESS** **PRE-BOOK PASSENGERS REPORT NO LATER THAN 1430(L)** **EARLY BIRD CHECK-IN IS ONLY AVAILABLE FOR PRE-BOOKED PASSENGERS @ 1800-2000L (Day prior to departure) BRING ALL CHECKED BAGGAGE (PET w/KENNEL)**", 67.138671875], ['TBD', 62.5]]], 'table_number': 2}], 'pdf_hash': 'a28f3893b7b495286443710b0c8fc01f049123d72c038dc50c97da21a6453c01', 'job_id': '831d480ceeb1e69b1541896ef632ce117ab403758613b89e4c91c39af30e3c42'}"""
+)
