@@ -59,7 +59,7 @@ class GPT3TurboAnalysis:
 
                 # Making the API request
                 response = openai.ChatCompletion.create(
-                    model="ft:gpt-3.5-turbo-0613:personal::8AQqGP3S",
+                    model="ft:gpt-3.5-turbo-0613:smartspacea::8aXoboWq",
                     messages=[{"role": "user", "content": request_content_str}],
                     temperature=0,
                     max_tokens=256,
