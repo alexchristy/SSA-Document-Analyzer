@@ -358,6 +358,9 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
                     'Appears to be special roll call format or note. Saving as "Roll Call Note" in notes.'
                 )
                 roll_call_notes["rollCallCellNote"] = row[roll_call_column_index][0]
+            else:
+                logging.info("Row %s has no roll call time. Skipping row...", row_index)
+                continue
 
         # If seat data parsing fails, check if there is no seat data but there is a note
         if not seats and len(row[seats_column_index][0]) > 0:
