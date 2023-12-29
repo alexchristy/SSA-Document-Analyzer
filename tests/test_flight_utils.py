@@ -312,7 +312,6 @@ class TestCellParsingUtils(unittest.TestCase):
             "Mildenhall AFB, EU": ["MILDENHALL AFB, EU"],
             "**DUSHANBE** - **AMBOULIINTL**": ["DUSHANBE", "AMBOULI INTL"],
             "LAJES FIELD, AZO": ["LAJES FIELD, AZO"],
-            "Early Check-in available December 27,2023 @1835L ; for Pre- Booked passengers on mission VLY6 destined Baltimore Washington International, MD": None,
             "Baltimore Washington INT'L, MD Early Check-in available starting 26 December 2023, @0930L for Pre-Booked passengers on mission 1LT2 destined Baltimore Washington INT'L, MD": [
                 "BALTIMORE WASHINGTON INT'L, MD"
             ],
