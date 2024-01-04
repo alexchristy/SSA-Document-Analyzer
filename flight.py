@@ -169,8 +169,16 @@ class Flight:
             raise InvalidDateError(msg)
 
         if not self.rollcall_time:
-            msg = "Rollcall time is missing"
-            raise InvalidRollcallTimeError(msg)
+            if not self.rollcall_note:
+                msg = "Rollcall time is missing"
+                raise InvalidRollcallTimeError(msg)
+
+            logging.info(
+                "Rollcall time was replaced with a note: %s. Using 23:59 for the rollcall time.",
+                self.rollcall_note,
+            )
+            # If there is a rollcall note, return the last minute of the day
+            return f"{self.date}2359"
 
         # Ensure rollcall_time is in HHMM format
         if (
