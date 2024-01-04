@@ -7,7 +7,7 @@ from aws_lambda_typing import context as lambda_context
 from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
 from firestore_db import FirestoreClient
-from flight import Flight
+from flight import Flight, InvalidDateError, InvalidRollcallTimeError
 from time_utils import get_local_time
 
 # Set up sentry
@@ -204,14 +204,23 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                 logging.error("Failed to create flight from dict: %s", flight_dict)
                 continue
 
-            if new_flight.get_departure_datetime() >= current_time:
-                firestore_client.store_flight_as_current(new_flight)
-                stored_flights.append(new_flight.flight_id)
-            else:
-                logging.info(
-                    "Flight %s has already departed. Not storing.",
-                    new_flight.flight_id,
+            try:
+                if new_flight.get_departure_datetime() >= current_time:
+                    firestore_client.store_flight_as_current(new_flight)
+                    stored_flights.append(new_flight.flight_id)
+                else:
+                    logging.info(
+                        "Flight %s has already departed. Not storing.",
+                        new_flight.flight_id,
+                    )
+            except InvalidRollcallTimeError as e:
+                logging.error(
+                    "Invalid rollcall time when storing the new flight: %s", e
                 )
+                continue
+            except InvalidDateError as e:
+                logging.error("Invalid date when storing the new flight: %s", e)
+                continue
 
         # Update Terminal document with new flights
         logging.info("Updating Terminal document with new flights.")

@@ -5,6 +5,19 @@ import pickle
 from typing import Any, Dict, Optional, Type
 
 
+# Custom error classes for flight objects
+class InvalidRollcallTimeError(Exception):
+    """Raised when the roll call time is invalid."""
+
+    pass
+
+
+class InvalidDateError(Exception):
+    """Raised when the date is invalid."""
+
+    pass
+
+
 class Flight:
     """Represents a flight with information about its origin, destination, roll call time, seats, notes, and date."""
 
@@ -153,11 +166,11 @@ class Flight:
 
         if not self.date:
             msg = "Date is missing"
-            raise ValueError(msg)
+            raise InvalidDateError(msg)
 
         if not self.rollcall_time:
             msg = "Rollcall time is missing"
-            raise ValueError(msg)
+            raise InvalidRollcallTimeError(msg)
 
         # Ensure rollcall_time is in HHMM format
         if (
@@ -165,7 +178,7 @@ class Flight:
             or not self.rollcall_time.isdigit()
         ):
             msg = "Invalid rollcall time format"
-            raise ValueError(msg)
+            raise InvalidRollcallTimeError(msg)
 
         # Combine date and rollcall time
         return f"{self.date}{self.rollcall_time}"
