@@ -215,11 +215,17 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     )
             except InvalidRollcallTimeError as e:
                 logging.error(
-                    "Invalid rollcall time when storing the new flight: %s", e
+                    "Invalid rollcall time when storing the new flight (%s): %s",
+                    new_flight.flight_id,
+                    e,
                 )
                 continue
             except InvalidDateError as e:
-                logging.error("Invalid date when storing the new flight: %s", e)
+                logging.error(
+                    "Invalid date when storing the new flight (%s): %s",
+                    new_flight.flight_id,
+                    e,
+                )
                 continue
 
         # Update Terminal document with new flights
