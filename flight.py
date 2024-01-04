@@ -183,6 +183,17 @@ class Flight:
         # Combine date and rollcall time
         return f"{self.date}{self.rollcall_time}"
 
+    def get_rollcall_note(self: "Flight") -> str:
+        """Get the roll call note.
+
+        Returns
+        -------
+            str: The roll call note.
+        """
+        if self.rollcall_note:
+            return self.notes["rollCallNotes"]["rollCallCellNote"]
+        return ""
+
     @classmethod
     def load_state(
         cls: Type["Flight"], filename: str = "flight_state.pkl"

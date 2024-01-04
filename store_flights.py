@@ -188,6 +188,13 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         archived_flights: List[str] = []
         for old_flight in old_flights:
+            if old_flight.rollcall_note and old_flight.get_rollcall_note() == "TBD":
+                logging.info(
+                    "Flight %s has a rollcall note of TBD. Not archiving.",
+                    old_flight.flight_id,
+                )
+                continue
+
             if old_flight.get_departure_datetime() < current_time:
                 firestore_client.archive_flight(old_flight)
                 archived_flights.append(old_flight.flight_id)
