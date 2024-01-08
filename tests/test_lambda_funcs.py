@@ -1748,6 +1748,14 @@ class TestProcess72HrFlights(unittest.TestCase):
             osan_1_72hr_flight_3,
         ]
 
+        # Correct year in the loaded flights to the current year
+        current_year = str(datetime.now(tz=pytz.UTC).year)
+
+        for flight in loaded_flights:
+            flight.as_string = flight.as_string.replace("2023", current_year)
+            flight.date = flight.date.replace("2023", current_year)
+            flight.flight_id = flight.generate_flight_id()
+
         # Sort flight by flight_id
         converted_flights.sort(key=lambda x: x.flight_id)
         loaded_flights.sort(key=lambda x: x.flight_id)
