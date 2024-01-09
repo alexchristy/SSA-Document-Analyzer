@@ -2259,10 +2259,10 @@ class TestStoreFlights(unittest.TestCase):
         The 4 same flights are sent to function. It should then delete the two past flights and insert the two future flights
         into current flights collection.
         """
-        pdf_archive_coll = "**TESTING**_PDF_Archive666"
-        terminal_coll = "**TESTING**_Terminals666"
-        current_flights_coll = "**TESTING**_Flights_Current666"
-        archive_flights_coll = "**TESTING**_Flights_Archive666"
+        pdf_archive_coll = "**TESTING**_PDF_Archive-Store-1"
+        terminal_coll = "**TESTING**_Terminals-Store-1"
+        current_flights_coll = "**TESTING**_Flights_Current-Store-1"
+        archive_flights_coll = "**TESTING**_Flights_Archive-Store-1"
         textract_jobs_coll = "Textract_Jobs"
 
         test_date = "202311040908"  # November 4, 2023 at 09:08
@@ -2602,10 +2602,10 @@ class TestStoreFlights(unittest.TestCase):
         Uses the current date and time at the Osan AB Passenger Terminal as the test date. To verify that the function works
         correctly.
         """
-        pdf_archive_coll = "**TESTING**_PDF_Archive666"
-        terminal_coll = "**TESTING**_Terminals666"
-        current_flights_coll = "**TESTING**_Flights_Current666"
-        archive_flights_coll = "**TESTING**_Flights_Archive666"
+        pdf_archive_coll = "**TESTING**_PDF_Archive-Store-2"
+        terminal_coll = "**TESTING**_Terminals-Store-2"
+        current_flights_coll = "**TESTING**_Flights_Current-Store-2"
+        archive_flights_coll = "**TESTING**_Flights_Archive-Store-2"
         textract_jobs_coll = "Textract_Jobs"
 
         lambda_client = initialize_client("lambda")
