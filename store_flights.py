@@ -204,6 +204,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         # Store new flights
         stored_flights: List[str] = []
+        problem_flights: List[Flight] = []
         for flight_dict in new_flights_dicts:
             new_flight = Flight.from_dict(flight_dict)
 
@@ -226,6 +227,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     new_flight.flight_id,
                     e,
                 )
+                problem_flights.append(new_flight)
                 continue
             except InvalidDateError as e:
                 logging.error(
@@ -233,7 +235,15 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     new_flight.flight_id,
                     e,
                 )
+                problem_flights.append(new_flight)
                 continue
+
+        # Update terminal with problem flights
+        firestore_client.append_to_doc(
+            firestore_client.terminal_coll,
+            terminal,
+            {"problemFlights": problem_flights},
+        )
 
         # Update Terminal document with new flights
         logging.info("Updating Terminal document with new flights.")
