@@ -193,6 +193,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                     "Flight %s has a rollcall note of TBD. Not archiving.",
                     old_flight.flight_id,
                 )
+                firestore_client.delete_current_flight(old_flight)
                 continue
 
             if old_flight.get_departure_datetime() < current_time:
