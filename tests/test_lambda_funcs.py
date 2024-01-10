@@ -2982,3 +2982,225 @@ class TestStoreFlights(unittest.TestCase):
         fs.delete_document_by_id(
             collection_name=terminal_coll, doc_id=terminal_doc["name"]
         )
+
+    def test_no_archive_tbd_rollcall_flights(self: unittest.TestCase) -> None:
+        """Verifies that the Store-Flights function gracefully handles invalid rollcall times.
+
+        This test verifies that the Store-Flights function gracefully handles invalid rollcall times. This is done by
+        sending a payload with a flight that has an invalid rollcall time.
+        """
+        pdf_archive_coll = "**TESTING**_PDF_Archive-Store-3"
+        terminal_coll = "**TESTING**_Terminals-Store-3"
+        current_flights_coll = "**TESTING**_Flights_Current-Store-3"
+        archive_flights_coll = "**TESTING**_Flights_Archive-Store-3"
+        textract_jobs_coll = "Textract_Jobs"
+
+        lambda_client = initialize_client("lambda")
+        fs = FirestoreClient(
+            pdf_archive_coll=pdf_archive_coll,
+            terminal_coll=terminal_coll,
+            textract_jobs_coll=textract_jobs_coll,
+            flight_current_coll=current_flights_coll,
+            flight_archive_coll=archive_flights_coll,
+        )
+
+        # Create a fake Textract job
+        job_id = "TEST_Textract_Job_Doc-Store-3"
+        textract_doc = {
+            "desc": "Test Textract Job document for testing Store-Flights function",
+            "test": True,
+            "testParameters": {
+                "sendPdf": True,
+                "testPdfArchiveColl": pdf_archive_coll,
+                "testTerminalColl": terminal_coll,
+                "testCurrentFlightsColl": current_flights_coll,
+                "testArchiveFlightsColl": archive_flights_coll,
+            },
+        }
+
+        fs.insert_document_with_id("Textract_Jobs", job_id, textract_doc)
+
+        # Create a the fake pdf archive document
+        pdf_doc = {
+            "cloud_path": "current/72_HR/72 Hour Slides AUG 18_fd040263-b.pdf",
+            "hash": "80b3f417259982271e57abad302a3caa12d2848f2d13301efc7bcffca12ee4e1",
+            "terminal": "Osan AB Passenger Terminal",
+            "type": "72_HR",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=pdf_archive_coll,
+            document_data=pdf_doc,
+            doc_id=pdf_doc["hash"],
+        )
+
+        # Create a fake terminal document
+        terminal_doc = {
+            "name": "Osan AB Passenger Terminal",
+            "location": "Osan AB, ROK",
+            "timezone": "Asia/Seoul",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=terminal_coll,
+            document_data=terminal_doc,
+            doc_id=terminal_doc["name"],
+        )
+
+        # Load in pickled flights
+        osan_1_72hr_flight_0 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_no_archive_tbd_rollcall_flights/osan_1_72hr_flight-0_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_0:
+            self.fail("Failed to load flight 0 from pickle file")
+
+        osan_1_72hr_flight_1 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_no_archive_tbd_rollcall_flights/osan_1_72hr_flight-1_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_1:
+            self.fail("Failed to load flight 1 from pickle file")
+
+        # Set the first flight to a TBD rollcall time and
+        # put in Current Flights collection to check
+        # that it does not get archived later.
+        osan_1_72hr_flight_0.rollcall_time = None
+        osan_1_72hr_flight_0.notes = {"rollCallNotes": {"rollCallCellNote": "TBD"}}
+        osan_1_72hr_flight_0.rollcall_note = True
+        osan_1_72hr_flight_0.as_string = osan_1_72hr_flight_0.generate_as_string()
+        osan_1_72hr_flight_0.flight_id = osan_1_72hr_flight_0.generate_flight_id()
+
+        fs.insert_document_with_id(
+            collection_name=current_flights_coll,
+            document_data=osan_1_72hr_flight_0.to_dict(),
+            doc_id=osan_1_72hr_flight_0.flight_id,
+        )
+
+        # Now send the second flight to the Store-Flights function
+        # to see if the function does not archive the first flight
+        # because it has a TBD rollcall time.
+        payload = json.dumps(
+            {
+                "flights": [osan_1_72hr_flight_1.to_dict()],
+                "pdf_hash": pdf_doc["hash"],
+                "job_id": job_id,
+                "terminal": terminal_doc["name"],
+            }
+        )
+
+        store_flights_response = lambda_client.invoke(
+            FunctionName="Store-Flights",
+            InvocationType="RequestResponse",
+            Payload=payload,
+        )
+
+        self.assertEqual(store_flights_response["StatusCode"], 200)
+
+        # Reading the payload
+        store_flights_stream = store_flights_response["Payload"]
+        store_flights_data = store_flights_stream.read()
+
+        # The payload is in bytes, so we decode it to a string and then load it as JSON
+        store_flights_payload = json.loads(store_flights_data.decode())
+
+        if not store_flights_payload:
+            self.fail("Payload is empty")
+
+        self.assertEqual(
+            store_flights_payload["body"],
+            "Successfully stored flights.",
+        )
+
+        # Check that self reported archived flights are correct
+        archived_flights = store_flights_payload.get("archivedFlights")
+
+        archived_flights = json.loads(archived_flights)
+
+        self.assertEqual(len(archived_flights), 0)
+
+        # Check that nothing was archived in Firestore
+        flight_archive_collection_ref = fs.db.collection(archive_flights_coll)
+
+        flight_archive_query = flight_archive_collection_ref.where(
+            "origin_terminal", "==", "Osan AB Passenger Terminal"
+        )
+
+        documents = flight_archive_query.stream()
+
+        self.assertEqual(len(list(documents)), 0)
+
+        # Check that no flights are in the current flights collection
+        flight_current_collection_ref = fs.db.collection(current_flights_coll)
+
+        flight_current_query = flight_current_collection_ref.where(
+            "origin_terminal", "==", "Osan AB Passenger Terminal"
+        )
+
+        documents = flight_current_query.stream()
+
+        self.assertEqual(len(list(documents)), 0)
+
+        # Check that the second flight did not make it to the terminal document
+        # since it is in the past
+        terminal_doc = fs.get_doc_by_id(
+            collection_name=terminal_coll, doc_id=terminal_doc["name"]
+        )
+
+        if not terminal_doc:
+            self.fail("Terminal document not found in Firestore")
+
+        # NOTE: This value should be set to false by Store-Flights. Here it defaults to true
+        # if it is not found. This is to ensure that the test fails if the value is not set.
+        self.assertEqual(terminal_doc.get("updating72Hour", True), False)
+
+        # Verify that the second flight is not listed in the terminal document
+        # because it is in the past
+        listed_flights: List[str] = cast(
+            List[str], terminal_doc.get("flights72Hour", [])
+        )
+
+        self.assertEqual(len(listed_flights), 0)
+
+        # Lastly, verify that the Textract job document was updated correctly
+        # to show that the function has finished running.
+        testing_textract_doc = fs.get_textract_job(job_id)
+
+        if not testing_textract_doc:
+            self.fail("Textract job not found in Firestore")
+
+        # Verify that the timestamps for the Store-Flights exist
+        # and are set properly in the textract job document
+        start_time = testing_textract_doc.get("started_store_flights", "")
+        end_time = testing_textract_doc.get("finished_store_flights", "")
+
+        if not start_time or not isinstance(start_time, datetime):
+            self.fail("Start time not found in Textract job")
+
+        if not end_time or not isinstance(end_time, datetime):
+            self.fail("End time not found in Textract job")
+
+        # Verify that the debug info for the Store-Flights function exists
+        # in the textract job document
+        request_id = testing_textract_doc.get("func_store_flights_request_id", "")
+        function_name = testing_textract_doc.get("func_store_flights_name", "")
+
+        if not request_id:
+            self.fail("Request ID not found in Textract job")
+
+        if not function_name:
+            self.fail("Function name not found in Textract job")
+
+        # Clean up
+        # Delete the PDF document from the archive
+        fs.delete_document_by_id(
+            collection_name=pdf_archive_coll, doc_id=pdf_doc["hash"]
+        )
+
+        # Delete the Textract job document
+        fs.delete_document_by_id(collection_name=textract_jobs_coll, doc_id=job_id)
+
+        # Delete the terminal document
+        fs.delete_document_by_id(
+            collection_name=terminal_coll, doc_id=terminal_doc["name"]
+        )
