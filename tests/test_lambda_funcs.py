@@ -131,6 +131,7 @@ class TestStartPdfTextractJob(unittest.TestCase):
             self.fail("Textract job not found in Firestore")
 
         self.assertEqual(textract_job["pdf_hash"], pdf_doc["hash"])
+        self.assertEqual(textract_job["terminal_name"], terminal_doc["name"])
 
         request_id = response.get("ResponseMetadata", {}).get("RequestId", "")
 
@@ -278,6 +279,7 @@ class TestStartPdfTextractJob(unittest.TestCase):
 
         self.assertEqual(textract_job["pdf_hash"], pdf_doc["hash"])
         self.assertTrue(textract_job.get("test", False))
+        self.assertEqual(textract_job["terminal_name"], terminal_doc["name"])
 
         # Check that the job id is equal to the fake job id that should be returned
         self.assertEqual(str(returned_job_id), "111111111111111111111111111111111111")
@@ -445,6 +447,7 @@ class TestStartPdfTextractJob(unittest.TestCase):
 
         self.assertEqual(textract_job["pdf_hash"], pdf_doc["hash"])
         self.assertTrue(textract_job.get("test", False))
+        self.assertEqual(textract_job["terminal_name"], terminal_doc["name"])
 
         # Check that the job id is NOT equal to the fake job id that should be returned
         self.assertNotEqual(

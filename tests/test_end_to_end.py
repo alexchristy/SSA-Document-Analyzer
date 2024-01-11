@@ -191,6 +191,14 @@ class TestEndToEnd(unittest.TestCase):
         if not isinstance(textract_doc, dict):
             self.fail("Textract document was not a dictionary")
 
+        # Check that the terminal name was included in the textract document
+        textract_doc = fs.get_textract_job(job_id)
+
+        if not textract_doc:
+            self.fail("Textract document was empty")
+
+        self.assertEqual(textract_doc.get("terminal_name", ""), terminal_doc["name"])
+
         # =======================================================================
         # ================(Check that previous flights archived)=================
         # =======================================================================
@@ -667,6 +675,14 @@ class TestEndToEnd(unittest.TestCase):
 
         if not isinstance(textract_doc, dict):
             self.fail("Textract document was not a dictionary")
+
+        # Check that the terminal name was included in the textract document
+        textract_doc = fs.get_textract_job(job_id)
+
+        if not textract_doc:
+            self.fail("Textract document was empty")
+
+        self.assertEqual(textract_doc.get("terminal_name", ""), terminal_doc["name"])
 
         # =======================================================================
         # ================(Check that previous flights archived)=================
@@ -1234,6 +1250,14 @@ class TestEndToEnd(unittest.TestCase):
         if not isinstance(textract_doc, dict):
             self.fail("Textract document was not a dictionary")
 
+        # Check that the terminal name was included in the textract document
+        textract_doc = fs.get_textract_job(job_id)
+
+        if not textract_doc:
+            self.fail("Textract document was empty")
+
+        self.assertEqual(textract_doc.get("terminal_name", ""), terminal_doc["name"])
+
         # =======================================================================
         # ================(Check that previous flights archived)=================
         # =======================================================================
@@ -1687,6 +1711,14 @@ class TestEndToEnd(unittest.TestCase):
 
         if not isinstance(textract_doc, dict):
             self.fail("Textract document was not a dictionary")
+
+        # Check that the terminal name was included in the textract document
+        textract_doc = fs.get_textract_job(job_id)
+
+        if not textract_doc:
+            self.fail("Textract document was empty")
+
+        self.assertEqual(textract_doc.get("terminal_name", ""), terminal_doc["name"])
 
         # =======================================================================
         # ================(Check that previous flights archived)=================
