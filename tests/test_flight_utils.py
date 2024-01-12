@@ -4,7 +4,7 @@ import sys
 sys.path.append("..")
 
 # Tested function imports
-from flight_utils import find_patriot_express
+from flight_utils import find_patriot_express, find_similar_dicts
 
 
 class TestNoteExtractionUtils(unittest.TestCase):
@@ -354,6 +354,154 @@ class TestFindPatriotExpress(unittest.TestCase):
 
     def test_non_string_input(self):
         self.assertFalse(find_patriot_express(123456))
+
+
+import unittest
+
+
+class TestFindSimilarDicts(unittest.TestCase):
+    def setUp(self):
+        # Setup common test data
+        self.dict1 = {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3",
+            "key4": "value4",
+        }
+        self.dict2 = {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3",
+            "key5": "value5",
+        }
+        self.dict3 = {
+            "key1": "value10",
+            "key2": {"subkey1": "subvalue1"},
+            "key3": "value30",
+            "key4": "value40",
+        }
+        self.dict4 = {
+            "key1": "value10",
+            "key2": {"subkey1": "subvalue2"},
+            "key3": "value30",
+            "key4": "value40",
+        }
+        self.empty_dict = {}
+        self.different_keys_dict = {
+            "keyA": "valueA",
+            "keyB": "valueB",
+            "keyC": "valueC",
+        }
+        self.different_length_dict_2 = {"key1": "value1", "key2": "value2"}
+        self.different_length_dict_3 = {
+            "key1": "value1",
+            "key2": "value2",
+            "key3": "value3",
+        }
+
+        self.flight_dict_1 = {
+            "date": "20210101",
+            "rollcall_time": "1234",
+            "patriot_express": True,
+            "destination": ["YOKOTA AIR BASE, JAPAN", "SEATTLE TACOMA WASHINGTON"],
+            "seats": [[60, "T"]],
+        }
+
+        self.flight_dict_2 = {
+            "date": "20210101",
+            "rollcall_time": "1234",
+            "patriot_express": True,
+            "destination": ["YOKOTA AIR BASE, JAPAN"],
+            "seats": [[60, "T"]],
+        }
+
+        self.flight_dict_3 = {
+            "date": "20210101",
+            "rollcall_time": "1234",
+            "patriot_express": True,
+            "destination": ["YOKOTA AIR BASE, JAPAN", "SEATTLE TACOMA WASHINGTON"],
+            "seats": [[60, "T"], [20, "F"]],
+        }
+
+    def test_basic_matching(self):
+        result = find_similar_dicts([self.dict1], [self.dict1])
+        self.assertEqual(result, [self.dict1])
+
+    def test_partial_matching(self):
+        result = find_similar_dicts([self.dict1], [self.dict2])
+        self.assertEqual(result, [self.dict2])
+
+    def test_nested_matching(self):
+        result = find_similar_dicts([self.dict3], [self.dict3])
+        self.assertEqual(result, [self.dict3])
+
+    def test_mismatch(self):
+        result = find_similar_dicts([self.dict1], [self.different_keys_dict])
+        self.assertEqual(result, [])
+
+    def test_empty_dict(self):
+        result = find_similar_dicts([self.empty_dict], [self.dict1])
+        self.assertEqual(result, [])
+
+    def test_empty_list(self):
+        result = find_similar_dicts([], [self.dict1])
+        self.assertEqual(result, [])
+
+    def test_non_dict_elements(self):
+        with self.assertRaises(TypeError):
+            find_similar_dicts(["not_a_dict"], [self.dict1])
+
+    def test_different_keys(self):
+        result = find_similar_dicts([self.dict1], [self.different_keys_dict])
+        self.assertEqual(result, [])
+
+    def test_variable_length_dicts(self):
+        result = find_similar_dicts([self.dict1], [self.different_length_dict_2], 3)
+        self.assertEqual(result, [])
+
+    def test_variable_length_dicts_with_correct_num_match_elements(self):
+        result = find_similar_dicts([self.dict1], [self.different_length_dict_3], 3)
+        self.assertEqual(result, [self.different_length_dict_3])
+
+    def test_matching_with_different_order(self):
+        result = find_similar_dicts([self.dict2], [self.dict1])
+        self.assertEqual(result, [self.dict1])
+
+    def test_different_types(self):
+        result = find_similar_dicts([self.dict3], [self.dict4])
+        self.assertEqual(result, [self.dict4])
+
+    def test_large_dicts(self):
+        large_dict1 = {f"key{i}": f"value{i}" for i in range(1000)}
+        large_dict2 = {f"key{i}": f"value{i}" for i in range(500)}
+        result = find_similar_dicts(
+            [large_dict1], [large_dict2], min_num_matching_keys=100
+        )
+        self.assertEqual(result, [large_dict2])
+
+    def test_custom_min_matching_keys(self):
+        result = find_similar_dicts([self.dict1], [self.dict2], min_num_matching_keys=4)
+        self.assertEqual(result, [])
+
+    def test_custom_min_matching_keys_with_matching(self):
+        result = find_similar_dicts([self.dict1], [self.dict2], min_num_matching_keys=1)
+        self.assertEqual(result, [self.dict2])
+
+    def test_flight_data_dicts(self):
+        result = find_similar_dicts([self.flight_dict_1], [self.flight_dict_2], 3)
+        self.assertEqual(result, [self.flight_dict_2])
+
+    def test_flight_data_dicts_with_different_seats(self):
+        result = find_similar_dicts([self.flight_dict_1], [self.flight_dict_3], 3)
+        self.assertEqual(result, [self.flight_dict_3])
+
+    def test_flight_data_dicts_with_different_seats_stricter(self):
+        result = find_similar_dicts([self.flight_dict_2], [self.flight_dict_3], 4)
+        self.assertEqual(result, [])
+
+
+if __name__ == "__main__":
+    unittest.main()
 
 
 if __name__ == "__main__":

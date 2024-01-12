@@ -1,7 +1,7 @@
 import datetime
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from fuzzywuzzy import fuzz  # type: ignore
 
@@ -505,3 +505,74 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
         flights.append(flight)
 
     return flights
+
+
+# Define a type alias for dictionary elements, which could include nested dictionaries
+Element = Union[str, int, float, Dict[str, "Element"]]
+GenericDict = Dict[str, Element]
+
+
+def compare_nested_dicts(elem1: Element, elem2: Element) -> int:
+    """Compare two elements, which could be nested dictionaries.
+
+    Args:
+    ----
+        elem1 (Element): The first element to compare.
+        elem2 (Element): The second element to compare.
+
+    Returns:
+    -------
+        int: The number of matching elements.
+    """
+    if isinstance(elem1, dict) and isinstance(elem2, dict):
+        # Count matching elements in nested dictionaries
+        return sum(
+            compare_nested_dicts(elem1[key], elem2[key])
+            for key in elem1
+            if key in elem2
+        )
+
+    # Direct comparison for non-dictionary elements
+    return int(elem1 == elem2)
+
+
+def find_similar_dicts(
+    base_dict_list: List[GenericDict],
+    comp_dict_list: List[GenericDict],
+    min_num_matching_keys: int = 3,
+) -> List[GenericDict]:
+    """Find dictionaries in comp_dict_list that are similar to a dictionary in base_dict_list.
+
+    Args:
+    ----
+        base_dict_list (List[GenericDict]): Base list of dictionaries to compare against.
+        comp_dict_list (List[GenericDict]): List of dictionaries to compare.
+        min_num_matching_keys (int, optional): The minimum number of matching keys required to consider the dictionaries similar. Default is 3.
+
+    Returns:
+    -------
+        List[GenericDict]: A list of dictionaries that are similar.
+    """
+    # Ensure that all elements in the lists are dictionaries
+    for d in base_dict_list + comp_dict_list:
+        if not isinstance(d, dict):
+            msg = "All elements in the lists must be dictionaries"
+            raise TypeError(msg)
+
+    similar_dicts = []
+
+    for comp_dict in comp_dict_list:
+        for new_dict in base_dict_list:
+            # Count matching elements (considering nested dictionaries)
+            match_count = sum(
+                compare_nested_dicts(comp_dict[key], new_dict[key])
+                for key in comp_dict
+                if key in new_dict
+            )
+
+            # Check if there are at least 3 matches
+            if match_count >= min_num_matching_keys:
+                similar_dicts.append(comp_dict)
+                break  # Break inner loop if a match is found
+
+    return similar_dicts
