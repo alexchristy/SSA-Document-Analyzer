@@ -180,6 +180,16 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             terminal_timezone=terminal_timezone,
         )
 
+        new_flights: List[Flight] = []
+        for flight_dict in new_flights_dicts:
+            new_flight = Flight.from_dict(flight_dict)
+
+            if not new_flight:
+                logging.error("Failed to create flight from dict: %s", flight_dict)
+                continue
+
+            new_flights.append(new_flight)
+
         # Archive flights that have departed
         old_flights = firestore_client.get_flights_by_terminal(terminal=terminal)
 
@@ -206,37 +216,31 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         # Store new flights
         stored_flights: List[str] = []
         problem_flights: List[Flight] = []
-        for flight_dict in new_flights_dicts:
-            new_flight = Flight.from_dict(flight_dict)
-
-            if not new_flight:
-                logging.error("Failed to create flight from dict: %s", flight_dict)
-                continue
-
+        for flight in new_flights:
             try:
-                if new_flight.get_departure_datetime() >= current_time:
-                    firestore_client.store_flight_as_current(new_flight)
-                    stored_flights.append(new_flight.flight_id)
+                if flight.get_departure_datetime() >= current_time:
+                    firestore_client.store_flight_as_current(flight)
+                    stored_flights.append(flight.flight_id)
                 else:
                     logging.info(
                         "Flight %s has already departed. Not storing.",
-                        new_flight.flight_id,
+                        flight.flight_id,
                     )
             except InvalidRollcallTimeError as e:
                 logging.error(
                     "Invalid rollcall time when storing the new flight (%s): %s",
-                    new_flight.flight_id,
+                    flight.flight_id,
                     e,
                 )
-                problem_flights.append(new_flight)
+                problem_flights.append(flight)
                 continue
             except InvalidDateError as e:
                 logging.error(
                     "Invalid date when storing the new flight (%s): %s",
-                    new_flight.flight_id,
+                    flight.flight_id,
                     e,
                 )
-                problem_flights.append(new_flight)
+                problem_flights.append(flight)
                 continue
 
         # Update terminal with problem flights
