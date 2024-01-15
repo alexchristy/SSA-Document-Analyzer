@@ -34,7 +34,7 @@ deploy/scripts/*.zip
 
 # Virtual envs:
 # Development
-LAMBDA-ENV
+base_env
 
 # start_pdf_textract_tables_job
 start_job_env
