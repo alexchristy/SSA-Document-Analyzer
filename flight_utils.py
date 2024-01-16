@@ -551,7 +551,7 @@ def find_similar_dicts(
 
     Returns:
     -------
-        List[GenericDict]: A list of dictionaries that are similar.
+        List[GenericDict]: A list of dictionaries from comp_dict_list that are similar to a dictionary in base_dict_list.
     """
     # Ensure that all elements in the lists are dictionaries
     for d in base_dict_list + comp_dict_list:
