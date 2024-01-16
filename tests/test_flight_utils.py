@@ -356,9 +356,6 @@ class TestFindPatriotExpress(unittest.TestCase):
         self.assertFalse(find_patriot_express(123456))
 
 
-import unittest
-
-
 class TestFindSimilarDicts(unittest.TestCase):
     def setUp(self):
         # Setup common test data
