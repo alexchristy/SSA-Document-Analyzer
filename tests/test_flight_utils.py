@@ -496,6 +496,24 @@ class TestFindSimilarDicts(unittest.TestCase):
         result = find_similar_dicts([self.flight_dict_2], [self.flight_dict_3], 4)
         self.assertEqual(result, [])
 
+    def test_multiple_data_dicts_matching(self):
+        result = find_similar_dicts(
+            [self.dict1, self.dict3], [self.dict2, self.dict4], min_num_matching_keys=3
+        )
+        self.assertEqual(result, [self.dict2, self.dict4])
+
+    def test_multiple_data_dicts_matching_diff_length_base_list(self):
+        result = find_similar_dicts(
+            [self.dict3], [self.dict2, self.dict4], min_num_matching_keys=3
+        )
+        self.assertEqual(result, [self.dict4])
+
+    def test_multiple_data_dicts_matching_diff_length_compare_list(self):
+        result = find_similar_dicts(
+            [self.dict1, self.dict3], [self.dict4], min_num_matching_keys=3
+        )
+        self.assertEqual(result, [self.dict4])
+
 
 if __name__ == "__main__":
     unittest.main()
