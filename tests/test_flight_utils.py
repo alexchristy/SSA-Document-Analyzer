@@ -902,7 +902,6 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         Both flights are from Osan AB and are 72hr flights. The old flight is the original pickled flight and the
         new flight is the original pickled flight. The old flight should not be pruned because it is not similar.
         """
-
         # Load in pickled flights
         osan_1_72hr_flight_0 = Flight.load_state(
             "tests/lambda-func-tests/TestStoreFlights/test_no_archive_tbd_rollcall_flights/osan_1_72hr_flight-0_fs.pkl"
