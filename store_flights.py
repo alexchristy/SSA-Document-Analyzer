@@ -201,9 +201,16 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         # which indicates that the new flight is really just an update to the old flight.
         # This is a workaround for the fact that the PDFs are not always updated before
         # the old flights are listed to depart.
-        pruned_old_flights = prune_recent_old_flights(
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
             old_flights=old_flights, new_flights=new_flights
         )
+
+        for removed_flight in removed_flights:
+            logging.info(
+                "Flight %s is too similar and recent. Not archiving.",
+                removed_flight.flight_id,
+            )
+            firestore_client.delete_current_flight(removed_flight)
 
         archived_flights: List[str] = []
         for old_flight in pruned_old_flights:
@@ -215,6 +222,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                 firestore_client.delete_current_flight(old_flight)
                 continue
 
+            # If departure date time in the past, archive flight
             if old_flight.get_departure_datetime() < current_time:
                 firestore_client.archive_flight(old_flight)
                 archived_flights.append(old_flight.flight_id)
