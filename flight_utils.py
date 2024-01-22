@@ -584,10 +584,10 @@ def prune_recent_old_flights(
     flight_age_seconds: int = 7200,
     min_num_match_keys: int = 3,
     keys_to_compare: Optional[List[str]] = None,
-) -> List[Flight]:
+) -> Tuple[List[Flight], List[Flight]]:
     """Prune old flights from the old flights list if they are similar to a new flight and are so many seconds old.
 
-    Similarity is determined by the number of matching keys between two flights' dictionaries.
+    Returns a list of old flights with similar + recent flights removed and then a seperate list of old flights that were removed.
 
     Args:
     ----
@@ -599,7 +599,7 @@ def prune_recent_old_flights(
 
     Returns:
     -------
-        List[Flight]: A list of old flight with similar + recent flights removed.
+        Tuple(List[Flight], List[Flight]): A tuple containing the pruned old flights and the removed old flights.
     """
     if keys_to_compare is None:
         keys_to_compare = ["date", "seats", "destinations", "rollcall_time"]
@@ -619,6 +619,7 @@ def prune_recent_old_flights(
             raise ValueError(msg)
 
     pruned_old_flights: List[Flight] = []
+    removed_old_flights: List[Flight] = []
     new_flights_dicts_reduced: List[Dict[str, Any]] = []
     old_flights_dicts_reduced: List[Dict[str, Any]] = []
 
@@ -636,23 +637,23 @@ def prune_recent_old_flights(
 
     # We are only looking for flight who match 3 of the 4 keys: destinations, rollcall_time, seats, date.
     # Flight ID will never match unless it is the same flight so we can ignore it and set min_num_matching_keys to 3.
-    similar_flights = find_similar_dicts(
+    similar_old_flights = find_similar_dicts(
         base_dict_list=new_flights_dicts_reduced,
         comp_dict_list=old_flights_dicts_reduced,
         min_num_matching_keys=min_num_match_keys,
     )
 
-    logging.info("Found %s similar flights.", len(similar_flights))
+    logging.info("Found %s similar flights.", len(similar_old_flights))
 
-    if not similar_flights:
-        return old_flights
+    if not similar_old_flights:
+        return old_flights, []
 
     # Get the flight IDs of the similar flights
-    similar_flight_ids = [flight["flight_id"] for flight in similar_flights]
+    similar_old_flight_ids = [flight["flight_id"] for flight in similar_old_flights]
 
     # Prune old flights that are similar to a new flight and are so many seconds old
     for flight in old_flights:
-        if flight.flight_id in similar_flight_ids:
+        if flight.flight_id in similar_old_flight_ids:
             logging.info(
                 "Found old flight with ID %s that is similar to a new flight.",
                 flight.flight_id,
@@ -660,7 +661,7 @@ def prune_recent_old_flights(
 
             # Get the similar flight
             similar_flight = next(
-                (f for f in similar_flights if f["flight_id"] == flight.flight_id),
+                (f for f in similar_old_flights if f["flight_id"] == flight.flight_id),
                 None,
             )
 
@@ -693,6 +694,7 @@ def prune_recent_old_flights(
                     flight.flight_id,
                     flight_age_seconds,
                 )
+                removed_old_flights.append(flight)
                 continue
 
             logging.info(
@@ -707,4 +709,4 @@ def prune_recent_old_flights(
 
         pruned_old_flights.append(flight)
 
-    return pruned_old_flights
+    return pruned_old_flights, removed_old_flights

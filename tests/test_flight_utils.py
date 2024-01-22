@@ -575,10 +575,13 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         new_flights = [new_flight_1, new_flight_2]
 
         # Prune old flights
-        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights
+        )
 
         # Assert that all old flights were pruned
         self.assertCountEqual(pruned_old_flights, [])
+        self.assertCountEqual(removed_flights, old_flights)
 
     def test_same_flights_same_creation_times(self):
         """Test that all the old flights in this test are pruned.
@@ -617,10 +620,13 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         new_flights = [new_flight_1, new_flight_2]
 
         # Prune old flights
-        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights
+        )
 
         # Assert that all old flights were pruned
         self.assertCountEqual(pruned_old_flights, [])
+        self.assertCountEqual(removed_flights, old_flights)
 
     def test_no_old_flights_pruned(self):
         """Test that all the old flights in this test are not pruned.
@@ -659,10 +665,13 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         new_flights = [new_flight_1, new_flight_2]
 
         # Prune old flights
-        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights
+        )
 
         # Assert that all old flights were pruned
         self.assertCountEqual(pruned_old_flights, old_flights)
+        self.assertCountEqual(removed_flights, [])
 
     def test_more_new_flights_than_old_flights(self):
         """Test that all the one old flight in this test is pruned.
@@ -702,10 +711,13 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         new_flights = [new_flight_1, new_flight_2]
 
         # Prune old flights
-        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights
+        )
 
         # Assert that all old flights were pruned
         self.assertCountEqual(pruned_old_flights, [])
+        self.assertCountEqual(removed_flights, old_flights)
 
     def test_flights_with_different_creation_times(self):
         """Test that all the old flights are pruned when the new flights and old flights have different creation times.
@@ -749,10 +761,13 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         new_flights = [new_flight_1, new_flight_2]
 
         # Prune old flights
-        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights
+        )
 
         # Assert that all old flights were pruned
         self.assertCountEqual(pruned_old_flights, [])
+        self.assertCountEqual(removed_flights, old_flights)
 
     def test_correct_time_bounds(self):
         """Test that the correct time bounds are used when pruning old flights.
@@ -794,12 +809,13 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         new_flights = [new_flight_1, new_flight_2]
 
         # Prune old flights
-        pruned_old_flights = prune_recent_old_flights(
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
             old_flights, new_flights, flight_age_seconds=7200
         )
 
         # Assert that all old flights were pruned
         self.assertCountEqual(pruned_old_flights, [old_flight_2])
+        self.assertCountEqual(removed_flights, [old_flight_1])
 
     def test_correct_time_bounds_with_custom_age(self):
         """Test that the correct time bounds are used when pruning old flights and a custom age is used.
@@ -841,12 +857,13 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         new_flights = [new_flight_1, new_flight_2]
 
         # Prune old flights
-        pruned_old_flights = prune_recent_old_flights(
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
             old_flights, new_flights, flight_age_seconds=22500
         )
 
-        # Assert that all old flights were pruned
+        # Assert that only the first old flight was pruned
         self.assertCountEqual(pruned_old_flights, [old_flight_2])
+        self.assertCountEqual(removed_flights, [old_flight_1])
 
     def test_zero_min_matching_keys_with_diff_flights(self):
         """Test that the old completely unrelated flights are pruned when min_num_matching_keys is 0.
@@ -889,12 +906,13 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
         new_flights = [new_flight_1, new_flight_2]
 
         # Prune old flights
-        pruned_old_flights = prune_recent_old_flights(
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
             old_flights, new_flights, min_num_match_keys=0, flight_age_seconds=7200
         )
 
         # Assert that all old flights were pruned
         self.assertCountEqual(pruned_old_flights, [])
+        self.assertCountEqual(removed_flights, old_flights)
 
     def test_with_osan_1_72hr_flights(self):
         """Test that the old flight is not pruned because it is not similar enough to the new flight.
@@ -918,11 +936,46 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
             self.fail("Failed to load flight 1 from pickle file")
 
         # Check that the flights are not similar
-        pruned_old_flights = prune_recent_old_flights(
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
             [osan_1_72hr_flight_0], [osan_1_72hr_flight_1]
         )
 
         self.assertCountEqual(pruned_old_flights, [osan_1_72hr_flight_0])
+        self.assertCountEqual(removed_flights, [])
+
+    def test_no_prune_when_no_similar_flights(self):
+        """Test that the function does not prune any flights when there are no similar flights.
+
+        One flight is from Al Udeid and the other is from Osan. Both are 72hr flights. Both flights have their
+        creation time set to the current time. The old flight should not be pruned because it is not similar.
+        """
+        osan_flight = Flight.load_state(
+            "tests/flight-objects/osan_1_72hr_table-2_flight-1.pkl"
+        )
+
+        if not osan_flight:
+            self.fail("Failed to load osan flight from pickle file")
+
+        al_udeid_flight = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        if not al_udeid_flight:
+            self.fail("Failed to load al udeid flight from pickle file")
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Set both flights creation_time to the current time
+        osan_flight.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+        al_udeid_flight.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        # Check that the flights are not similar
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights=[osan_flight], new_flights=[al_udeid_flight]
+        )
+
+        self.assertCountEqual(pruned_old_flights, [osan_flight])
+        self.assertCountEqual(removed_flights, [])
 
 
 if __name__ == "__main__":
