@@ -576,3 +576,135 @@ def find_similar_dicts(
                 break  # Break inner loop if a match is found
 
     return similar_dicts
+
+
+def prune_recent_old_flights(
+    old_flights: List[Flight],
+    new_flights: List[Flight],
+    flight_age_seconds: int = 7200,
+    min_num_match_keys: int = 3,
+    keys_to_compare: Optional[List[str]] = None,
+) -> List[Flight]:
+    """Prune old flights from the old flights list if they are similar to a new flight and are so many seconds old.
+
+    Similarity is determined by the number of matching keys between two flights' dictionaries.
+
+    Args:
+    ----
+        old_flights (List[Flight]): List of old flights to prune.
+        new_flights (List[Flight]): List of new flights to compare against.
+        flight_age_seconds (int, optional): The age of a flight in seconds to consider it old enough to not prune. Default is 7200 (2 hours) inclusive.
+        min_num_match_keys (int, optional): The minimum number of matching keys required to consider the flights similar. Default is 3.
+        keys_to_compare (Optional[List[str]], optional): A list of keys to compare between the flights. Default is ["date", "seats", "destinations", "rollcall_time"].
+
+    Returns:
+    -------
+        List[Flight]: A list of old flight with similar + recent flights removed.
+    """
+    if keys_to_compare is None:
+        keys_to_compare = ["date", "seats", "destinations", "rollcall_time"]
+
+    keys_to_compare = [key.lower() for key in keys_to_compare]
+
+    keys_to_compare.append("flight_id")  # Used for tracking. Will never match.
+
+    # Ensure that all elements in the lists are Flight objects
+    for f in old_flights + new_flights:
+        if not isinstance(f, Flight):
+            msg = "All elements in the lists must be Flight objects"
+            raise TypeError(msg)
+
+        if not all(key in f.to_dict() for key in keys_to_compare):
+            msg = f"One or more flights do not contain all the required keys for comparison. Keys reques: {keys_to_compare}"
+            raise ValueError(msg)
+
+    pruned_old_flights: List[Flight] = []
+    new_flights_dicts_reduced: List[Dict[str, Any]] = []
+    old_flights_dicts_reduced: List[Dict[str, Any]] = []
+
+    # Create dynamically reduced dictionaries for new flights
+    for flight in new_flights:
+        flight_dict = flight.to_dict()
+        reduced_flight_dict = {key: flight_dict[key] for key in keys_to_compare}
+        new_flights_dicts_reduced.append(reduced_flight_dict)
+
+    # Create dynamically reduced dictionaries for old flights
+    for flight in old_flights:
+        flight_dict = flight.to_dict()
+        reduced_flight_dict = {key: flight_dict[key] for key in keys_to_compare}
+        old_flights_dicts_reduced.append(reduced_flight_dict)
+
+    # We are only looking for flight who match 3 of the 4 keys: destinations, rollcall_time, seats, date.
+    # Flight ID will never match unless it is the same flight so we can ignore it and set min_num_matching_keys to 3.
+    similar_flights = find_similar_dicts(
+        base_dict_list=new_flights_dicts_reduced,
+        comp_dict_list=old_flights_dicts_reduced,
+        min_num_matching_keys=min_num_match_keys,
+    )
+
+    logging.info("Found %s similar flights.", len(similar_flights))
+
+    if not similar_flights:
+        return old_flights
+
+    # Get the flight IDs of the similar flights
+    similar_flight_ids = [flight["flight_id"] for flight in similar_flights]
+
+    # Prune old flights that are similar to a new flight and are so many seconds old
+    for flight in old_flights:
+        if flight.flight_id in similar_flight_ids:
+            logging.info(
+                "Found old flight with ID %s that is similar to a new flight.",
+                flight.flight_id,
+            )
+
+            # Get the similar flight
+            similar_flight = next(
+                (f for f in similar_flights if f["flight_id"] == flight.flight_id),
+                None,
+            )
+
+            if similar_flight is None:
+                logging.error(
+                    "Failed to get similar flight with ID %s. Skipping...",
+                    flight.flight_id,
+                )
+                continue
+
+            flight_creation_datetime = datetime.datetime.strptime(
+                str(flight.creation_time), "%Y%m%d%H%M"
+            ).replace(tzinfo=datetime.timezone.utc)
+
+            current_date = datetime.datetime.now(
+                tz=datetime.UTC
+            )  # Flight creation_time is in UTC
+
+            time_diff = current_date - flight_creation_datetime
+
+            logging.info(
+                "Time delta (secs): %s for flight: %s",
+                time_diff.total_seconds(),
+                flight.flight_id,
+            )
+
+            if time_diff.total_seconds() <= flight_age_seconds:
+                logging.info(
+                    "Old flight with ID %s is younger than %s seconds. Pruning...",
+                    flight.flight_id,
+                    flight_age_seconds,
+                )
+                continue
+
+            logging.info(
+                "Old flight with ID %s is older than %s seconds. Keeping...",
+                flight.flight_id,
+                flight_age_seconds,
+            )
+        else:
+            logging.error(
+                "Old flight with ID %s is not found in similar flights. Archiving to be safe...",
+            )
+
+        pruned_old_flights.append(flight)
+
+    return pruned_old_flights

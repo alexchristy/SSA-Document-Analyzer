@@ -1,10 +1,17 @@
-import unittest
+import datetime
 import sys
+import unittest
+from copy import deepcopy
 
 sys.path.append("..")
 
 # Tested function imports
-from flight_utils import find_patriot_express, find_similar_dicts
+from flight_utils import (
+    find_patriot_express,
+    find_similar_dicts,
+    prune_recent_old_flights,
+)
+from flight import Flight
 
 
 class TestNoteExtractionUtils(unittest.TestCase):
@@ -514,9 +521,409 @@ class TestFindSimilarDicts(unittest.TestCase):
         )
         self.assertEqual(result, [self.dict4])
 
+    def test_return_maintains_original_order(self):
+        result = find_similar_dicts(
+            [self.dict1, self.dict3], [self.dict2, self.dict4], min_num_matching_keys=3
+        )
+        self.assertListEqual(result, [self.dict2, self.dict4])
 
-if __name__ == "__main__":
-    unittest.main()
+    def test_return_maintains_original_order_reversed(self):
+        result = find_similar_dicts(
+            [self.dict2, self.dict4], [self.dict3, self.dict1], min_num_matching_keys=3
+        )
+        self.assertListEqual(result, [self.dict3, self.dict1])
+
+
+class TestPruneSimilarOldFlights(unittest.TestCase):
+    """Tests whether old flights that are too similar to new flights and the terminal updated too quickly are pruned."""
+
+    def test_same_flights_diff_creation_times(self):
+        """Test that all the old flights in this test are pruned.
+
+        Two flights are loaded in. The old flights are the original pickled flights with their creation_time
+        set to 1.5 hours ago. The new flights are the two flights with their creation_time set to the current time.
+        """
+        flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-2.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old__creation_time = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_formatted = old__creation_time.strftime("%Y%m%d%H%M")
+
+        old_flight_1 = deepcopy(flight_1)
+        old_flight_1.creation_time = old_creation_time_formatted
+
+        old_flight_2 = deepcopy(flight_2)
+        old_flight_2.creation_time = old_creation_time_formatted
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1 = deepcopy(flight_1)
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flight_2 = deepcopy(flight_2)
+        new_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+
+        # Assert that all old flights were pruned
+        self.assertCountEqual(pruned_old_flights, [])
+
+    def test_same_flights_same_creation_times(self):
+        """Test that all the old flights in this test are pruned.
+
+        Two flights are loaded in. The old flights are the original pickled flights with their creation_time
+        set to the current time. The new flights are the two flights with their creation_time set to the current time.
+
+        Both the old flights should be pruned because they are too similar to the new flights and too recent.
+        """
+        flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-2.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_flight_1 = deepcopy(flight_1)
+        old_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        old_flight_2 = deepcopy(flight_2)
+        old_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1 = deepcopy(flight_1)
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flight_2 = deepcopy(flight_2)
+        new_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+
+        # Assert that all old flights were pruned
+        self.assertCountEqual(pruned_old_flights, [])
+
+    def test_no_old_flights_pruned(self):
+        """Test that all the old flights in this test are not pruned.
+
+        Two flights are loaded in. The old flights are the original pickled flights with their original
+        creation time some date in 2023. The new flights are the two flights with their creation_time set
+        to the current time.
+
+        Both the old flights should not be pruned because even though they are similar to the new flights,
+        they are not recent enough.
+        """
+        flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-2.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_flight_1 = deepcopy(flight_1)
+
+        old_flight_2 = deepcopy(flight_2)
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1 = deepcopy(flight_1)
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flight_2 = deepcopy(flight_2)
+        new_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+
+        # Assert that all old flights were pruned
+        self.assertCountEqual(pruned_old_flights, old_flights)
+
+    def test_more_new_flights_than_old_flights(self):
+        """Test that all the one old flight in this test is pruned.
+
+        Two flights are loaded in. The old flight is one of the original pickled flights with their original
+        1.75 hour in the past hour creation_time. The new flights are the two flights with their creation_time set
+        to the current time.
+
+        The old flight should be pruned because it is too similar to only one of the new flights and too recent.
+        """
+        flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-2.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1 = deepcopy(flight_1)
+
+        old_flight_1.creation_time = old_creation_time.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1]
+
+        # Create new_flights list
+        new_flight_1 = deepcopy(flight_1)
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flight_2 = deepcopy(flight_2)
+        new_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+
+        # Assert that all old flights were pruned
+        self.assertCountEqual(pruned_old_flights, [])
+
+    def test_flights_with_different_creation_times(self):
+        """Test that all the old flights are pruned when the new flights and old flights have different creation times.
+
+        The old flights are the original pickled flights with their creation_time set to 1.5 and 1.75 hours ago. The
+        current flights are the two flights with their creation_time set to the current time and current time - 2 minutes.
+
+        All old flights should be pruned because they are too similar to the new flights and too recent.
+        """
+        flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-2.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1 = deepcopy(flight_1)
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+
+        old_flight_2 = deepcopy(flight_2)
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1 = deepcopy(flight_1)
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flight_2 = deepcopy(flight_2)
+        new_flight_2.creation_time = (
+            current_time_utc - datetime.timedelta(minutes=2)
+        ).strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights = prune_recent_old_flights(old_flights, new_flights)
+
+        # Assert that all old flights were pruned
+        self.assertCountEqual(pruned_old_flights, [])
+
+    def test_correct_time_bounds(self):
+        """Test that the correct time bounds are used when pruning old flights.
+
+        The old flights are the original pickled flights with their creation_time set to 1.95 hours ago and 2 hours ago.
+        The current flights are the two flights with their creation time set to the current time. Only the first old
+        flight should be pruned because it is too similar to the first new flight and too recent because the time bound
+        is 2 hours.
+        """
+        flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-2.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.95)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=2)
+
+        old_flight_1 = deepcopy(flight_1)
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+
+        old_flight_2 = deepcopy(flight_2)
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1 = deepcopy(flight_1)
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flight_2 = deepcopy(flight_2)
+        new_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights = prune_recent_old_flights(
+            old_flights, new_flights, flight_age_seconds=7200
+        )
+
+        # Assert that all old flights were pruned
+        self.assertCountEqual(pruned_old_flights, [old_flight_2])
+
+    def test_correct_time_bounds_with_custom_age(self):
+        """Test that the correct time bounds are used when pruning old flights and a custom age is used.
+
+        The old flights are the original pickled flights with their creation_time set to 6.25 hours ago and 6.3 hours ago.
+        The current flights are the two flights with their creation time set to the current time. Only the first old
+        flight should be pruned because it is too similar to the first new flight and too recent because the time bound
+        is 6.25 hours.
+        """
+        flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-2.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=6.21)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=6.25)
+
+        old_flight_1 = deepcopy(flight_1)
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+
+        old_flight_2 = deepcopy(flight_2)
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1 = deepcopy(flight_1)
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flight_2 = deepcopy(flight_2)
+        new_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights = prune_recent_old_flights(
+            old_flights, new_flights, flight_age_seconds=22500
+        )
+
+        # Assert that all old flights were pruned
+        self.assertCountEqual(pruned_old_flights, [old_flight_2])
+
+    def test_zero_min_matching_keys_with_diff_flights(self):
+        """Test that the old completely unrelated flights are pruned when min_num_matching_keys is 0.
+
+        The old flights are the original pickled flights with their creation_time set to 1.5 and 1.75 hours ago. The
+        current flights are the two flights with their creation_time set to the current time. All old flights should
+        be pruned because they are too recent and min_num_matching_keys is 0.
+        """
+        old_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-2.pkl"
+        )
+
+        new_flight_1 = Flight.load_state(
+            "tests/flight-objects/andersen_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_2 = Flight.load_state(
+            "tests/flight-objects/andersen_1_72hr_table-2_flight-1.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+        new_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights = prune_recent_old_flights(
+            old_flights, new_flights, min_num_match_keys=0, flight_age_seconds=7200
+        )
+
+        # Assert that all old flights were pruned
+        self.assertCountEqual(pruned_old_flights, [])
+
+    def test_with_osan_1_72hr_flights(self):
+        """Test that the old flight is not pruned because it is not similar enough to the new flight.
+
+        Both flights are from Osan AB and are 72hr flights. The old flight is the original pickled flight and the
+        new flight is the original pickled flight. The old flight should not be pruned because it is not similar.
+        """
+
+        # Load in pickled flights
+        osan_1_72hr_flight_0 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_no_archive_tbd_rollcall_flights/osan_1_72hr_flight-0_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_0:
+            self.fail("Failed to load flight 0 from pickle file")
+
+        osan_1_72hr_flight_1 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_no_archive_tbd_rollcall_flights/osan_1_72hr_flight-1_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_1:
+            self.fail("Failed to load flight 1 from pickle file")
+
+        # Check that the flights are not similar
+        pruned_old_flights = prune_recent_old_flights(
+            [osan_1_72hr_flight_0], [osan_1_72hr_flight_1]
+        )
+
+        self.assertCountEqual(pruned_old_flights, [osan_1_72hr_flight_0])
 
 
 if __name__ == "__main__":
