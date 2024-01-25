@@ -6,12 +6,14 @@ from copy import deepcopy
 sys.path.append("..")
 
 # Tested function imports
+from flight import Flight
 from flight_utils import (
+    count_matching_keys,
     find_patriot_express,
     find_similar_dicts,
     prune_recent_old_flights,
+    sort_dicts_by_matching_keys,
 )
-from flight import Flight
 
 
 class TestNoteExtractionUtils(unittest.TestCase):
@@ -976,6 +978,487 @@ class TestPruneSimilarOldFlights(unittest.TestCase):
 
         self.assertCountEqual(pruned_old_flights, [osan_flight])
         self.assertCountEqual(removed_flights, [])
+
+    def test_1_to_1_pruning_2_to_1(self):
+        """Test that the function prunes flighs with 1 to 1 matches.
+
+        This means that if there are two flights to Al Udeid and then the updated flight schedule has one flight to Osan,
+        only one of the old flights should be pruned. Each new flight should only be matched to one old flight max.
+
+        This test uses the same flight three times for both the old and new flights. The old flights are the original
+        pickled flights with their creation_time set to 1.5 and 1.75 hours ago. The current flight is the original pickled
+        flight with its creation_time set to the current time. Only one of the old flights should be pruned because
+        of the 1:1 matching and they are too similar to the new flight and too recent.
+        """
+        old_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1]
+
+        # Prune old flights
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights, min_num_match_keys=3
+        )
+
+        # Assert that only one old flight was pruned
+        self.assertEqual(len(pruned_old_flights), 1)
+
+    def test_1_to_1_pruning_2_to_2(self):
+        """Test that the function prunes flighs with 1 to 1 matches.
+
+        This means that if there are two flights to Al Udeid and then the updated flight schedule has two flights to Osan,
+        both of the old flights should be pruned. Each new flight should only be matched to one old flight max.
+
+        This test uses the same flight three times for both the old and new flights. The old flights are the original
+        pickled flights with their creation_time set to 1.5 and 1.75 hours ago. The current flights are the original pickled
+        flight with its creation_time set to the current time. Both of the old flights should be pruned because
+        of the 1:1 matching and they are too similar to the new flight and too recent.
+        """
+        old_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Create new_flights list
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+        new_flight_2.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights, min_num_match_keys=3
+        )
+
+        # Assert that only one old flight was pruned
+        self.assertCountEqual(pruned_old_flights, [])
+        self.assertCountEqual(removed_flights, old_flights)
+
+    def test_1_to_1_pruning_3_to_2(self):
+        """Test that the function prunes flighs with 1 to 1 matches.
+
+        This means that if there are three flights to Al Udeid and then the updated flight schedule has two updated flights to Osan,
+        only two of the old flights should be pruned. Each new flight should only be matched to one old flight max.
+
+        This test uses the same flight three times for the old and two for new flights. The old flights are the original
+        pickled flights with their creation_time set to 1.5, 1.75, and 1.9 hours ago. The current flights are the original pickled
+        flight with their creation_time set to the current time. Only two of the old flights should be pruned because
+        of the 1:1 matching and they are too similar to the new flight and too recent.
+        """
+        old_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_3 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+        old_creation_time_3 = current_time_utc - datetime.timedelta(hours=1.9)
+
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+        old_flight_3.creation_time = old_creation_time_3.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2, old_flight_3]
+
+        # Create new_flights list
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1, new_flight_2]
+
+        # Prune old flights
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights, min_num_match_keys=3
+        )
+
+        # Assert that only one old flight was pruned
+        self.assertEqual(len(pruned_old_flights), 1)
+        self.assertEqual(len(removed_flights), 2)
+
+    def test_default_priority_prune_key(self):
+        """Test that the old flight who's priority_prune_key value is the same as the new flight's key is pruned over the other old flight who's priority_prune_key value is different.
+
+        This test uses the default priority_prune_key value of "destination". Both old flights and the new flight come from the same pickled flight object.
+        Old flight 1 has it's seat value changed to be different from the new flight's seat value. Old flight 2 has it's destination value changed to be
+        different from the new flight's destination value. Since the priority_prune_key is "destination", old flight 1 should be removed because it's
+        destination value is the same as the new flight's destination and thus more similar and more likely to be the same flight as the new flight.
+        """
+        old_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Change old_flight_1's seats value
+        old_flight_1.seats = [{"number": 666, "status": "F"}]
+        old_flight_1.as_string = old_flight_1.generate_as_string()
+        old_flight_1.flight_id = old_flight_1.generate_flight_id()
+
+        # Change old_flight_2's destination value
+        old_flight_2.destinations = ["YOKOTA AIR BASE, JAPAN"]
+        old_flight_2.as_string = old_flight_2.generate_as_string()
+        old_flight_2.flight_id = old_flight_2.generate_flight_id()
+
+        # Create new_flights list
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1]
+
+        # Prune old flights
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights, min_num_match_keys=3
+        )
+
+        # Assert that only one old flight 1 was pruned
+        self.assertCountEqual(pruned_old_flights, [old_flight_2])
+        self.assertCountEqual(removed_flights, [old_flight_1])
+
+    def test_custom_priority_prune_key(self):
+        """Test that the old flight who's priority_prune_key value is the same as the new flight's key is pruned over the other old flight who's priority_prune_key value is different.
+
+        This test uses the custom priority_prune_key value of "seats". Both old flights and the new flight come from the same pickled flight object.
+        Old flight 1 has it's seat value changed to be different from the new flight's seat value. Old flight 2 has it's destination value changed to be
+        different from the new flight's destination value. Since the priority_prune_key is "seats", old flight 2 should be pruned because it's
+        seats value is the same as the new flight's destination and thus treated as more similar and in this scenario likely to be the same flight
+        as the new flight.
+        """
+        old_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Change old_flight_1's seats value
+        old_flight_1.seats = [{"number": 666, "status": "F"}]
+        old_flight_1.as_string = old_flight_1.generate_as_string()
+        old_flight_1.flight_id = old_flight_1.generate_flight_id()
+
+        # Change old_flight_2's destination value
+        old_flight_2.destinations = ["YOKOTA AIR BASE, JAPAN"]
+        old_flight_2.as_string = old_flight_2.generate_as_string()
+        old_flight_2.flight_id = old_flight_2.generate_flight_id()
+
+        # Create new_flights list
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1]
+
+        # Prune old flights
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights, new_flights, min_num_match_keys=3, priority_prune_key="seats"
+        )
+
+        # Assert that only one old flight 1 was pruned
+        self.assertCountEqual(pruned_old_flights, [old_flight_1])
+        self.assertCountEqual(removed_flights, [old_flight_2])
+
+    def test_many_priorty_prune_key_match(self):
+        """Test that the most similar flight is pruned when there is more than one flight with the same priority_prune_key value.
+
+        If there are two similar old flights and both have the same priority_prune_key value as the new flight, only one should be pruned.
+        In this case, of the two old flights, the one that is most similar to the new flight should be pruned.
+
+        In this test, both old flights and the new flight come from the same pickled flight object. This means that both the old flights
+        have the same destination value as the new flight. Since we are using "destinations" as the priority_prune_key, both old flights
+        will match the priority_prune_key. However, we change the seats value of Old flight 1 to be different from the new flight's seats value.
+        This means that old flight 2 is more similar to the new flight and should be removed.
+        """
+        old_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Change old_flight_1's seats  to make it less similar to the new flight
+        old_flight_1.seats = [{"number": 666, "status": "F"}]
+        old_flight_1.as_string = old_flight_1.generate_as_string()
+        old_flight_1.flight_id = old_flight_1.generate_flight_id()
+
+        # Create new_flights list
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1]
+
+        # Prune old flights
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights,
+            new_flights,
+            min_num_match_keys=3,
+            priority_prune_key="destinations",
+        )
+
+        # Assert that only one old flight 1 was pruned
+        self.assertCountEqual(pruned_old_flights, [old_flight_1])
+        self.assertCountEqual(removed_flights, [old_flight_2])
+
+    def test_no_priority_prune_key_match(self):
+        """Test that the most similar flight is pruned when none of the similar old flights have the same priority_prune_key value as the new flight.
+
+        If there are two similar old flights and neither have the same priority_prune_key value as the new flight, only one should be pruned.
+        In this case, of the two old flights, the one that is most similar to the new flight should be pruned.
+
+        In this test, both old flights and the new flight come from the same pickled flight object. This means that both the old flights
+        have the same destination value as the new flight. So we change the destination value of both old flights to be different from the
+        new flight's destination value. This means that neither old flight will match the priority_prune_key. However, we change the seats
+        value of Old flight 1 to be different from the new flight's seats value. This means that old flight 2 is more similar to the new
+        flight and should be removed.
+        """
+        old_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        old_flight_2 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        new_flight_1 = Flight.load_state(
+            "tests/flight-objects/al_udeid_1_72hr_table-1_flight-1.pkl"
+        )
+
+        current_time_utc = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        # Create old_flights list
+        old_creation_time_1 = current_time_utc - datetime.timedelta(hours=1.5)
+        old_creation_time_2 = current_time_utc - datetime.timedelta(hours=1.75)
+
+        old_flight_1.creation_time = old_creation_time_1.strftime("%Y%m%d%H%M")
+        old_flight_2.creation_time = old_creation_time_2.strftime("%Y%m%d%H%M")
+
+        old_flights = [old_flight_1, old_flight_2]
+
+        # Change old_flight_1's seats  to make it less similar to the new flight
+        # to make sure it is not removed
+        old_flight_1.seats = [{"number": 666, "status": "F"}]
+        old_flight_1.destinations = ["YOKOTA AIR BASE, JAPAN"]
+        old_flight_1.as_string = old_flight_1.generate_as_string()
+        old_flight_1.flight_id = old_flight_1.generate_flight_id()
+
+        # Change old_flight_2's destinations
+        old_flight_2.destinations = ["YOKOTA AIR BASE, JAPAN"]
+        old_flight_2.as_string = old_flight_2.generate_as_string()
+        old_flight_2.flight_id = old_flight_2.generate_flight_id()
+
+        # Create new_flights list
+        new_flight_1.creation_time = current_time_utc.strftime("%Y%m%d%H%M")
+
+        new_flights = [new_flight_1]
+
+        # Prune old flights
+        pruned_old_flights, removed_flights = prune_recent_old_flights(
+            old_flights,
+            new_flights,
+            min_num_match_keys=2,
+            priority_prune_key="destinations",
+        )
+
+        # Assert that only one old flight 2 was removed
+        self.assertCountEqual(pruned_old_flights, [old_flight_1])
+        self.assertCountEqual(removed_flights, [old_flight_2])
+
+
+class TestCountMatchingKeys(unittest.TestCase):
+    def test_full_match(self):
+        self.assertEqual(count_matching_keys({"a": 1, "b": 2}, {"a": 1, "b": 2}), 2)
+
+    def test_partial_match(self):
+        self.assertEqual(
+            count_matching_keys({"a": 1, "b": 2, "c": 3}, {"a": 1, "b": 4, "d": 3}), 1
+        )
+
+    def test_no_match(self):
+        self.assertEqual(count_matching_keys({"a": 1, "b": 2}, {"c": 3, "d": 4}), 0)
+
+    def test_both_empty(self):
+        self.assertEqual(count_matching_keys({}, {}), 0)
+
+    def test_one_empty(self):
+        self.assertEqual(count_matching_keys({}, {"a": 1, "b": 2}), 0)
+
+
+class TestSortDictsByMatchingKeys(unittest.TestCase):
+    def setUp(self):
+        self.reference_dict = {"a": 1, "b": 2, "c": 3}
+        self.edge_case_reference_dict = {"a": 1, "b": "text", "c": {"d": 4}}
+
+    def test_various_matching(self):
+        dicts = [{"a": 1, "b": 2}, {"a": 1, "d": 4}, {"a": 1, "b": 2, "c": 3}, {"e": 5}]
+        sorted_dicts = sort_dicts_by_matching_keys(dicts, self.reference_dict)
+        self.assertEqual(
+            sorted_dicts,
+            [{"a": 1, "b": 2, "c": 3}, {"a": 1, "b": 2}, {"a": 1, "d": 4}, {"e": 5}],
+        )
+
+    def test_no_matches(self):
+        dicts = [{"d": 4, "e": 5}, {"f": 6}]
+        sorted_dicts = sort_dicts_by_matching_keys(dicts, self.reference_dict)
+        self.assertEqual(sorted_dicts, [{"d": 4, "e": 5}, {"f": 6}])
+
+    def test_empty_list(self):
+        dicts = []
+        sorted_dicts = sort_dicts_by_matching_keys(dicts, self.reference_dict)
+        self.assertEqual(sorted_dicts, [])
+
+    def test_full_matches(self):
+        dicts = [{"a": 1, "b": 2, "c": 3}, {"a": 1, "b": 2, "c": 3}]
+        sorted_dicts = sort_dicts_by_matching_keys(dicts, self.reference_dict)
+        self.assertEqual(
+            sorted_dicts, [{"a": 1, "b": 2, "c": 3}, {"a": 1, "b": 2, "c": 3}]
+        )
+
+    def test_identical_dicts(self):
+        dicts = [
+            {"a": 1, "b": "text", "c": {"d": 4}},
+            {"a": 1, "b": "text", "c": {"d": 4}},
+        ]
+        sorted_dicts = sort_dicts_by_matching_keys(dicts, self.edge_case_reference_dict)
+        self.assertEqual(
+            sorted_dicts,
+            [
+                {"a": 1, "b": "text", "c": {"d": 4}},
+                {"a": 1, "b": "text", "c": {"d": 4}},
+            ],
+        )
+
+    def test_empty_reference(self):
+        dicts = [{"a": 1, "b": 2}, {"c": 3, "d": 4}]
+        sorted_dicts = sort_dicts_by_matching_keys(dicts, {})
+        self.assertEqual(
+            sorted_dicts, [{"a": 1, "b": 2}, {"c": 3, "d": 4}]
+        )  # Order remains the same as input
+
+    def test_mixed_types(self):
+        dicts = [{"a": 1, "b": "text"}, {"a": 1, "b": 2, "c": 3}]
+        sorted_dicts = sort_dicts_by_matching_keys(dicts, self.edge_case_reference_dict)
+        self.assertEqual(
+            sorted_dicts, [{"a": 1, "b": "text"}, {"a": 1, "b": 2, "c": 3}]
+        )  # 'b': 'text' is a match
+
+    def test_nested_dicts(self):
+        dicts = [
+            {"a": 1, "b": "text", "c": {"d": 5}},
+            {"a": 2, "b": "text", "c": {"d": 4}},
+        ]
+        sorted_dicts = sort_dicts_by_matching_keys(dicts, self.edge_case_reference_dict)
+        self.assertEqual(
+            sorted_dicts,
+            [
+                {"a": 1, "b": "text", "c": {"d": 5}},
+                {"a": 2, "b": "text", "c": {"d": 4}},
+            ],
+        )  # 'c': {'d': 4} is a non-match
 
 
 if __name__ == "__main__":
