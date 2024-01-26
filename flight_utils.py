@@ -619,7 +619,7 @@ def find_similar_dicts(
     return similar_dicts
 
 
-def prune_recent_old_flights(
+def prune_recent_old_flights(  # noqa: PLR0913 (To be refactored later)
     old_flights: List[Flight],
     new_flights: List[Flight],
     flight_age_seconds: int = 7200,
