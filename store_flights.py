@@ -181,37 +181,62 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
             terminal_timezone=terminal_timezone,
         )
 
-        new_flights: List[Flight] = []
-        for flight_dict in new_flights_dicts:
-            new_flight = Flight.from_dict(flight_dict)
-
-            if not new_flight:
-                logging.error("Failed to create flight from dict: %s", flight_dict)
-                continue
-
-            new_flights.append(new_flight)
-
-        # Archive flights that have departed
+        # Get all old flights
         old_flights = firestore_client.get_flights_by_terminal(terminal=terminal)
 
         if not old_flights:
             logging.info("No flights found to archive.")
 
+        # Remove old flights in the future
+        for flight in old_flights[:]:
+            if flight.get_departure_datetime() >= current_time:
+                logging.info(
+                    "Removing old flight that has not departed yet: %s.",
+                    flight.flight_id,
+                )
+                firestore_client.delete_current_flight(flight)
+                old_flights.remove(flight)
+
+        # Create new flights
+        new_flights: List[Flight] = []
+        for flight_dict in new_flights_dicts:
+            new_flight = Flight.from_dict(flight_dict)
+
+            if not new_flight:
+                logging.error("Failed to create new flight from dict: %s", flight_dict)
+                continue
+
+            new_flights.append(new_flight)
+
+        # Delete all new flights that have already departed
+        for flight in new_flights[:]:
+            if flight.get_departure_datetime() < current_time:
+                logging.info(
+                    "Removing new flight that has already departed: %s.",
+                    flight.flight_id,
+                )
+                new_flights.remove(flight)
+
         # Prevent archiving old flights that are too similar to new flights
-        # which indicates that the new flight is really just an update to the old flight.
+        # which indicates that the new flight is really just an update to the old flight listing.
         # This is a workaround for the fact that the PDFs are not always updated before
         # the old flights are listed to depart.
         pruned_old_flights, removed_flights = prune_recent_old_flights(
             old_flights=old_flights, new_flights=new_flights
         )
 
+        logging.info(
+            "Removed %d similar old flights: %s",
+            len(removed_flights),
+            ", ".join(str(flight.flight_id) for flight in removed_flights),
+        )
+
+        # Delete flights that are too similar and recent
         for removed_flight in removed_flights:
-            logging.info(
-                "Flight %s is too similar and recent. Not archiving.",
-                removed_flight.flight_id,
-            )
+            old_flights.remove(removed_flight)
             firestore_client.delete_current_flight(removed_flight)
 
+        # Archive old flights
         archived_flights: List[str] = []
         for old_flight in pruned_old_flights:
             if old_flight.rollcall_note and old_flight.get_rollcall_note() == "TBD":
@@ -222,10 +247,8 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                 firestore_client.delete_current_flight(old_flight)
                 continue
 
-            # If departure date time in the past, archive flight
-            if old_flight.get_departure_datetime() < current_time:
-                firestore_client.archive_flight(old_flight)
-                archived_flights.append(old_flight.flight_id)
+            firestore_client.archive_flight(old_flight)
+            archived_flights.append(old_flight.flight_id)
 
             # Delete all old flights
             firestore_client.delete_current_flight(old_flight)
