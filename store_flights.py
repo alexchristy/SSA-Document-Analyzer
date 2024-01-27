@@ -83,7 +83,7 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
         if not new_flights_dicts:
             response_msg = f"No flights found in payload: {event}"
-            raise ValueError(response_msg)
+            logging.warning(response_msg)
 
         textract_doc = firestore_client.get_textract_job(job_id)
 
@@ -259,6 +259,18 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
             # Delete all old flights
             firestore_client.delete_current_flight(old_flight)
+
+        # Log num of flights archived and in Firestore Textract_Jobs
+        logging.info("Archived %s flights.", len(archived_flights))
+        firestore_client.append_to_doc(
+            "Textract_Jobs", job_id, {"numArchivedFlights": len(archived_flights)}
+        )
+
+        # Log flight ids of flights that were archived and in Firestore Textract_Jobs
+        logging.info("Archived flights: %s", archived_flights)
+        firestore_client.append_to_doc(
+            "Textract_Jobs", job_id, {"archivedFlights": archived_flights}
+        )
 
         # Store new flights
         stored_flights: List[str] = []

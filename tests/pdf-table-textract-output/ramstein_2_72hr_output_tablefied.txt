@@ -1,0 +1,56 @@
+## Table 1 (Page: 3, Confidence: 99.853515625)
+
+DEPARTURES FROM: RAMSTEIN AB, Germany (RMS) Wednesday, December 27th 2023 (Confidence: 62.060546875)
+
+| ROLL CALL (94.189453125) | DESTINATION (96.484375)                                                                                                                                                                            | SEATS (92.919921875)       |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
+| 0540 (91.259765625)      | Al Udeid AB, Qatar (93.505859375)                                                                                                                                                                  | 19F (90.0390625)           |
+| 0545 (95.1171875)        | Baltimore Washington INT'L, MD Early Check-in available starting 26 December 2023, @0930L for Pre-Booked passengers on mission 1LT2 destined Baltimore Washington International, MD (97.412109375) | 178T (93.84765625)         |
+| 0815 (89.84375)          | Kuwait INT'L, Kuwait (92.041015625)                                                                                                                                                                | 324T (88.671875)           |
+| 0815 (94.62890625)       | Al Udeid AB, Qatar (96.923828125)                                                                                                                                                                  | 324T 1 Stop (93.408203125) |
+| 0935 (89.2578125)        | Sigonella, Italy (91.40625)                                                                                                                                                                        | TBD (88.0859375)           |
+|  (95.068359375)          | Early Check-in available December 27,2023 @1835L ; for Pre- Booked passengers on mission VLY6 destined Baltimore Washington International, MD (97.36328125)                                        |  (93.798828125)            |
+| 0935 (92.3828125)        | Signolla, Italy (94.62890625)                                                                                                                                                                      | 19F (91.162109375)         |
+*Seats: T - Tentative, F - Firm, TBD - To Be Determined* (Confidence: 86.71875)
+
+## Table 2 (Page: 4, Confidence: 99.853515625)
+
+Thursday, December 28th 2023 (Confidence: 99.94161987304688)
+
+| ROLL CALL (94.3359375) | DESTINATION (96.77734375)                                                                                                                                                                  | SEATS (94.482421875)      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| 0440 (92.28515625)     | Rota, Spain (94.677734375)                                                                                                                                                                 | TBD (92.48046875)         |
+| 0510 (91.748046875)    | Muwaffaq Salti AB, Jordan (94.091796875)                                                                                                                                                   | TBD (91.89453125)         |
+| 0510 (94.189453125)    | Al Udeid AB, Qatar (96.630859375)                                                                                                                                                          | TBD 1 Stop (94.384765625) |
+| 0650 (94.04296875)     | Joint Base McGuire-Dix-Lakehurst, NJ (96.484375)                                                                                                                                           | TBD 1 Stop (94.23828125)  |
+| 0830 (88.8671875)      | Muwaffaq Salti AB, Qatar (91.162109375)                                                                                                                                                    | TBD (89.0625)             |
+| 0830 (94.53125)        | Rota, Spain (96.97265625)                                                                                                                                                                  | TBD 1 Stop (94.7265625)   |
+| 0912 (88.623046875)    | Joint Base Andrews, MD (90.91796875)                                                                                                                                                       | TBD (88.818359375)        |
+| 1415 (95.166015625)    | Baltimore Washington INT'L, MD Early Check-in available December 27, 2023 @1835L for Pre- Booked passengers on mission VLY6 destined Baltimore Washington International, MD (97.607421875) | TBD (95.361328125)        |
+
+## Table 3 (Page: 5, Confidence: 99.853515625)
+
+Friday, December 29th 2023 (Confidence: 73.095703125)
+
+| ROLL CALL (94.580078125) | DESTINATION (97.265625)                 | SEATS (93.9453125)       |
+| ------------------------ | --------------------------------------- | ------------------------ |
+| 0230 (90.673828125)      | Muwaffaq Salti AB, Jordan (93.26171875) | TBD (90.0390625)         |
+| 0326 (91.89453125)       | Al Udeid AB, Qatar (94.482421875)       | TBD (91.259765625)       |
+| 0336 (92.138671875)      | Al Udeid AB, Qatar (94.775390625)       | TBD (91.552734375)       |
+| 0340 (91.845703125)      | Powidz, Poland (94.43359375)            | TBD (91.2109375)         |
+| 0346 (91.796875)         | Al Udeid AB, Qatar (94.384765625)       | TBD (91.162109375)       |
+| 0356 (91.845703125)      | Al Udeid AB, Qatar (94.43359375)        | TBD (91.2109375)         |
+| 0540 (91.50390625)       | Powidz, Poland (94.091796875)           | TBD (90.869140625)       |
+| 0720 (91.6015625)        | Agades, Niger (94.189453125)            | TBD (90.966796875)       |
+| 1320 (90.869140625)      | Djibouti, Djibouti (93.505859375)       | TBD (90.283203125)       |
+| 1320 (94.482421875)      | Al Udeid AB, Qatar (97.16796875)        | TBD 1 Stop (93.84765625) |
+*Seats : T - Tentative, F - - Firm, TBD - To Be Determined* (Confidence: 76.953125)
+
+## Table 4 (Page: 6, Confidence: 99.8046875)
+
+ARRIVALS TO: RAMSTEIN AB, Germany (RMS) Wednesday, December 27th 2023 (Confidence: 95.166015625)
+
+| DESTINATION (96.2890625)                      | PICK UP TIME (93.359375) |
+| --------------------------------------------- | ------------------------ |
+| Adana AB, Turkey (93.408203125)               | 0720L (90.576171875)     |
+| Baltimore Washington Int'l, MD (96.142578125) | 0945L (93.212890625)     |

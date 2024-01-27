@@ -549,6 +549,21 @@ def merge_table_rows(table: Table) -> Optional[Table]:
         return None
 
 
+def any_in(a: List[Any], b: List[Any]) -> bool:
+    """Return whether any element in a is in b.
+
+    Args:
+    ----
+        a (List[Any]): The first list.
+        b (List[Any]): The second list.
+
+    Returns:
+    -------
+        bool: Whether any element in a is in b.
+    """
+    return bool(set(a) & set(b))
+
+
 def _get_merge_row_groups(
     table: Table,
 ) -> List[List[Tuple[int, List[Tuple[str, float]]]]]:
@@ -594,7 +609,33 @@ def _get_merge_row_groups(
         logging.error("An error occurred while identifying merge groups: %s", e)
         return []
 
-    return merge_groups
+    # Deduplicate merge groups
+    # This removes merge groups that overlap with previous merge groups
+    previous_group_idxs: List[int] = []
+    dedup_merge_groups: List[List[Tuple[int, List[Tuple[str, float]]]]] = []
+    for i, group in enumerate(merge_groups):
+        logging.info("Analyzing merge group: %s", group)
+
+        current_group_idxs = [row[0] for row in group]
+
+        if i == 0:
+            previous_group_idxs = current_group_idxs
+            dedup_merge_groups.append(group)
+            continue
+
+        if any_in(previous_group_idxs, current_group_idxs):
+            logging.info(
+                "Found overlapping merge groups: %s and %s. Excluding this group from merge.",
+                previous_group_idxs,
+                current_group_idxs,
+            )
+            previous_group_idxs = current_group_idxs
+            continue
+
+        dedup_merge_groups.append(group)
+        previous_group_idxs = current_group_idxs
+
+    return dedup_merge_groups
 
 
 def _merge_grouped_rows(
@@ -617,15 +658,21 @@ def _merge_grouped_rows(
             return table
 
         num_columns = len(table.rows[0])
+
+        # Row offset to account for rows that have been merged
+        row_offset = 0
+
         # Perform row merging for identified merge groups
         for group in merge_groups:
             merged_row = [("", 0.0)] * num_columns
-            first_row_index = group[0][0]
+            first_row_index = group[0][0] - row_offset
 
             for _, row in group:
                 for col in range(num_columns):
                     merged_text = f"{merged_row[col][0]} {row[col][0]}".strip()
-                    merged_conf = (merged_row[col][1] + row[col][1]) / 2
+                    merged_conf = merged_row[col][1] + (
+                        row[col][1] / len(group)
+                    )  # Average confidence calculation
                     # Round to 8 decimal places
                     merged_conf = round(merged_conf, 8)
                     merged_row[col] = (merged_text, merged_conf)
@@ -693,7 +740,9 @@ def _merge_grouped_rows(
                 [idx for idx, _ in group[1:]]
             )  # Sort to delete from end
             for idx in reversed(indices_to_remove):  # Delete from end
-                del table.rows[idx]
+                del table.rows[idx - row_offset]
+
+            row_offset += len(indices_to_remove)
 
         # Remove None rows (which are placeholders for the merged rows)
         table.rows = [row for row in table.rows if row is not None]

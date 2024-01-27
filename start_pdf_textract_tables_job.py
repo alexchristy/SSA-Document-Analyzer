@@ -1,5 +1,6 @@
 import logging
 import os
+import urllib.parse
 from typing import Any, Dict
 
 import boto3  # type: ignore
@@ -58,7 +59,11 @@ def lambda_handler(
     try:
         # Get S3 bucket and object from AWS SNS event
         s3_bucket = event["Records"][0]["s3"]["bucket"]["name"]
-        s3_object = event["Records"][0]["s3"]["object"]["key"]
+        s3_object_encoded = event["Records"][0]["s3"]["object"]["key"]
+
+        # Decode S3 object
+        s3_object = urllib.parse.unquote(s3_object_encoded)
+
         logging.info("Creating job for s3://%s/%s", s3_bucket, s3_object)
 
         # Get SNS topic and role ARNs from ENV variables

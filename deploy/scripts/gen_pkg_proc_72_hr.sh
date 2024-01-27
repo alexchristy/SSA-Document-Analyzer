@@ -1,11 +1,24 @@
 #!/bin/bash
-rm -rf proc_72_flights*
-mkdir proc_72_flights
-cd proc_72_flights
-source ../../../convert_72hr_env/bin/activate
-pip install -r ../../../dependencies/process_72hr_requirements.txt --target .
-cp ../../../*.py ./
-cp ../../../creds.json ./
+
+# Define the root directory for the lambda function
+LAMBDA_ROOT_DIR="proc_72_flights"
+
+# Clear and recreate the lambda root directory
+rm -rf $LAMBDA_ROOT_DIR
+mkdir $LAMBDA_ROOT_DIR
+
+# Install dependencies in the lambda root directory
+# Note: The virtual environment activation is not necessary
+pip install -r ../../dependencies/process_72hr_requirements.txt --target $LAMBDA_ROOT_DIR
+
+# Copy Python files and credentials to the lambda root directory
+cp ../../*.py $LAMBDA_ROOT_DIR/
+cp ../../creds.json $LAMBDA_ROOT_DIR/
+
+# Create the deployment package
+cd $LAMBDA_ROOT_DIR
 zip -r9 ../proc_72_flights.zip .
+
+# Clean up
 cd ..
-rm -rf proc_72_flights
+rm -rf $LAMBDA_ROOT_DIR

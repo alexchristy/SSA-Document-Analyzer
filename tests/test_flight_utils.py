@@ -321,6 +321,9 @@ class TestCellParsingUtils(unittest.TestCase):
             "Mildenhall AFB, EU": ["MILDENHALL AFB, EU"],
             "**DUSHANBE** - **AMBOULIINTL**": ["DUSHANBE", "AMBOULI INTL"],
             "LAJES FIELD, AZO": ["LAJES FIELD, AZO"],
+            "Baltimore Washington INT'L, MD Early Check-in available starting 26 December 2023, @0930L for Pre-Booked passengers on mission 1LT2 destined Baltimore Washington INT'L, MD": [
+                "BALTIMORE WASHINGTON INT'L, MD"
+            ],
         }
 
         for input_data, expected_output in test_cases.items():
