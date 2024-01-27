@@ -5,6 +5,19 @@ import pickle
 from typing import Any, Dict, Optional, Type
 
 
+# Custom error classes for flight objects
+class InvalidRollcallTimeError(Exception):
+    """Raised when the roll call time is invalid."""
+
+    pass
+
+
+class InvalidDateError(Exception):
+    """Raised when the date is invalid."""
+
+    pass
+
+
 class Flight:
     """Represents a flight with information about its origin, destination, roll call time, seats, notes, and date."""
 
@@ -20,6 +33,8 @@ class Flight:
         seat_note: bool = False,
         destination_note: bool = False,
         patriot_express: bool = False,
+        creation_time: Optional[int] = None,
+        should_archive: bool = True,
     ) -> None:
         """Initialize a Flight object with the given parameters.
 
@@ -35,6 +50,8 @@ class Flight:
             seat_note (bool, optional): Whether there is a note for the seats. Defaults to False.
             destination_note (bool, optional): Whether there is a note for the destinations. Defaults to False.
             patriot_express (bool, optional): Whether the flight is a Patriot Express flight. Defaults to False.
+            creation_time (int, optional): The time the flight was created. Defaults to None.
+            should_archive (bool, optional): Whether the flight should be archived. Defaults to True.
         """
         self.origin_terminal = origin_terminal
         self.destinations = destinations
@@ -46,9 +63,13 @@ class Flight:
         self.seat_note = seat_note
         self.destination_note = destination_note
         self.patriot_express = patriot_express
-        self.creation_time = int(
-            datetime.datetime.now(tz=datetime.timezone.utc).strftime("%Y%m%d%H%M")
+        self.should_archive = should_archive
+
+        # Generate creation time if not provided
+        self.creation_time = creation_time or int(
+            datetime.datetime.now(tz=datetime.UTC).strftime("%Y%m%d%H%M")
         )
+
         self.as_string = self.generate_as_string()
 
         self.flight_id = self.generate_flight_id()
@@ -153,11 +174,19 @@ class Flight:
 
         if not self.date:
             msg = "Date is missing"
-            raise ValueError(msg)
+            raise InvalidDateError(msg)
 
         if not self.rollcall_time:
-            msg = "Rollcall time is missing"
-            raise ValueError(msg)
+            if not self.rollcall_note:
+                msg = "Rollcall time is missing"
+                raise InvalidRollcallTimeError(msg)
+
+            logging.info(
+                "Rollcall time was replaced with a note: %s. Using 23:59 for the rollcall time.",
+                self.rollcall_note,
+            )
+            # If there is a rollcall note, return the last minute of the day
+            return f"{self.date}2359"
 
         # Ensure rollcall_time is in HHMM format
         if (
@@ -165,10 +194,21 @@ class Flight:
             or not self.rollcall_time.isdigit()
         ):
             msg = "Invalid rollcall time format"
-            raise ValueError(msg)
+            raise InvalidRollcallTimeError(msg)
 
         # Combine date and rollcall time
         return f"{self.date}{self.rollcall_time}"
+
+    def get_rollcall_note(self: "Flight") -> str:
+        """Get the roll call note.
+
+        Returns
+        -------
+            str: The roll call note.
+        """
+        if self.rollcall_note:
+            return self.notes["rollCallNotes"]["rollCallCellNote"]
+        return ""
 
     @classmethod
     def load_state(
@@ -235,6 +275,8 @@ class Flight:
                 "seat_note",
                 "destination_note",
                 "patriot_express",
+                "creation_time",
+                "should_archive",
             }
             filtered_data = {k: v for k, v in data.items() if k in valid_keys}
 

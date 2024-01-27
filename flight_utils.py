@@ -1,7 +1,8 @@
+import copy
 import datetime
 import logging
 import re
-from typing import Any, Dict, List, Optional, Tuple, cast
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from fuzzywuzzy import fuzz  # type: ignore
 
@@ -508,3 +509,295 @@ def convert_72hr_table_to_flights(  # noqa: PLR0911 (To be refactored later)
         flights.append(flight)
 
     return flights
+
+
+def count_matching_keys(dict1: Dict[str, Any], dict2: Dict[str, Any]) -> int:
+    """Count the number of matching keys between two dictionaries.
+
+    Args:
+    ----
+        dict1 (Dict[str, Any]): The first dictionary.
+        dict2 (Dict[str, Any]): The second dictionary.
+
+    Returns:
+    -------
+        int: The number of keys that match in both value and existence.
+    """
+    matching_keys = 0
+
+    for key in dict1:
+        if key in dict2 and dict1[key] == dict2[key]:
+            matching_keys += 1
+
+    return matching_keys
+
+
+def sort_dicts_by_matching_keys(
+    dict_list: List[Dict[str, Any]], reference_dict: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    """Sort a list of dictionaries based on the number of matching keys with a reference dictionary.
+
+    Args:
+    ----
+        dict_list (List[Dict[str, Any]]): List of dictionaries to be sorted.
+        reference_dict (Dict[str, Any]): The reference dictionary to compare against.
+
+    Returns:
+    -------
+        List[Dict[str, Any]]: Sorted list of dictionaries, with most matching keys first.
+    """
+    return sorted(
+        dict_list, key=lambda d: count_matching_keys(d, reference_dict), reverse=True
+    )
+
+
+# Define a type alias for dictionary elements, which could include nested dictionaries
+Element = Union[str, int, float, Dict[str, "Element"]]
+GenericDict = Dict[str, Element]
+
+
+def compare_nested_dicts(elem1: Element, elem2: Element) -> int:
+    """Compare two elements, which could be nested dictionaries.
+
+    Args:
+    ----
+        elem1 (Element): The first element to compare.
+        elem2 (Element): The second element to compare.
+
+    Returns:
+    -------
+        int: The number of matching elements.
+    """
+    if isinstance(elem1, dict) and isinstance(elem2, dict):
+        # Count matching elements in nested dictionaries
+        return sum(
+            compare_nested_dicts(elem1[key], elem2[key])
+            for key in elem1
+            if key in elem2
+        )
+
+    # Direct comparison for non-dictionary elements
+    return int(elem1 == elem2)
+
+
+def find_similar_dicts(
+    base_dict_list: List[GenericDict],
+    comp_dict_list: List[GenericDict],
+    min_num_matching_keys: int = 3,
+) -> List[GenericDict]:
+    """Find dictionaries in comp_dict_list that are similar to a dictionary in base_dict_list.
+
+    Args:
+    ----
+        base_dict_list (List[GenericDict]): Base list of dictionaries to compare against.
+        comp_dict_list (List[GenericDict]): List of dictionaries to compare.
+        min_num_matching_keys (int, optional): The minimum number of matching keys required to consider the dictionaries similar. Default is 3.
+
+    Returns:
+    -------
+        List[GenericDict]: A list of dictionaries from comp_dict_list that are similar to a dictionary in base_dict_list.
+    """
+    # Ensure that all elements in the lists are dictionaries
+    for d in base_dict_list + comp_dict_list:
+        if not isinstance(d, dict):
+            msg = "All elements in the lists must be dictionaries"
+            raise TypeError(msg)
+
+    similar_dicts = []
+
+    for comp_dict in comp_dict_list:
+        for new_dict in base_dict_list:
+            # Count matching elements (considering nested dictionaries)
+            match_count = sum(
+                compare_nested_dicts(comp_dict[key], new_dict[key])
+                for key in comp_dict
+                if key in new_dict
+            )
+
+            # Check if there are at least 3 matches
+            if match_count >= min_num_matching_keys:
+                similar_dicts.append(comp_dict)
+                break  # Break inner loop if a match is found
+
+    return similar_dicts
+
+
+def prune_recent_old_flights(  # noqa: PLR0913 (To be refactored later)
+    old_flights: List[Flight],
+    new_flights: List[Flight],
+    flight_age_seconds: int = 7200,
+    min_num_match_keys: int = 3,
+    keys_to_compare: Optional[List[str]] = None,
+    priority_prune_key: str = "destinations",
+) -> Tuple[List[Flight], List[Flight]]:
+    """Prune old flights from the old flights list if they are similar to a new flight and are so many seconds old.
+
+    Returns a list of old flights with similar + recent flights removed and then a seperate list of old flights that were removed.
+    Prunes on a 1:1 basis. If there are multiple similar old flights, only the highest priority flight will be pruned.
+
+    Priority is determined by the `priority_prune_key` argument. If the `priority_prune_key` matches between a new flight and an old flight, the old flight will be pruned.
+    If two old flights match the `priority_prune_key`, the old flight with the most similarity to the new flight will be pruned.
+
+    Args:
+    ----
+        old_flights (List[Flight]): List of old flights to prune.
+        new_flights (List[Flight]): List of new flights to compare against.
+        flight_age_seconds (int, optional): The age of a flight in seconds to consider it old enough to not prune. Default is 7200 (2 hours) inclusive.
+        min_num_match_keys (int, optional): The minimum number of matching keys required to consider the flights similar. Default is 3.
+        keys_to_compare (Optional[List[str]], optional): A list of keys to compare between the flights. Default is ["date", "seats", "destinations", "rollcall_time"].
+        priority_prune_key (Optional[str], optional): Key that if it matches gives that flight priority to be pruned. Must be in keys_to_compare. Default is destinations.
+
+    Returns:
+    -------
+        Tuple(List[Flight], List[Flight]): A tuple containing the pruned old flights and the removed old flights.
+    """
+    working_old_flights = copy.deepcopy(
+        old_flights
+    )  # We remove flights from this list and return it
+
+    current_date = datetime.datetime.now(
+        tz=datetime.UTC
+    )  # Flight creation_time is in UTC
+
+    if keys_to_compare is None:
+        keys_to_compare = ["date", "seats", "destinations", "rollcall_time"]
+
+    keys_to_compare = [key.lower() for key in keys_to_compare]
+
+    keys_to_compare.append("flight_id")  # Used for tracking. Will never match.
+
+    # Ensure that all elements in the lists are Flight objects
+    for f in working_old_flights + new_flights:
+        if not isinstance(f, Flight):
+            msg = "All elements in the lists must be Flight objects"
+            raise TypeError(msg)
+
+        if not all(key in f.to_dict() for key in keys_to_compare):
+            msg = f"One or more flights do not contain all the required keys for comparison. Keys reques: {keys_to_compare}"
+            raise ValueError(msg)
+
+    # Check priority_prune_key is in keys_to_compare
+    if priority_prune_key not in keys_to_compare:
+        msg = f"priority_prune_key '{priority_prune_key}' is not in keys_to_compare. Keys reques: {keys_to_compare}"
+        raise ValueError(msg)
+
+    removed_old_flights: List[Flight] = []
+    new_flights_dicts_reduced: List[Dict[str, Any]] = []
+    old_flights_dicts_reduced: List[Dict[str, Any]] = []
+
+    # Create dynamically reduced dictionaries for new flights
+    for flight in new_flights:
+        flight_dict = flight.to_dict()
+        reduced_flight_dict = {key: flight_dict[key] for key in keys_to_compare}
+        new_flights_dicts_reduced.append(reduced_flight_dict)
+
+    for new_flight_dict in new_flights_dicts_reduced:
+        logging.info("New flight dict: %s", new_flight_dict)
+
+        # Create dynamically reduced dictionaries for old flights
+        for flight in working_old_flights:
+            flight_dict = flight.to_dict()
+            reduced_flight_dict = {key: flight_dict[key] for key in keys_to_compare}
+            old_flights_dicts_reduced.append(reduced_flight_dict)
+
+        similar_old_flights = find_similar_dicts(
+            base_dict_list=[new_flight_dict],
+            comp_dict_list=old_flights_dicts_reduced,
+            min_num_matching_keys=min_num_match_keys,
+        )
+
+        logging.info("Found %s similar flights.", len(similar_old_flights))
+
+        if not similar_old_flights:
+            continue
+
+        # List similar flights ordered by priority to be pruned
+        ordered_sim_old_flights: List[Dict[str, Any]] = []
+
+        # First old flights to be pruned are the ones that match the priority_prune_key
+        # in a first come first serve basis.
+        for sim_old_flight in similar_old_flights[:]:  # Iterate over a copy of the list
+            # Check if the new flight matches the prune key
+            if (
+                sim_old_flight[priority_prune_key]
+                == new_flight_dict[priority_prune_key]
+            ):
+                logging.info(
+                    "Old flight matches new flight's prune key '%s'. Old flight: %s",
+                    priority_prune_key,
+                    sim_old_flight,
+                )
+                ordered_sim_old_flights.append(sim_old_flight)
+                similar_old_flights.remove(sim_old_flight)
+
+        # Sort the flights that match the priority_prune_key by the number of matching keys
+        if len(ordered_sim_old_flights) > 1:
+            ordered_sim_old_flights = sort_dicts_by_matching_keys(
+                dict_list=ordered_sim_old_flights, reference_dict=new_flight_dict
+            )
+
+        # Sort the remaining old flights by the number of matching keys
+        if len(similar_old_flights) > 1:
+            no_match_sim_old_flights = sort_dicts_by_matching_keys(
+                dict_list=similar_old_flights, reference_dict=new_flight_dict
+            )
+            ordered_sim_old_flights.extend(no_match_sim_old_flights)
+        else:
+            ordered_sim_old_flights.extend(similar_old_flights)
+
+        # Get the flight IDs of the similar flights
+        old_flight_ids = [flight.flight_id for flight in old_flights]
+
+        for sim_flight in ordered_sim_old_flights:
+            # Get the flight ID of the similar flight
+            similar_flight_id = sim_flight["flight_id"]
+
+            if similar_flight_id not in old_flight_ids:
+                logging.error(
+                    "Similar flight ID '%s' not found in the original old flights list. Skipping...",
+                    similar_flight_id,
+                )
+                continue
+
+            # Get the similar flight
+            similar_flight = next(
+                (f for f in working_old_flights if f.flight_id == similar_flight_id),
+                None,
+            )
+
+            if similar_flight is None:
+                logging.error(
+                    "Failed to get similar flight with ID %s. Skipping...",
+                    similar_flight_id,
+                )
+                continue
+
+            flight_creation_datetime = datetime.datetime.strptime(
+                str(similar_flight.creation_time), "%Y%m%d%H%M"
+            ).replace(tzinfo=datetime.timezone.utc)
+
+            time_diff = current_date - flight_creation_datetime
+
+            logging.info(
+                "Time delta (secs): %s for flight: %s",
+                time_diff.total_seconds(),
+                similar_flight.flight_id,
+            )
+
+            if time_diff.total_seconds() <= flight_age_seconds:
+                logging.info(
+                    "Old flight with ID %s is younger than %s seconds. Pruning...",
+                    similar_flight.flight_id,
+                    flight_age_seconds,
+                )
+                removed_old_flights.append(similar_flight)
+                working_old_flights.remove(similar_flight)
+                break  # Break out of inner loop if a flight is pruned to avoid pruning multiple flights (1:1)
+
+            logging.info(
+                "Old flight with ID %s is older than %s seconds. Not removing...",
+                similar_flight.flight_id,
+                flight_age_seconds,
+            )
+
+    return working_old_flights, removed_old_flights

@@ -1,5 +1,6 @@
 import logging
 import os
+from dotenv import load_dotenv
 
 import boto3  # type: ignore
 from botocore.exceptions import (  # type: ignore
@@ -43,6 +44,7 @@ def initialize_client(requested_client: str) -> boto3.client:
     try:
         if os.getenv("RUN_LOCAL"):
             logging.info("Running in a local environment.")
+            load_dotenv()
 
             aws_access_key = os.getenv("AWS_ACCESS_KEY_ID")
             aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
@@ -72,5 +74,6 @@ def initialize_client(requested_client: str) -> boto3.client:
         logging.error(msg)
         raise ValueError(msg) from e
     except Exception as e:
-        logging.error("Failed to initialize AWS client %s: %s", requested_client, e)
+        msg = f"Failed to initialize AWS client {requested_client}: {e}"
+        logging.error(msg)
         raise ValueError(msg) from e

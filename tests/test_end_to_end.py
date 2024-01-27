@@ -191,6 +191,14 @@ class TestEndToEnd(unittest.TestCase):
         if not isinstance(textract_doc, dict):
             self.fail("Textract document was not a dictionary")
 
+        # Check that the terminal name was included in the textract document
+        textract_doc = fs.get_textract_job(job_id)
+
+        if not textract_doc:
+            self.fail("Textract document was empty")
+
+        self.assertEqual(textract_doc.get("terminal_name", ""), terminal_doc["name"])
+
         # =======================================================================
         # ================(Check that previous flights archived)=================
         # =======================================================================
@@ -236,27 +244,43 @@ class TestEndToEnd(unittest.TestCase):
 
         # Only the second flight to Mildenhall AFB should be in the current flights collection
         # since the first flight is in the past and should be deleted
-        current_flight_dict = fs.get_doc_by_id(
+        current_flight_1_dict = fs.get_doc_by_id(
             collection_name=current_flights_coll,
             doc_id=macdill_2_72hr_flight_2.flight_id,
         )
 
-        if not current_flight_dict:
+        if not current_flight_1_dict:
             self.fail("Current flight was empty")
 
-        # Check that the current flight is the same as the original flight
-        current_flight = Flight.from_dict(current_flight_dict)
+        current_flight_2_dict = fs.get_doc_by_id(
+            collection_name=current_flights_coll,
+            doc_id=macdill_2_72hr_flight_1.flight_id,
+        )
 
-        if not current_flight:
+        if not current_flight_2_dict:
+            self.fail("Current flight was not deleted")
+
+        # Check that the two current flights are the same as the original flight
+        current_flight_1 = Flight.from_dict(current_flight_1_dict)
+        current_flight_2 = Flight.from_dict(current_flight_2_dict)
+
+        if not current_flight_1:
             self.fail("Unable to convert current flight dict to Flight object")
 
-        self.assertEqual(current_flight, macdill_2_72hr_flight_2)
+        if not current_flight_2:
+            self.fail("Unable to convert current flight dict to Flight object")
+
+        self.assertEqual(current_flight_1, macdill_2_72hr_flight_2)
+        self.assertEqual(current_flight_2, macdill_2_72hr_flight_1)
+
+        # Ensure the second flight is marked should_archive False
+        self.assertFalse(current_flight_2_dict.get("should_archive", True))
 
         # Check that there are no other flights in the current flights collection
         current_docs = fs.db.collection(current_flights_coll).stream()
 
         # Only one document for Mildenhall AFB flight tested above
-        self.assertEqual(len(list(current_docs)), 1)
+        self.assertEqual(len(list(current_docs)), 2)
 
         # =======================================================================
         # ===============(Check Store-Flights updates Termnal doc)===============
@@ -281,7 +305,10 @@ class TestEndToEnd(unittest.TestCase):
 
         # Check that the correct flight id was added to the terminal document
         # for the flight to Mildenhall AFB
-        correct_flight_ids = [macdill_2_72hr_flight_2.flight_id]
+        correct_flight_ids = [
+            macdill_2_72hr_flight_2.flight_id,
+            macdill_2_72hr_flight_1.flight_id,
+        ]
         terminal_flight_ids = cast(list, terminal_doc.get("flights72Hour", []))
 
         if not terminal_flight_ids or not isinstance(terminal_flight_ids, list):
@@ -443,7 +470,8 @@ class TestEndToEnd(unittest.TestCase):
         fs.delete_document_by_id(archive_flights_coll, archived_flight.flight_id)
 
         # Delete current flight document
-        fs.delete_document_by_id(current_flights_coll, current_flight.flight_id)
+        fs.delete_document_by_id(current_flights_coll, current_flight_1.flight_id)
+        fs.delete_document_by_id(current_flights_coll, current_flight_2.flight_id)
 
         # Delete textract job document
         fs.delete_document_by_id(textract_jobs_coll, job_id)
@@ -553,6 +581,8 @@ class TestEndToEnd(unittest.TestCase):
         ]
 
         current_flights = [
+            kadena_1_72hr_flight_1,
+            kadena_1_72hr_flight_2,
             kadena_1_72hr_flight_3,
             kadena_1_72hr_flight_4,
             kadena_1_72hr_flight_5,
@@ -668,6 +698,14 @@ class TestEndToEnd(unittest.TestCase):
         if not isinstance(textract_doc, dict):
             self.fail("Textract document was not a dictionary")
 
+        # Check that the terminal name was included in the textract document
+        textract_doc = fs.get_textract_job(job_id)
+
+        if not textract_doc:
+            self.fail("Textract document was empty")
+
+        self.assertEqual(textract_doc.get("terminal_name", ""), terminal_doc["name"])
+
         # =======================================================================
         # ================(Check that previous flights archived)=================
         # =======================================================================
@@ -729,18 +767,22 @@ class TestEndToEnd(unittest.TestCase):
             # Add two because this list starts at the 3rd flight in the pdf
             if not current_flight:
                 self.fail(
-                    f"Unable to convert current flight dict to Flight object. Flight {i+2}."
+                    f"Unable to convert current flight dict to Flight object. Flight {i+1}."
                 )
 
             self.assertEqual(
                 flight, current_flight
             )  # flight is an from a pickled file. current_flight is being tested.
 
+            if flight.get_departure_datetime() < test_date:
+                # Ensure the first two flights are marked should_archive False
+                self.assertFalse(current_flight_dict.get("should_archive", True))
+
         # Check that there are no other flights in the current flights collection
         current_docs = fs.db.collection(current_flights_coll).stream()
 
         # Only one document for Mildenhall AFB flight tested above
-        self.assertEqual(len(list(current_docs)), 3)
+        self.assertEqual(len(list(current_docs)), 5)
 
         # =======================================================================
         # ===============(Check Store-Flights updates Termnal doc)===============
@@ -1116,9 +1158,10 @@ class TestEndToEnd(unittest.TestCase):
             sigonella_1_72hr_flight_3,
         ]
 
-        current_flights = [  # Every flight except the third flight
+        current_flights = [  # Every flight
             sigonella_1_72hr_flight_1,
             sigonella_1_72hr_flight_2,
+            sigonella_1_72hr_flight_3,
             sigonella_1_72hr_flight_4,
             sigonella_1_72hr_flight_5,
             sigonella_1_72hr_flight_6,
@@ -1234,6 +1277,14 @@ class TestEndToEnd(unittest.TestCase):
         if not isinstance(textract_doc, dict):
             self.fail("Textract document was not a dictionary")
 
+        # Check that the terminal name was included in the textract document
+        textract_doc = fs.get_textract_job(job_id)
+
+        if not textract_doc:
+            self.fail("Textract document was empty")
+
+        self.assertEqual(textract_doc.get("terminal_name", ""), terminal_doc["name"])
+
         # =======================================================================
         # ================(Check that previous flights archived)=================
         # =======================================================================
@@ -1294,12 +1345,16 @@ class TestEndToEnd(unittest.TestCase):
             # Add two because this list starts at the 3rd flight in the pdf
             if not current_flight:
                 self.fail(
-                    f"Unable to convert current flight dict to Flight object. Flight {i+2}."
+                    f"Unable to convert current flight dict to Flight object. Flight {i+1}."
                 )
 
             self.assertEqual(
                 flight, current_flight
             )  # flight is an from a pickled file. current_flight is being tested.
+
+            if flight.get_departure_datetime() < test_date:
+                # Ensure the third flight is marked should_archive False
+                self.assertFalse(current_flight_dict.get("should_archive", True))
 
         # Check that there are no other flights in the current flights collection
         current_docs = fs.db.collection(current_flights_coll).stream()
@@ -1581,7 +1636,8 @@ class TestEndToEnd(unittest.TestCase):
             bwi_1_72hr_flight_1,
         ]
 
-        current_flights = [  # Every flight except the first flight
+        current_flights = [  # Every flight
+            bwi_1_72hr_flight_1,
             bwi_1_72hr_flight_2,
             bwi_1_72hr_flight_3,
         ]
@@ -1688,6 +1744,14 @@ class TestEndToEnd(unittest.TestCase):
         if not isinstance(textract_doc, dict):
             self.fail("Textract document was not a dictionary")
 
+        # Check that the terminal name was included in the textract document
+        textract_doc = fs.get_textract_job(job_id)
+
+        if not textract_doc:
+            self.fail("Textract document was empty")
+
+        self.assertEqual(textract_doc.get("terminal_name", ""), terminal_doc["name"])
+
         # =======================================================================
         # ================(Check that previous flights archived)=================
         # =======================================================================
@@ -1748,12 +1812,16 @@ class TestEndToEnd(unittest.TestCase):
             # Add two because this list starts at the 3rd flight in the pdf
             if not current_flight:
                 self.fail(
-                    f"Unable to convert current flight dict to Flight object. Flight {i+2}."
+                    f"Unable to convert current flight dict to Flight object. Flight {i+1}."
                 )
 
             self.assertEqual(
                 flight, current_flight
             )  # flight is an from a pickled file. current_flight is being tested.
+
+            if flight.get_departure_datetime() < test_date:
+                # Ensure the first flight is marked should_archive False
+                self.assertFalse(current_flight_dict.get("should_archive", True))
 
         # Check that there are no other flights in the current flights collection
         current_docs = fs.db.collection(current_flights_coll).stream()
@@ -1947,3 +2015,34 @@ class TestEndToEnd(unittest.TestCase):
 
         # Delete textract job document
         fs.delete_document_by_id(textract_jobs_coll, job_id)
+
+    def test_e2e_similarity_archive_filter(self) -> None:
+        """Test that old flights that are similar to new flights are not archived when the new flights are updated within 2 hours after the old flights.
+
+        For this test we use the `tests/pdfs/hickam_1_72hr_test.pdf` pdf and flights. First we insert the flights from this PDF into the Current_Flights
+        collection. Then we trigger the entire lambda chain with the same PDF. The lambda chain should update the flights in the Current_Flights collection
+        a not archive the similar old flights. See below for more details:
+
+        Test Current Time: 18 Aug, 2023 @ 0458
+
+        Old Flights: August 18, 2023 (Created 18 Aug, 2023 @ 0335)
+
+        | Roll Call | Destination | Seats |
+        |-----------|-------------|-------|
+        | 0411 | Travis AFB, CA | 8T |
+        | 0500 | Travis AFB, CA | 15T | --> Different Seat Count
+        | 0936 | MacDill AFB, FL | 10T |
+        | 1140 | MacDill AFB, FL | 10T |
+        | 2055 | Travis AFB, CA | TBD |
+
+        New Flights (Original PDF): August 18, 2023 (Created 18 Aug, 2023 @ 0459)
+
+        | Roll Call | Destination | Seats |
+        |-----------|-------------|-------|
+        | 0411 | Travis AFB, CA | 8T |
+        | 0500 | Travis AFB, CA | 42F |
+        | 0936 | MacDill AFB, FL | 10T |
+        | 1140 | MacDill AFB, FL | 10T |
+        | 2055 | Travis AFB, CA | TBD |
+        """
+        pass

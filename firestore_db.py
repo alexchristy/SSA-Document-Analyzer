@@ -961,3 +961,42 @@ class FirestoreClient:
 
         logging.info("Deleted all documents from collection '%s'", collection_name)
         return None
+
+    def find_document_with_matching_array(
+        self: "FirestoreClient",
+        collection_name: str,
+        array_field_name: str,
+        target_array: List[Any],
+    ) -> Optional[Dict[str, Any]]:
+        """Find document in a collection with a matching array.
+
+        Args:
+        ----
+            collection_name (str): The name of the collection to search.
+            array_field_name (str): The name of the array field to search.
+            target_array (list): The array to search for.
+
+        Returns:
+        -------
+            Optional[Dict[str, Any]]: A dictionary representing the document if it exists, otherwise None.
+        """
+        try:
+            # Query the Firestore collection
+            collection_ref = self.db.collection(collection_name)
+            docs = collection_ref.stream()
+
+            for doc in docs:
+                doc_data = doc.to_dict()
+                # Check if the document has the field and if the field matches the target array
+                if (
+                    array_field_name in doc_data
+                    and doc_data[array_field_name] == target_array
+                ):
+                    return doc_data
+
+            return None
+
+        except Exception as e:
+            # Handle exceptions
+            print(f"An error occurred retrieving a document by array: {e}")
+            return None

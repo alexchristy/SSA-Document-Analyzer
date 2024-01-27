@@ -194,6 +194,13 @@ def lambda_handler(
         if test:
             fs.append_to_doc("Textract_Jobs", job_id, test_payload)
 
+        # Add Terminal name to Textract Job
+        terminal_name_append_dict = {
+            "terminal_name": terminal_name,
+        }
+
+        fs.append_to_doc("Textract_Jobs", job_id, terminal_name_append_dict)
+
         return {
             "statusCode": 200,
             "body": "Job started successfully.",

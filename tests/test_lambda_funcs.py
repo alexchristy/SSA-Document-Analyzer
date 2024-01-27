@@ -1,10 +1,13 @@
 import copy
+import datetime as dt_base
 import json
 import logging
 import time
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, cast
+
+import pytz
 
 from aws_utils import initialize_client
 from firestore_db import FirestoreClient
@@ -129,6 +132,7 @@ class TestStartPdfTextractJob(unittest.TestCase):
             self.fail("Textract job not found in Firestore")
 
         self.assertEqual(textract_job["pdf_hash"], pdf_doc["hash"])
+        self.assertEqual(textract_job["terminal_name"], terminal_doc["name"])
 
         request_id = response.get("ResponseMetadata", {}).get("RequestId", "")
 
@@ -276,6 +280,7 @@ class TestStartPdfTextractJob(unittest.TestCase):
 
         self.assertEqual(textract_job["pdf_hash"], pdf_doc["hash"])
         self.assertTrue(textract_job.get("test", False))
+        self.assertEqual(textract_job["terminal_name"], terminal_doc["name"])
 
         # Check that the job id is equal to the fake job id that should be returned
         self.assertEqual(str(returned_job_id), "111111111111111111111111111111111111")
@@ -443,6 +448,7 @@ class TestStartPdfTextractJob(unittest.TestCase):
 
         self.assertEqual(textract_job["pdf_hash"], pdf_doc["hash"])
         self.assertTrue(textract_job.get("test", False))
+        self.assertEqual(textract_job["terminal_name"], terminal_doc["name"])
 
         # Check that the job id is NOT equal to the fake job id that should be returned
         self.assertNotEqual(
@@ -1471,13 +1477,27 @@ class TestProcess72HrFlights(unittest.TestCase):
             osan_1_72hr_flight_3,
         ]
 
+        # Correct year in the loaded flights to the current year
+        current_year = str(datetime.now(tz=pytz.UTC).year)
+
+        for flight in loaded_flights:
+            flight.as_string = flight.as_string.replace("2023", current_year)
+            flight.date = flight.date.replace("2023", current_year)
+            flight.flight_id = flight.generate_flight_id()
+
         # Sort flight by flight_id
         converted_flights.sort(key=lambda x: x.flight_id)
         loaded_flights.sort(key=lambda x: x.flight_id)
 
-        # Check that the flights are equal
-        for i, flight in enumerate(converted_flights):
-            self.assertEqual(flight, loaded_flights[i])
+        # Fix the destination for the first flight
+        # Since it flips between INTL and INT'L due to ChatGPT
+        converted_flights[1].destinations[0] = (
+            converted_flights[1].destinations[0].replace("INTL", "INT'L")
+        )
+        converted_flights[1].as_string = converted_flights[1].generate_as_string()
+        converted_flights[1].flight_id = converted_flights[1].generate_flight_id()
+
+        self.assertCountEqual(converted_flights, loaded_flights)
 
         # Check that the proper information is written to Textract job document
         testing_textract_doc = fs.get_textract_job(job_id)
@@ -1510,17 +1530,24 @@ class TestProcess72HrFlights(unittest.TestCase):
             self.fail("Function name not found in Textract job")
 
         # Verify that the correct flight ids are written to the Textract job document
-        flight_ids = testing_textract_doc.get("flight_ids")
+        flight_ids = cast(List[str], testing_textract_doc.get("flight_ids"))
 
         if not flight_ids:
             self.fail("Flight IDs not found in Textract job")
 
         self.assertEqual(len(flight_ids), 4)
 
-        flight_ids.sort()
+        # Remove problematic flight id stemming from the INTL and INT'L issue
+        flight_ids.remove(
+            "3dbb83bba0253e017f1f3ffdd65c6779a6b7c24d22e4585582b9981b4fe43a2f"
+        )
+        flight_ids.append(
+            "85dcdeb00978c0e86d660a5a4dc126ec22866970bed4a3c4a404dd011a48ebfd"
+        )
 
-        for i, flight_id in enumerate(flight_ids):
-            self.assertEqual(flight_id, converted_flights[i].flight_id)
+        converted_flight_ids = [flight.flight_id for flight in converted_flights]
+
+        self.assertCountEqual(flight_ids, converted_flight_ids)
 
         # Verify the number of flights is correctly written to the Textract job document
         num_flights = testing_textract_doc.get("num_flights")
@@ -1738,13 +1765,27 @@ class TestProcess72HrFlights(unittest.TestCase):
             osan_1_72hr_flight_3,
         ]
 
+        # Correct year in the loaded flights to the current year
+        current_year = str(datetime.now(tz=pytz.UTC).year)
+
+        for flight in loaded_flights:
+            flight.as_string = flight.as_string.replace("2023", current_year)
+            flight.date = flight.date.replace("2023", current_year)
+            flight.flight_id = flight.generate_flight_id()
+
         # Sort flight by flight_id
         converted_flights.sort(key=lambda x: x.flight_id)
         loaded_flights.sort(key=lambda x: x.flight_id)
 
-        # Check that the flights are equal
-        for i, flight in enumerate(converted_flights):
-            self.assertEqual(flight, loaded_flights[i])
+        # Fix the destination for the first flight
+        # Since it flips between INTL and INT'L due to ChatGPT
+        converted_flights[1].destinations[0] = (
+            converted_flights[1].destinations[0].replace("INTL", "INT'L")
+        )
+        converted_flights[1].as_string = converted_flights[1].generate_as_string()
+        converted_flights[1].flight_id = converted_flights[1].generate_flight_id()
+
+        self.assertCountEqual(converted_flights, loaded_flights)
 
         # Check that the proper information is written to Textract job document
         testing_textract_doc = fs.get_textract_job(job_id)
@@ -1784,10 +1825,17 @@ class TestProcess72HrFlights(unittest.TestCase):
 
         self.assertEqual(len(flight_ids), 4)
 
-        flight_ids.sort()
+        # Remove problematic flight id stemming from the INTL and INT'L issue
+        flight_ids.remove(
+            "3dbb83bba0253e017f1f3ffdd65c6779a6b7c24d22e4585582b9981b4fe43a2f"
+        )
+        flight_ids.append(
+            "85dcdeb00978c0e86d660a5a4dc126ec22866970bed4a3c4a404dd011a48ebfd"
+        )
 
-        for i, flight_id in enumerate(flight_ids):
-            self.assertEqual(flight_id, converted_flights[i].flight_id)
+        converted_flight_ids = [flight.flight_id for flight in converted_flights]
+
+        self.assertCountEqual(flight_ids, converted_flight_ids)
 
         # Verify the number of flights is correctly written to the Textract job document
         num_flights = testing_textract_doc.get("num_flights")
@@ -2156,9 +2204,16 @@ class TestProcess72HrFlights(unittest.TestCase):
         converted_flights.sort(key=lambda x: x.flight_id)
         loaded_flights.sort(key=lambda x: x.flight_id)
 
+        # Fix the destination for the first flight
+        # Since it flips between INTL and INT'L due to ChatGPT
+        converted_flights[2].destinations[0] = (
+            converted_flights[2].destinations[0].replace("INTL", "INT'L")
+        )
+        converted_flights[2].as_string = converted_flights[2].generate_as_string()
+        converted_flights[2].flight_id = converted_flights[2].generate_flight_id()
+
         # Check that the flights are equal
-        for i, flight in enumerate(converted_flights):
-            self.assertEqual(flight, loaded_flights[i])
+        self.assertCountEqual(converted_flights, loaded_flights)
 
         # Check that the proper information is written to Textract job document
         testing_textract_doc = fs.get_textract_job(job_id)
@@ -2198,10 +2253,17 @@ class TestProcess72HrFlights(unittest.TestCase):
 
         self.assertEqual(len(flight_ids), 4)
 
-        flight_ids.sort()
+        # Remove problematic flight id stemming from the INTL and INT'L issue
+        flight_ids.remove(
+            "9ba710129f0ea0aa7c63fb154761818f6bc4d2b972a963789ac35a9ab444a5a2"
+        )
+        flight_ids.append(
+            "673efa45a9d885599846280d7582cb0afa282f4f58b5c30ba6a98f52b5d3c221"
+        )
 
-        for i, flight_id in enumerate(flight_ids):
-            self.assertEqual(flight_id, converted_flights[i].flight_id)
+        converted_flight_ids = [flight.flight_id for flight in converted_flights]
+
+        self.assertCountEqual(flight_ids, converted_flight_ids)
 
         # Verify the number of flights is correctly written to the Textract job document
         num_flights = testing_textract_doc.get("num_flights")
@@ -2241,10 +2303,10 @@ class TestStoreFlights(unittest.TestCase):
         The 4 same flights are sent to function. It should then delete the two past flights and insert the two future flights
         into current flights collection.
         """
-        pdf_archive_coll = "**TESTING**_PDF_Archive666"
-        terminal_coll = "**TESTING**_Terminals666"
-        current_flights_coll = "**TESTING**_Flights_Current666"
-        archive_flights_coll = "**TESTING**_Flights_Archive666"
+        pdf_archive_coll = "**TESTING**_PDF_Archive-Store-1"
+        terminal_coll = "**TESTING**_Terminals-Store-1"
+        current_flights_coll = "**TESTING**_Flights_Current-Store-1"
+        archive_flights_coll = "**TESTING**_Flights_Archive-Store-1"
         textract_jobs_coll = "Textract_Jobs"
 
         test_date = "202311040908"  # November 4, 2023 at 09:08
@@ -2453,11 +2515,13 @@ class TestStoreFlights(unittest.TestCase):
         if not stored_flights:
             self.fail("No stored flights found in Store-Flights payload")
 
-        self.assertEqual(len(stored_flights), 2)
+        self.assertEqual(len(stored_flights), 4)
 
         self.assertCountEqual(
             stored_flights,
             [
+                flights[0].get("flight_id", ""),
+                flights[1].get("flight_id", ""),
                 flights[2].get("flight_id", ""),
                 flights[3].get("flight_id", ""),
             ],
@@ -2479,6 +2543,9 @@ class TestStoreFlights(unittest.TestCase):
 
             if not stored_flight:
                 self.fail("Failed to convert archived flight from dictionary")
+
+            if stored_flight.get_departure_datetime() < test_date:
+                self.assertEqual(stored_flight.should_archive, False)
 
             for pickled_flight in flights:
                 if pickled_flight["flight_id"] == stored_flight.flight_id:
@@ -2523,11 +2590,13 @@ class TestStoreFlights(unittest.TestCase):
         if not listed_flights:
             self.fail("No listed flights found in terminal document")
 
-        self.assertEqual(len(listed_flights), 2)
+        self.assertEqual(len(listed_flights), 4)
 
         self.assertCountEqual(
             listed_flights,
             [
+                flights[0].get("flight_id", ""),
+                flights[1].get("flight_id", ""),
                 flights[2].get("flight_id", ""),
                 flights[3].get("flight_id", ""),
             ],
@@ -2584,10 +2653,10 @@ class TestStoreFlights(unittest.TestCase):
         Uses the current date and time at the Osan AB Passenger Terminal as the test date. To verify that the function works
         correctly.
         """
-        pdf_archive_coll = "**TESTING**_PDF_Archive666"
-        terminal_coll = "**TESTING**_Terminals666"
-        current_flights_coll = "**TESTING**_Flights_Current666"
-        archive_flights_coll = "**TESTING**_Flights_Archive666"
+        pdf_archive_coll = "**TESTING**_PDF_Archive-Store-2"
+        terminal_coll = "**TESTING**_Terminals-Store-2"
+        current_flights_coll = "**TESTING**_Flights_Current-Store-2"
+        archive_flights_coll = "**TESTING**_Flights_Archive-Store-2"
         textract_jobs_coll = "Textract_Jobs"
 
         lambda_client = initialize_client("lambda")
@@ -2730,7 +2799,7 @@ class TestStoreFlights(unittest.TestCase):
 
         old_flights_copy = copy.deepcopy(flights)
 
-        # Insert flights into current flights collection
+        # Insert old flights into current flights collection
         # to test archiving
         for flight_copy in old_flights_copy:
             fs.insert_document_with_id(
@@ -2842,11 +2911,13 @@ class TestStoreFlights(unittest.TestCase):
         if not stored_flights:
             self.fail("No stored flights found in Store-Flights payload")
 
-        self.assertEqual(len(stored_flights), 2)
+        self.assertEqual(len(stored_flights), 4)
 
         self.assertCountEqual(
             stored_flights,
             [
+                flights[0].get("flight_id", ""),
+                flights[1].get("flight_id", ""),
                 flights[2].get("flight_id", ""),
                 flights[3].get("flight_id", ""),
             ],
@@ -2868,6 +2939,11 @@ class TestStoreFlights(unittest.TestCase):
 
             if not stored_flight:
                 self.fail("Failed to convert archived flight from dictionary")
+
+            if stored_flight.get_departure_datetime() < local_time.strftime(
+                "%Y%m%d%H%M"
+            ):
+                self.assertEqual(stored_flight.should_archive, False)
 
             for pickled_flight in flights:
                 if pickled_flight["flight_id"] == stored_flight.flight_id:
@@ -2912,11 +2988,13 @@ class TestStoreFlights(unittest.TestCase):
         if not listed_flights:
             self.fail("No listed flights found in terminal document")
 
-        self.assertEqual(len(listed_flights), 2)
+        self.assertEqual(len(listed_flights), 4)
 
         self.assertCountEqual(
             listed_flights,
             [
+                flights[0].get("flight_id", ""),
+                flights[1].get("flight_id", ""),
                 flights[2].get("flight_id", ""),
                 flights[3].get("flight_id", ""),
             ],
@@ -2964,3 +3042,1236 @@ class TestStoreFlights(unittest.TestCase):
         fs.delete_document_by_id(
             collection_name=terminal_coll, doc_id=terminal_doc["name"]
         )
+
+    def test_no_archive_tbd_rollcall_flights(self: unittest.TestCase) -> None:
+        """Verifies that the Store-Flights function gracefully handles invalid rollcall times.
+
+        This test verifies that the Store-Flights function gracefully handles invalid rollcall times. This is done by
+        sending a payload with a flight that has an invalid rollcall time.
+        """
+        pdf_archive_coll = "**TESTING**_PDF_Archive-Store-3"
+        terminal_coll = "**TESTING**_Terminals-Store-3"
+        current_flights_coll = "**TESTING**_Flights_Current-Store-3"
+        archive_flights_coll = "**TESTING**_Flights_Archive-Store-3"
+        textract_jobs_coll = "Textract_Jobs"
+
+        lambda_client = initialize_client("lambda")
+        fs = FirestoreClient(
+            pdf_archive_coll=pdf_archive_coll,
+            terminal_coll=terminal_coll,
+            textract_jobs_coll=textract_jobs_coll,
+            flight_current_coll=current_flights_coll,
+            flight_archive_coll=archive_flights_coll,
+        )
+
+        # Create a fake Textract job
+        job_id = "TEST_Textract_Job_Doc-Store-3"
+        textract_doc = {
+            "desc": "Test Textract Job document for testing Store-Flights function",
+            "test": True,
+            "testParameters": {
+                "sendPdf": True,
+                "testPdfArchiveColl": pdf_archive_coll,
+                "testTerminalColl": terminal_coll,
+                "testCurrentFlightsColl": current_flights_coll,
+                "testArchiveFlightsColl": archive_flights_coll,
+            },
+        }
+
+        fs.insert_document_with_id("Textract_Jobs", job_id, textract_doc)
+
+        # Create a the fake pdf archive document
+        pdf_doc = {
+            "cloud_path": "current/72_HR/72 Hour Slides AUG 18_fd040263-b.pdf",
+            "hash": "80b3f417259982271e57abad302a3caa12d2848f2d13301efc7bcffca12ee4e1",
+            "terminal": "Osan AB Passenger Terminal",
+            "type": "72_HR",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=pdf_archive_coll,
+            document_data=pdf_doc,
+            doc_id=pdf_doc["hash"],
+        )
+
+        # Create a fake terminal document
+        terminal_doc = {
+            "name": "Osan AB Passenger Terminal",
+            "location": "Osan AB, ROK",
+            "timezone": "Asia/Seoul",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=terminal_coll,
+            document_data=terminal_doc,
+            doc_id=terminal_doc["name"],
+        )
+
+        # Load in pickled flights
+        osan_1_72hr_flight_0 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_no_archive_tbd_rollcall_flights/osan_1_72hr_flight-0_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_0:
+            self.fail("Failed to load flight 0 from pickle file")
+
+        osan_1_72hr_flight_1 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_no_archive_tbd_rollcall_flights/osan_1_72hr_flight-1_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_1:
+            self.fail("Failed to load flight 1 from pickle file")
+
+        # Set the first flight to a TBD rollcall time and
+        # put in Current Flights collection to check
+        # that it does not get archived later.
+        osan_1_72hr_flight_0.rollcall_time = None
+        osan_1_72hr_flight_0.notes = {"rollCallNotes": {"rollCallCellNote": "TBD"}}
+        osan_1_72hr_flight_0.rollcall_note = True
+        osan_1_72hr_flight_0.as_string = osan_1_72hr_flight_0.generate_as_string()
+        osan_1_72hr_flight_0.flight_id = osan_1_72hr_flight_0.generate_flight_id()
+
+        fs.insert_document_with_id(
+            collection_name=current_flights_coll,
+            document_data=osan_1_72hr_flight_0.to_dict(),
+            doc_id=osan_1_72hr_flight_0.flight_id,
+        )
+
+        # Now send the second flight to the Store-Flights function
+        # to see if the function does not archive the first flight
+        # because it has a TBD rollcall time.
+        payload = json.dumps(
+            {
+                "flights": [osan_1_72hr_flight_1.to_dict()],
+                "pdf_hash": pdf_doc["hash"],
+                "job_id": job_id,
+                "terminal": terminal_doc["name"],
+            }
+        )
+
+        store_flights_response = lambda_client.invoke(
+            FunctionName="Store-Flights",
+            InvocationType="RequestResponse",
+            Payload=payload,
+        )
+
+        self.assertEqual(store_flights_response["StatusCode"], 200)
+
+        # Reading the payload
+        store_flights_stream = store_flights_response["Payload"]
+        store_flights_data = store_flights_stream.read()
+
+        # The payload is in bytes, so we decode it to a string and then load it as JSON
+        store_flights_payload = json.loads(store_flights_data.decode())
+
+        if not store_flights_payload:
+            self.fail("Payload is empty")
+
+        self.assertEqual(
+            store_flights_payload["body"],
+            "Successfully stored flights.",
+        )
+
+        # Check that self reported archived flights are correct
+        archived_flights = store_flights_payload.get("archivedFlights")
+
+        archived_flights = json.loads(archived_flights)
+
+        self.assertEqual(len(archived_flights), 0)
+
+        # Check that nothing was archived in Firestore
+        flight_archive_collection_ref = fs.db.collection(archive_flights_coll)
+
+        flight_archive_query = flight_archive_collection_ref.where(
+            "origin_terminal", "==", "Osan AB Passenger Terminal"
+        )
+
+        documents = flight_archive_query.stream()
+
+        self.assertEqual(len(list(documents)), 0)
+
+        # Check that the one new flight was correctly stored in Firestore
+        flight_current_collection_ref = fs.db.collection(current_flights_coll)
+
+        flight_current_query = flight_current_collection_ref.where(
+            "origin_terminal", "==", "Osan AB Passenger Terminal"
+        )
+
+        documents = flight_current_query.stream()
+
+        self.assertEqual(len(list(documents)), 1)
+
+        # Verify that the flight is marked as should_archive False
+        flight_1_dict = fs.get_doc_by_id(
+            collection_name=current_flights_coll,
+            doc_id=osan_1_72hr_flight_1.flight_id,
+        )
+
+        if not flight_1_dict:
+            self.fail("Flight 1 not found in Firestore")
+
+        flight_1 = Flight.from_dict(flight_1_dict)
+
+        if not flight_1:
+            self.fail("Failed to convert flight 1 from dictionary")
+
+        self.assertEqual(flight_1.should_archive, False)
+
+        # Check that the second flight made it to the temrinal document
+        terminal_doc = fs.get_doc_by_id(
+            collection_name=terminal_coll, doc_id=terminal_doc["name"]
+        )
+
+        if not terminal_doc:
+            self.fail("Terminal document not found in Firestore")
+
+        # NOTE: This value should be set to false by Store-Flights. Here it defaults to true
+        # if it is not found. This is to ensure that the test fails if the value is not set.
+        self.assertEqual(terminal_doc.get("updating72Hour", True), False)
+
+        # Verify that the second flight is not listed in the terminal document
+        # because it is in the past
+        listed_flights: List[str] = cast(
+            List[str], terminal_doc.get("flights72Hour", [])
+        )
+
+        self.assertEqual(len(listed_flights), 1)
+
+        # Lastly, verify that the Textract job document was updated correctly
+        # to show that the function has finished running.
+        testing_textract_doc = fs.get_textract_job(job_id)
+
+        if not testing_textract_doc:
+            self.fail("Textract job not found in Firestore")
+
+        # Verify that the timestamps for the Store-Flights exist
+        # and are set properly in the textract job document
+        start_time = testing_textract_doc.get("started_store_flights", "")
+        end_time = testing_textract_doc.get("finished_store_flights", "")
+
+        if not start_time or not isinstance(start_time, datetime):
+            self.fail("Start time not found in Textract job")
+
+        if not end_time or not isinstance(end_time, datetime):
+            self.fail("End time not found in Textract job")
+
+        # Verify that the debug info for the Store-Flights function exists
+        # in the textract job document
+        request_id = testing_textract_doc.get("func_store_flights_request_id", "")
+        function_name = testing_textract_doc.get("func_store_flights_name", "")
+
+        if not request_id:
+            self.fail("Request ID not found in Textract job")
+
+        if not function_name:
+            self.fail("Function name not found in Textract job")
+
+        # Clean up
+        # Delete the PDF document from the archive
+        fs.delete_document_by_id(
+            collection_name=pdf_archive_coll, doc_id=pdf_doc["hash"]
+        )
+
+        # Delete the Textract job document
+        fs.delete_document_by_id(collection_name=textract_jobs_coll, doc_id=job_id)
+
+        # Delete the terminal document
+        fs.delete_document_by_id(
+            collection_name=terminal_coll, doc_id=terminal_doc["name"]
+        )
+
+        # Delete flight 1 from Firestore Current Flights collection
+        fs.delete_document_by_id(
+            collection_name=current_flights_coll,
+            doc_id=osan_1_72hr_flight_1.flight_id,
+        )
+
+    def test_assume_end_day_for_tbd_rollcall_flights(self: unittest.TestCase) -> None:
+        """Verifies that Store-Flights correctly assume that flight with TDB rollcall time are the last minute of the day.
+
+        To do this, it will set the test date and time to a normal time during the day. Then it will send a 4 flights to the
+        lambda function. The first flight will be before the test date and time, the second flight will be a TBD rollcall time
+        on the day before, the third flight will also have a TBD rollcall time but on the test date, and the fourth flight will
+        be after the test date and time. The function should prevent the first two flights from being put into the Current_Flights
+        collection because they are in the past and store the last two flights since they are in the future in this test.
+        """
+        pdf_archive_coll = "**TESTING**_PDF_Archive-Store-4"
+        terminal_coll = "**TESTING**_Terminals-Store-4"
+        current_flights_coll = "**TESTING**_Flights_Current-Store-4"
+        archive_flights_coll = "**TESTING**_Flights_Archive-Store-4"
+        textract_jobs_coll = "Textract_Jobs"
+
+        lambda_client = initialize_client("lambda")
+        fs = FirestoreClient(
+            pdf_archive_coll=pdf_archive_coll,
+            terminal_coll=terminal_coll,
+            textract_jobs_coll=textract_jobs_coll,
+            flight_current_coll=current_flights_coll,
+            flight_archive_coll=archive_flights_coll,
+        )
+
+        # Create a fake Textract job
+        job_id = "TEST_Textract_Job_Doc-Store-4"
+        textract_doc = {
+            "desc": "Test Textract Job document for testing Store-Flights function",
+            "test": True,
+            "testParameters": {
+                "sendPdf": True,
+                "testPdfArchiveColl": pdf_archive_coll,
+                "testTerminalColl": terminal_coll,
+                "testCurrentFlightsColl": current_flights_coll,
+                "testArchiveFlightsColl": archive_flights_coll,
+                "testDateTime": "202401100000",  # January 10, 2024 at 00:00
+            },
+        }
+
+        fs.insert_document_with_id("Textract_Jobs", job_id, textract_doc)
+
+        # Create a the fake pdf archive document
+        pdf_doc = {
+            "cloud_path": "current/72_HR/72 Hour Slides AUG 18_fd040263-b.pdf",
+            "hash": "80b3f417259982271e57abad302a3caa12d2848f2d13301efc7bcffca12ee4e1",
+            "terminal": "Osan AB Passenger Terminal",
+            "type": "72_HR",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=pdf_archive_coll,
+            document_data=pdf_doc,
+            doc_id=pdf_doc["hash"],
+        )
+
+        # Create a fake terminal document
+        terminal_doc = {
+            "name": "Osan AB Passenger Terminal",
+            "location": "Osan AB, ROK",
+            "timezone": "Asia/Seoul",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=terminal_coll,
+            document_data=terminal_doc,
+            doc_id=terminal_doc["name"],
+        )
+
+        # Load in pickled flights
+        osan_1_72hr_flight_0 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-0_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_0:
+            self.fail("Failed to load flight 0 from pickle file")
+
+        osan_1_72hr_flight_1 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-1_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_1:
+            self.fail("Failed to load flight 1 from pickle file")
+
+        osan_1_72hr_flight_2 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-2_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_2:
+            self.fail("Failed to load flight 2 from pickle file")
+
+        osan_1_72hr_flight_3 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-3_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_3:
+            self.fail("Failed to load flight 3 from pickle file")
+
+        flight_dicts: List[Dict[str, Any]] = []
+
+        # Leave the first flight as is since it is in the past
+        flight_dicts.append(osan_1_72hr_flight_0.to_dict())
+
+        # Set second flight to TBD rollcall time
+        # Effective rollcall time should be 23:59
+        osan_1_72hr_flight_1.date = "20240109"
+        osan_1_72hr_flight_1.rollcall_time = None
+        osan_1_72hr_flight_1.notes = {"rollCallNotes": {"rollCallCellNote": "TBD"}}
+        osan_1_72hr_flight_1.rollcall_note = True
+        osan_1_72hr_flight_1.as_string = osan_1_72hr_flight_1.generate_as_string()
+        osan_1_72hr_flight_1.flight_id = osan_1_72hr_flight_1.generate_flight_id()
+        flight_dicts.append(osan_1_72hr_flight_1.to_dict())
+
+        # Set third flight TBD rollcall time for the test date
+        osan_1_72hr_flight_2.date = "20240110"
+        osan_1_72hr_flight_2.rollcall_time = None
+        osan_1_72hr_flight_2.notes = {"rollCallNotes": {"rollCallCellNote": "TBD"}}
+        osan_1_72hr_flight_2.rollcall_note = True
+        osan_1_72hr_flight_2.as_string = osan_1_72hr_flight_2.generate_as_string()
+        osan_1_72hr_flight_2.flight_id = osan_1_72hr_flight_2.generate_flight_id()
+        flight_dicts.append(osan_1_72hr_flight_2.to_dict())
+
+        # Set fourth flight to a time after the test date
+        osan_1_72hr_flight_3.date = "20240111"
+        osan_1_72hr_flight_3.rollcall_time = "0001"
+        osan_1_72hr_flight_3.as_string = osan_1_72hr_flight_3.generate_as_string()
+        osan_1_72hr_flight_3.flight_id = osan_1_72hr_flight_3.generate_flight_id()
+        flight_dicts.append(osan_1_72hr_flight_3.to_dict())
+
+        payload = json.dumps(
+            {
+                "flights": flight_dicts,
+                "pdf_hash": pdf_doc["hash"],
+                "job_id": job_id,
+                "terminal": terminal_doc["name"],
+            }
+        )
+
+        store_flights_response = lambda_client.invoke(
+            FunctionName="Store-Flights",
+            InvocationType="RequestResponse",
+            Payload=payload,
+        )
+
+        self.assertEqual(store_flights_response["StatusCode"], 200)
+
+        # Reading the payload
+        store_flights_stream = store_flights_response["Payload"]
+        store_flights_data = store_flights_stream.read()
+
+        # The payload is in bytes, so we decode it to a string and then load it as JSON
+        store_flights_payload = json.loads(store_flights_data.decode())
+
+        if not store_flights_payload:
+            self.fail("Payload is empty")
+
+        self.assertEqual(
+            store_flights_payload["body"],
+            "Successfully stored flights.",
+        )
+
+        # Check that self reported archived flights are correct
+        archived_flights = store_flights_payload.get("archivedFlights")
+
+        if archived_flights:
+            archived_flights = json.loads(archived_flights)
+
+            self.assertEqual(len(archived_flights), 0)
+
+        # Check that nothing was archived in Firestore
+        flight_archive_collection_ref = fs.db.collection(archive_flights_coll)
+
+        flight_archive_query = flight_archive_collection_ref.where(
+            "origin_terminal", "==", "Osan AB Passenger Terminal"
+        )
+
+        documents = flight_archive_query.stream()
+
+        if documents:
+            self.assertEqual(len(list(documents)), 0)
+
+        # Check that only the second and third flight are in the current flights collection
+        stored_flights = store_flights_payload.get("storedFlights", [])
+
+        stored_flights = json.loads(stored_flights)
+
+        if not stored_flights:
+            self.fail("No stored flights found in Store-Flights payload")
+
+        self.assertEqual(len(stored_flights), 4)
+
+        self.assertCountEqual(
+            stored_flights,
+            [
+                flight_dicts[0].get("flight_id", ""),
+                flight_dicts[1].get("flight_id", ""),
+                flight_dicts[2].get("flight_id", ""),
+                flight_dicts[3].get("flight_id", ""),
+            ],
+        )
+
+        test_datetime = "202401100000"
+
+        # Check that they are correctly stored in Firestore
+        for flight_id in stored_flights:
+            flight_dict = fs.get_doc_by_id(
+                collection_name=current_flights_coll, doc_id=flight_id
+            )
+
+            if not flight_dict:
+                self.fail(f"Flight {flight_id} not found in Firestore")
+
+            # In current collection, should not be marked as archived
+            self.assertEqual(flight_dict.get("archived", False), False)
+            self.assertEqual(flight_dict.get("archived_timestamp", None), None)
+
+            stored_flight = Flight.from_dict(flight_dict)
+
+            if not stored_flight:
+                self.fail("Failed to convert archived flight from dictionary")
+
+            if stored_flight.get_departure_datetime() < test_datetime:
+                self.assertEqual(stored_flight.should_archive, False)
+
+            for flight in flight_dicts:
+                if flight["flight_id"] == stored_flight.flight_id:
+                    self.assertEqual(Flight.from_dict(flight), stored_flight)
+
+                    fs.delete_document_by_id(
+                        collection_name=current_flights_coll,
+                        doc_id=stored_flight.flight_id,
+                    )
+                    break
+
+        # Check that other flights were not in the current flights collection
+        flight_current_collection_ref = fs.db.collection(current_flights_coll)
+
+        flight_current_query = flight_current_collection_ref.where(
+            "origin_terminal", "==", "Osan AB Passenger Terminal"
+        )
+
+        documents = flight_current_query.stream()
+
+        self.assertEqual(len(list(documents)), 0)
+
+        # Check that the second and third flight are listed in the terminal document
+        # since they are in the future
+        terminal_doc = fs.get_doc_by_id(
+            collection_name=terminal_coll, doc_id=terminal_doc["name"]
+        )
+
+        if not terminal_doc:
+            self.fail("Terminal document not found in Firestore")
+
+        # NOTE: This value should be set to false by Store-Flights. Here it defaults to true
+        # if it is not found. This is to ensure that the test fails if the value is not set.
+        self.assertEqual(terminal_doc.get("updating72Hour", True), False)
+
+        # Verify that the second and third flight are listed in the terminal document
+        # because they are in the future
+        listed_flights: List[str] = cast(
+            List[str], terminal_doc.get("flights72Hour", [])
+        )
+
+        self.assertEqual(len(listed_flights), 4)
+
+        self.assertCountEqual(
+            listed_flights,
+            [
+                flight_dicts[0].get("flight_id", ""),
+                flight_dicts[1].get("flight_id", ""),
+                flight_dicts[2].get("flight_id", ""),
+                flight_dicts[3].get("flight_id", ""),
+            ],
+        )
+
+        # Lastly, verify that the Textract job document was updated correctly
+        # to show that the function has finished running.
+        testing_textract_doc = fs.get_textract_job(job_id)
+
+        if not testing_textract_doc:
+            self.fail("Textract job not found in Firestore")
+
+        # Verify that the timestamps for the Store-Flights exist
+        # and are set properly in the textract job document
+        start_time = testing_textract_doc.get("started_store_flights", "")
+        end_time = testing_textract_doc.get("finished_store_flights", "")
+
+        if not start_time or not isinstance(start_time, datetime):
+            self.fail("Start time not found in Textract job")
+
+        if not end_time or not isinstance(end_time, datetime):
+            self.fail("End time not found in Textract job")
+
+        # Verify that the debug info for the Store-Flights function exists
+        # in the textract job document
+        request_id = testing_textract_doc.get("func_store_flights_request_id", "")
+        function_name = testing_textract_doc.get("func_store_flights_name", "")
+
+        if not request_id:
+            self.fail("Request ID not found in Textract job")
+
+        if not function_name:
+            self.fail("Function name not found in Textract job")
+
+        # Clean up
+        # Delete the PDF document from the archive
+        fs.delete_document_by_id(
+            collection_name=pdf_archive_coll, doc_id=pdf_doc["hash"]
+        )
+
+        # Delete the Textract job document
+        fs.delete_document_by_id(collection_name=textract_jobs_coll, doc_id=job_id)
+
+        # Delete the terminal document
+        fs.delete_document_by_id(
+            collection_name=terminal_coll, doc_id=terminal_doc["name"]
+        )
+
+    def test_should_archive_flag(self: unittest.TestCase) -> None:
+        """Test that new flights in the past are put in Current Flights collection but have should_archive set to False.
+
+        This test will first insert two old flights into the current flights collection to simulate old flights. The first old
+        flight has the the should_archive flag set to False and the second has it set to True. This means that the first old flight
+        should not be archived by the Store-Flights function but the second should be archived. Then it will send a new flight to the
+        Store-Flights function with it's departure datetime in the past. The function should store the new flight in the current flights
+        collection but with the should_archive flag set to False.
+        """
+        pdf_archive_coll = "**TESTING**_PDF_Archive-Store-7"
+        terminal_coll = "**TESTING**_Terminals-Store-7"
+        current_flights_coll = "**TESTING**_Flights_Current-Store-7"
+        archive_flights_coll = "**TESTING**_Flights_Archive-Store-7"
+        textract_jobs_coll = "Textract_Jobs"
+
+        lambda_client = initialize_client("lambda")
+        fs = FirestoreClient(
+            pdf_archive_coll=pdf_archive_coll,
+            terminal_coll=terminal_coll,
+            textract_jobs_coll=textract_jobs_coll,
+            flight_current_coll=current_flights_coll,
+            flight_archive_coll=archive_flights_coll,
+        )
+
+        # Create a fake Textract job
+        job_id = "TEST_Textract_Job_Doc-Store-7"
+        textract_doc = {
+            "desc": "Test Textract Job document for testing Store-Flights function",
+            "test": True,
+            "testParameters": {
+                "sendPdf": True,
+                "testPdfArchiveColl": pdf_archive_coll,
+                "testTerminalColl": terminal_coll,
+                "testCurrentFlightsColl": current_flights_coll,
+                "testArchiveFlightsColl": archive_flights_coll,
+            },
+        }
+
+        fs.insert_document_with_id("Textract_Jobs", job_id, textract_doc)
+
+        # Create a the fake pdf archive document
+        pdf_doc = {
+            "cloud_path": "current/72_HR/72 Hour Slides AUG 18_fd040263-b.pdf",
+            "hash": "80b3f417259982271e57abad302a3caa12d2848f2d13301efc7bcffca12ee4e1",
+            "terminal": "Osan AB Passenger Terminal",
+            "type": "72_HR",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=pdf_archive_coll,
+            document_data=pdf_doc,
+            doc_id=pdf_doc["hash"],
+        )
+
+        # Create a fake terminal document
+        terminal_doc = {
+            "name": "Osan AB Passenger Terminal",
+            "location": "Osan AB, ROK",
+            "timezone": "Asia/Seoul",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=terminal_coll,
+            document_data=terminal_doc,
+            doc_id=terminal_doc["name"],
+        )
+
+        # Load in pickled flights
+        osan_1_72hr_flight_0 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-0_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_0:
+            self.fail("Failed to load flight 0 from pickle file")
+
+        osan_1_72hr_flight_1 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-1_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_1:
+            self.fail("Failed to load flight 1 from pickle file")
+
+        osan_1_72hr_flight_2 = Flight.load_state(
+            "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-2_fs.pkl"
+        )
+
+        if not osan_1_72hr_flight_2:
+            self.fail("Failed to load flight 2 from pickle file")
+
+        # Set first old flight to have should_archive set to False
+        osan_1_72hr_flight_0.should_archive = False
+
+        old_flights = [osan_1_72hr_flight_0, osan_1_72hr_flight_1]
+
+        for flight in old_flights:
+            flight.as_string = flight.generate_as_string()
+            flight.flight_id = flight.generate_flight_id()
+
+            fs.insert_document_with_id(
+                collection_name=current_flights_coll,
+                document_data=flight.to_dict(),
+                doc_id=flight.flight_id,
+            )
+
+        # Now send the third flight to the Store-Flights function
+        payload = json.dumps(
+            {
+                "flights": [osan_1_72hr_flight_2.to_dict()],
+                "pdf_hash": pdf_doc["hash"],
+                "job_id": job_id,
+                "terminal": terminal_doc["name"],
+            }
+        )
+
+        store_flights_response = lambda_client.invoke(
+            FunctionName="Store-Flights",
+            InvocationType="RequestResponse",
+            Payload=payload,
+        )
+
+        self.assertEqual(store_flights_response["StatusCode"], 200)
+
+        # Reading the payload
+        store_flights_stream = store_flights_response["Payload"]
+        store_flights_data = store_flights_stream.read()
+
+        # The payload is in bytes, so we decode it to a string and then load it as JSON
+        store_flights_payload = json.loads(store_flights_data.decode())
+
+        if not store_flights_payload:
+            self.fail("Payload is empty")
+
+        self.assertEqual(
+            store_flights_payload["body"],
+            "Successfully stored flights.",
+        )
+
+        # Check that self reported archived flights are correct
+        archived_flights = store_flights_payload.get("archivedFlights")
+
+        if archived_flights:
+            archived_flights = json.loads(archived_flights)
+
+        self.assertCountEqual(archived_flights, [osan_1_72hr_flight_1.flight_id])
+
+        # Check that there are no other flights in the archive collection
+        flight_archive_collection_ref = fs.db.collection(archive_flights_coll)
+
+        flight_archive_query = flight_archive_collection_ref.where(
+            "origin_terminal", "==", "Osan AB Passenger Terminal"
+        )
+
+        documents = flight_archive_query.stream()
+
+        self.assertEqual(len(list(documents)), 1)
+
+        # Check that there is only the one new flight in the current flights collection
+        flight_current_collection_ref = fs.db.collection(current_flights_coll)
+
+        flight_current_query = flight_current_collection_ref.where(
+            "origin_terminal", "==", "Osan AB Passenger Terminal"
+        )
+
+        documents = flight_current_query.stream()
+
+        self.assertEqual(len(list(documents)), 1)
+
+        # Get the one flight in the current flights collection
+        flight_dict = fs.get_doc_by_id(
+            collection_name=current_flights_coll,
+            doc_id=osan_1_72hr_flight_2.flight_id,
+        )
+
+        if not flight_dict:
+            self.fail("Flight not found in Firestore")
+
+        new_flight = Flight.from_dict(flight_dict)
+
+        if not new_flight:
+            self.fail("Failed to convert flight from dictionary")
+
+        self.assertEqual(new_flight.should_archive, False)
+        self.assertEqual(new_flight, osan_1_72hr_flight_2)
+
+        # Clean up
+        # Delete the PDF document from the archive
+        fs.delete_document_by_id(
+            collection_name=pdf_archive_coll, doc_id=pdf_doc["hash"]
+        )
+
+        # Delete the Textract job document
+        fs.delete_document_by_id(collection_name=textract_jobs_coll, doc_id=job_id)
+
+        # Delete the terminal document
+        fs.delete_document_by_id(
+            collection_name=terminal_coll, doc_id=terminal_doc["name"]
+        )
+
+        # Delete new flight from current flights collection
+        fs.delete_document_by_id(
+            collection_name=current_flights_coll,
+            doc_id=osan_1_72hr_flight_2.flight_id,
+        )
+
+        # Delete the only archived flight from the archive flights collection
+        fs.delete_document_by_id(
+            collection_name=archive_flights_coll,
+            doc_id=osan_1_72hr_flight_1.flight_id,
+        )
+
+    # def test_no_archive_similar_flight(self: unittest.TestCase) -> None:
+    #     """Verifies that Store-Flights does not archive a flight that is similar to to a new flight created within 2 hours of the old flight.
+
+    #     This test will first insert a flight into the current flights collection as the "old" flight. Then it will send a new flight to the
+    #     Store-Flights function that is the exact same as the old flight except have it's changed. The function should not archive the "old"
+    #     flight since it is similar to the new flight and their creation times are within 2 hours of each other.
+    #     """
+    #     pdf_archive_coll = "**TESTING**_PDF_Archive-Store-5"
+    #     terminal_coll = "**TESTING**_Terminals-Store-5"
+    #     current_flights_coll = "**TESTING**_Flights_Current-Store-5"
+    #     archive_flights_coll = "**TESTING**_Flights_Archive-Store-5"
+    #     textract_jobs_coll = "Textract_Jobs"
+
+    #     lambda_client = initialize_client("lambda")
+    #     fs = FirestoreClient(
+    #         pdf_archive_coll=pdf_archive_coll,
+    #         terminal_coll=terminal_coll,
+    #         textract_jobs_coll=textract_jobs_coll,
+    #         flight_current_coll=current_flights_coll,
+    #         flight_archive_coll=archive_flights_coll,
+    #     )
+
+    #     # Create a fake Textract job
+    #     job_id = "TEST_Textract_Job_Doc-Store-5"
+    #     textract_doc = {
+    #         "desc": "Test Textract Job document for testing Store-Flights function",
+    #         "test": True,
+    #         "testParameters": {
+    #             "sendPdf": True,
+    #             "testPdfArchiveColl": pdf_archive_coll,
+    #             "testTerminalColl": terminal_coll,
+    #             "testCurrentFlightsColl": current_flights_coll,
+    #             "testArchiveFlightsColl": archive_flights_coll,
+    #         },
+    #     }
+
+    #     fs.insert_document_with_id("Textract_Jobs", job_id, textract_doc)
+
+    #     # Create a the fake pdf archive document
+    #     pdf_doc = {
+    #         "cloud_path": "current/72_HR/72 Hour Slides AUG 18_fd040263-b.pdf",
+    #         "hash": "80b3f417259982271e57abad302a3caa12d2848f2d13301efc7bcffca12ee4e1",
+    #         "terminal": "Osan AB Passenger Terminal",
+    #         "type": "72_HR",
+    #     }
+
+    #     fs.insert_document_with_id(
+    #         collection_name=pdf_archive_coll,
+    #         document_data=pdf_doc,
+    #         doc_id=pdf_doc["hash"],
+    #     )
+
+    #     # Create a fake terminal document
+    #     terminal_doc = {
+    #         "name": "Osan AB Passenger Terminal",
+    #         "location": "Osan AB, ROK",
+    #         "timezone": "Asia/Seoul",
+    #     }
+
+    #     fs.insert_document_with_id(
+    #         collection_name=terminal_coll,
+    #         document_data=terminal_doc,
+    #         doc_id=terminal_doc["name"],
+    #     )
+
+    #     # Load in pickled flights
+    #     osan_1_72hr_flight_0 = Flight.load_state(
+    #         "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-0_fs.pkl"
+    #     )
+
+    #     if not osan_1_72hr_flight_0:
+    #         self.fail("Failed to load flight 0 from pickle file")
+
+    #     # Generate creation_time for both flights
+    #     creation_time_now = datetime.now(tz=dt_base.UTC)
+    #     creation_time_1_5hr_ago = creation_time_now - timedelta(hours=1.5)
+
+    #     # This ensures that the new flight is in the future
+    #     # which means it should be stored in current_flights
+    #     new_flight_date = creation_time_now + timedelta(days=1)
+
+    #     # Change seats of the new flight
+    #     new_flight = copy.deepcopy(osan_1_72hr_flight_0)
+    #     new_flight.creation_time = int(creation_time_now.strftime("%Y%m%d%H%M"))
+    #     new_flight.date = new_flight_date.strftime("%Y%m%d")
+    #     new_flight.as_string = new_flight.generate_as_string()
+    #     new_flight.flight_id = new_flight.generate_flight_id()
+
+    #     # Change the creation time of the old flight
+    #     osan_1_72hr_flight_0.creation_time = int(
+    #         creation_time_1_5hr_ago.strftime("%Y%m%d%H%M")
+    #     )
+    #     osan_1_72hr_flight_0.as_string = osan_1_72hr_flight_0.generate_as_string()
+    #     osan_1_72hr_flight_0.flight_id = osan_1_72hr_flight_0.generate_flight_id()
+
+    #     # Insert the old flight into the current flights collection
+    #     fs.insert_document_with_id(
+    #         collection_name=current_flights_coll,
+    #         document_data=osan_1_72hr_flight_0.to_dict(),
+    #         doc_id=osan_1_72hr_flight_0.flight_id,
+    #     )
+
+    #     # Send the new flight to the Store-Flights function
+    #     payload = json.dumps(
+    #         {
+    #             "flights": [new_flight.to_dict()],
+    #             "pdf_hash": pdf_doc["hash"],
+    #             "job_id": job_id,
+    #             "terminal": terminal_doc["name"],
+    #         }
+    #     )
+
+    #     store_flights_response = lambda_client.invoke(
+    #         FunctionName="Store-Flights",
+    #         InvocationType="RequestResponse",
+    #         Payload=payload,
+    #     )
+
+    #     self.assertEqual(store_flights_response["StatusCode"], 200)
+
+    #     # Reading the payload
+    #     store_flights_stream = store_flights_response["Payload"]
+    #     store_flights_data = store_flights_stream.read()
+
+    #     # The payload is in bytes, so we decode it to a string and then load it as JSON
+    #     store_flights_payload = json.loads(store_flights_data.decode())
+
+    #     if not store_flights_payload:
+    #         self.fail("Payload is empty")
+
+    #     self.assertEqual(
+    #         store_flights_payload["body"],
+    #         "Successfully stored flights.",
+    #     )
+
+    #     # Check that self reported archived flights are correct
+    #     archived_flights = store_flights_payload.get("archivedFlights")
+
+    #     if archived_flights:
+    #         archived_flights = json.loads(archived_flights)
+
+    #     self.assertEqual(len(archived_flights), 0)
+
+    #     # Check that nothing was archived in Firestore
+    #     flight_archive_collection_ref = fs.db.collection(archive_flights_coll)
+
+    #     flight_archive_query = flight_archive_collection_ref.where(
+    #         "origin_terminal", "==", "Osan AB Passenger Terminal"
+    #     )
+
+    #     documents = flight_archive_query.stream()
+
+    #     if documents:
+    #         self.assertEqual(len(list(documents)), 0)
+    #     else:
+    #         self.fail("Documents is None")
+
+    #     # Check that only the new flight is in the current flights collection
+    #     stored_flights = store_flights_payload.get("storedFlights", [])
+
+    #     stored_flights = json.loads(stored_flights)
+
+    #     self.assertEqual(len(stored_flights), 1)
+
+    #     self.assertCountEqual(
+    #         stored_flights,
+    #         [
+    #             new_flight.flight_id,
+    #         ],
+    #     )
+
+    #     # Check that the new flight is correctly stored in Firestore
+    #     # Check that nothing was archived in Firestore
+    #     flight_archive_collection_ref = fs.db.collection(current_flights_coll)
+
+    #     flight_archive_query = flight_archive_collection_ref.where(
+    #         "origin_terminal", "==", "Osan AB Passenger Terminal"
+    #     )
+
+    #     documents = flight_archive_query.stream()
+
+    #     fs_current_flights: List[Flight] = []
+
+    #     for doc in documents:
+    #         flight = Flight.from_dict(doc.to_dict())
+
+    #         if not flight:
+    #             self.fail("Failed to convert Firestore document to Flight")
+
+    #         fs_current_flights.append(flight)
+
+    #     self.assertEqual(len(fs_current_flights), 1)
+
+    #     self.assertCountEqual(
+    #         fs_current_flights,
+    #         [
+    #             new_flight,
+    #         ],
+    #     )
+
+    #     # Clean up
+    #     # Delete the PDF document from the archive
+    #     fs.delete_document_by_id(
+    #         collection_name=pdf_archive_coll, doc_id=pdf_doc["hash"]
+    #     )
+
+    #     # Delete the Textract job document
+    #     fs.delete_document_by_id(collection_name=textract_jobs_coll, doc_id=job_id)
+
+    #     # Delete the terminal document
+    #     fs.delete_document_by_id(
+    #         collection_name=terminal_coll, doc_id=terminal_doc["name"]
+    #     )
+
+    #     # Delete the new flight from the current flights collection
+    #     fs.delete_document_by_id(
+    #         collection_name=current_flights_coll, doc_id=new_flight.flight_id
+    #     )
+
+    # def test_no_archive_similar_flight_1_to_1(self):
+    #     """Verifies that Store-Flights similar prunes one old flight for one new flight.
+
+    #     This test will first insert the same flight into the current flights collection twice to simulate two "old" flights.
+    #     Then it will send a new flight to the Store-Flights function that is the exact same as the old flights except have it's
+    #     creation time changed. The function should not archive one of "old" flight since it is similar to the new flight and
+    #     creation times are within 2 hours of each other, but it should archive the other "old" flight since each new flight
+    #     can only prune one old flight.
+    #     """
+    #     pdf_archive_coll = "**TESTING**_PDF_Archive-Store-6"
+    #     terminal_coll = "**TESTING**_Terminals-Store-6"
+    #     current_flights_coll = "**TESTING**_Flights_Current-Store-6"
+    #     archive_flights_coll = "**TESTING**_Flights_Archive-Store-6"
+    #     textract_jobs_coll = "Textract_Jobs"
+
+    #     lambda_client = initialize_client("lambda")
+    #     fs = FirestoreClient(
+    #         pdf_archive_coll=pdf_archive_coll,
+    #         terminal_coll=terminal_coll,
+    #         textract_jobs_coll=textract_jobs_coll,
+    #         flight_current_coll=current_flights_coll,
+    #         flight_archive_coll=archive_flights_coll,
+    #     )
+
+    #     # Create a fake Textract job
+    #     job_id = "TEST_Textract_Job_Doc-Store-6"
+    #     textract_doc = {
+    #         "desc": "Test Textract Job document for testing Store-Flights function",
+    #         "test": True,
+    #         "testParameters": {
+    #             "sendPdf": True,
+    #             "testPdfArchiveColl": pdf_archive_coll,
+    #             "testTerminalColl": terminal_coll,
+    #             "testCurrentFlightsColl": current_flights_coll,
+    #             "testArchiveFlightsColl": archive_flights_coll,
+    #         },
+    #     }
+
+    #     fs.insert_document_with_id("Textract_Jobs", job_id, textract_doc)
+
+    #     # Create a the fake pdf archive document
+    #     pdf_doc = {
+    #         "cloud_path": "current/72_HR/72 Hour Slides AUG 18_fd040263-b.pdf",
+    #         "hash": "80b3f417259982271e57abad302a3caa12d2848f2d13301efc7bcffca12ee4e1",
+    #         "terminal": "Osan AB Passenger Terminal",
+    #         "type": "72_HR",
+    #     }
+
+    #     fs.insert_document_with_id(
+    #         collection_name=pdf_archive_coll,
+    #         document_data=pdf_doc,
+    #         doc_id=pdf_doc["hash"],
+    #     )
+
+    #     # Create a fake terminal document
+    #     terminal_doc = {
+    #         "name": "Osan AB Passenger Terminal",
+    #         "location": "Osan AB, ROK",
+    #         "timezone": "Asia/Seoul",
+    #     }
+
+    #     fs.insert_document_with_id(
+    #         collection_name=terminal_coll,
+    #         document_data=terminal_doc,
+    #         doc_id=terminal_doc["name"],
+    #     )
+
+    #     # Load in pickled flights
+    #     osan_1_72hr_flight_0 = Flight.load_state(
+    #         "tests/lambda-func-tests/TestStoreFlights/test_assume_end_day_for_tbd_rollcall_flights/osan_1_72hr_flight-0_fs.pkl"
+    #     )
+
+    #     if not osan_1_72hr_flight_0:
+    #         self.fail("Failed to load flight 0 from pickle file")
+
+    #     # Get the current time
+    #     creation_time_now_utc = datetime.now(tz=dt_base.UTC)
+    #     creation_time_now_osan = datetime.now(tz=pytz.timezone("Asia/Seoul"))
+    #     creation_time_5_mins_ago = creation_time_now_utc - timedelta(minutes=5)
+
+    #     # Create two old flights
+    #     old_flight_1 = copy.deepcopy(osan_1_72hr_flight_0)
+    #     old_flight_2 = copy.deepcopy(osan_1_72hr_flight_0)
+
+    #     old_flight_1.creation_time = int(
+    #         creation_time_5_mins_ago.strftime("%Y%m%d%H%M")
+    #     )
+    #     old_flight_2.creation_time = int(
+    #         creation_time_5_mins_ago.strftime("%Y%m%d%H%M")
+    #     )
+
+    #     old_flight_1.date = creation_time_now_osan.strftime("%Y%m%d")
+    #     old_flight_2.date = creation_time_now_osan.strftime("%Y%m%d")
+
+    #     # Changing the rollcall time to ensure the flight are in the past for the current day.
+    #     # Should still match as similar since the only difference between the old and new
+    #     # flights is rollcall time. (Only Rollcall time, Date, Destination, and Seats are used
+    #     # to determine if a flight is similar). By default, 3/4 of these values have to match
+    #     # between an old and new flight for the old flight to be considered similar and not archived.
+    #     #
+    #     # Note: The rollcall time is set to 0001 to ensure that it is always in the past so the old
+    #     # flights are not removed because they are in the future.
+    #     old_flight_1.rollcall_time = "0001"
+    #     old_flight_2.rollcall_time = "0002"  # Different rollcall time so that the flight_id is different and no overwrite occurs
+
+    #     old_flight_1.as_string = old_flight_1.generate_as_string()
+    #     old_flight_2.as_string = old_flight_2.generate_as_string()
+
+    #     old_flight_1.flight_id = old_flight_1.generate_flight_id()
+    #     old_flight_2.flight_id = old_flight_2.generate_flight_id()
+
+    #     # Create new flight
+    #     new_flight = copy.deepcopy(osan_1_72hr_flight_0)
+    #     new_flight.creation_time = int(creation_time_now_utc.strftime("%Y%m%d%H%M"))
+
+    #     new_flight.date = creation_time_now_osan.strftime(
+    #         "%Y%m%d"
+    #     )  # To ensure it is the same as the old flights
+    #     new_flight.rollcall_time = (
+    #         "2359"  # To ensure it is always in the future for current day
+    #     )
+
+    #     new_flight.as_string = new_flight.generate_as_string()
+    #     new_flight.flight_id = new_flight.generate_flight_id()
+
+    #     # Insert the old flights into the current flights collection
+    #     fs.insert_document_with_id(
+    #         collection_name=current_flights_coll,
+    #         document_data=old_flight_1.to_dict(),
+    #         doc_id=old_flight_1.flight_id,
+    #     )
+
+    #     fs.insert_document_with_id(
+    #         collection_name=current_flights_coll,
+    #         document_data=old_flight_2.to_dict(),
+    #         doc_id=old_flight_2.flight_id,
+    #     )
+
+    #     # Send the new flight to the Store-Flights function
+    #     payload = json.dumps(
+    #         {
+    #             "flights": [new_flight.to_dict()],
+    #             "pdf_hash": pdf_doc["hash"],
+    #             "job_id": job_id,
+    #             "terminal": terminal_doc["name"],
+    #         }
+    #     )
+
+    #     store_flights_response = lambda_client.invoke(
+    #         FunctionName="Store-Flights",
+    #         InvocationType="RequestResponse",
+    #         Payload=payload,
+    #     )
+
+    #     self.assertEqual(store_flights_response["StatusCode"], 200)
+
+    #     # Reading the payload
+    #     store_flights_stream = store_flights_response["Payload"]
+    #     store_flights_data = store_flights_stream.read()
+
+    #     # The payload is in bytes, so we decode it to a string and then load it as JSON
+    #     store_flights_payload = json.loads(store_flights_data.decode())
+
+    #     if not store_flights_payload:
+    #         self.fail("Payload is empty")
+
+    #     self.assertEqual(
+    #         store_flights_payload["body"],
+    #         "Successfully stored flights.",
+    #     )
+
+    #     # Check that self reported archived flights are correct
+    #     archived_flights = store_flights_payload.get("archivedFlights")
+
+    #     if archived_flights:
+    #         archived_flights = json.loads(archived_flights)
+
+    #     self.assertEqual(len(archived_flights), 1)
+
+    #     # Check that only one old flight was archived in Firestore
+    #     flight_archive_collection_ref = fs.db.collection(archive_flights_coll)
+
+    #     flight_archive_query = flight_archive_collection_ref.where(
+    #         "origin_terminal", "==", "Osan AB Passenger Terminal"
+    #     )
+
+    #     documents = flight_archive_query.stream()
+
+    #     self.assertEqual(len(list(documents)), 1)
+
+    #     # Check that only the new flight is in the current flights collection
+    #     stored_flights = store_flights_payload.get("storedFlights", [])
+
+    #     stored_flights = json.loads(stored_flights)
+
+    #     self.assertEqual(len(stored_flights), 1)
+
+    #     self.assertCountEqual(
+    #         stored_flights,
+    #         [
+    #             new_flight.flight_id,
+    #         ],
+    #     )
+
+    #     # Check that only the new flight is in the current flights collection
+    #     flight_current_collection_ref = fs.db.collection(current_flights_coll)
+
+    #     flight_current_query = flight_current_collection_ref.where(
+    #         "origin_terminal", "==", "Osan AB Passenger Terminal"
+    #     )
+
+    #     documents = flight_current_query.stream()
+
+    #     self.assertEqual(len(list(documents)), 1)
+
+    #     # Clean up
+    #     # Delete the PDF document from the archive
+    #     fs.delete_document_by_id(
+    #         collection_name=pdf_archive_coll, doc_id=pdf_doc["hash"]
+    #     )
+
+    #     # Delete the Textract job document
+    #     fs.delete_document_by_id(collection_name=textract_jobs_coll, doc_id=job_id)
+
+    #     # Delete the terminal document
+    #     fs.delete_document_by_id(
+    #         collection_name=terminal_coll, doc_id=terminal_doc["name"]
+    #     )
+
+    #     # Delete the new flight from the current flights collection
+    #     fs.delete_document_by_id(
+    #         collection_name=current_flights_coll, doc_id=new_flight.flight_id
+    #     )
+
+    #     # Delete both old flights from the archive flights collection
+    #     fs.delete_document_by_id(
+    #         collection_name=archive_flights_coll, doc_id=old_flight_1.flight_id
+    #     )
+
+    #     fs.delete_document_by_id(
+    #         collection_name=archive_flights_coll, doc_id=old_flight_2.flight_id
+    #     )

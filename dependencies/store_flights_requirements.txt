@@ -35,3 +35,7 @@ sentry-sdk==1.36.0
 types-pytz==2023.3.1.1
 uritemplate==4.1.1
 urllib3==2.0.7
+fuzzywuzzy==0.18.0
+openai==0.28.1
+Levenshtein==0.23.0
+python-Levenshtein==0.23.0
