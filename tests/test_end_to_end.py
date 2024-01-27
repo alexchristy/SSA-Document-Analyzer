@@ -1979,3 +1979,34 @@ class TestEndToEnd(unittest.TestCase):
 
         # Delete textract job document
         fs.delete_document_by_id(textract_jobs_coll, job_id)
+
+    def test_e2e_similarity_archive_filter(self) -> None:
+        """Test that old flights that are similar to new flights are not archived when the new flights are updated within 2 hours after the old flights.
+
+        For this test we use the `tests/pdfs/hickam_1_72hr_test.pdf` pdf and flights. First we insert the flights from this PDF into the Current_Flights
+        collection. Then we trigger the entire lambda chain with the same PDF. The lambda chain should update the flights in the Current_Flights collection
+        a not archive the similar old flights. See below for more details:
+
+        Test Current Time: 18 Aug, 2023 @ 0458
+
+        Old Flights: August 18, 2023 (Created 18 Aug, 2023 @ 0335)
+
+        | Roll Call | Destination | Seats |
+        |-----------|-------------|-------|
+        | 0411 | Travis AFB, CA | 8T |
+        | 0500 | Travis AFB, CA | 15T | --> Different Seat Count
+        | 0936 | MacDill AFB, FL | 10T |
+        | 1140 | MacDill AFB, FL | 10T |
+        | 2055 | Travis AFB, CA | TBD |
+
+        New Flights (Original PDF): August 18, 2023 (Created 18 Aug, 2023 @ 0459)
+
+        | Roll Call | Destination | Seats |
+        |-----------|-------------|-------|
+        | 0411 | Travis AFB, CA | 8T |
+        | 0500 | Travis AFB, CA | 42F |
+        | 0936 | MacDill AFB, FL | 10T |
+        | 1140 | MacDill AFB, FL | 10T |
+        | 2055 | Travis AFB, CA | TBD |
+        """
+        pass

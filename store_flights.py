@@ -8,7 +8,6 @@ from sentry_sdk.integrations.aws_lambda import AwsLambdaIntegration
 
 from firestore_db import FirestoreClient
 from flight import Flight, InvalidDateError, InvalidRollcallTimeError
-from flight_utils import prune_recent_old_flights
 from time_utils import get_local_time
 
 # Set up sentry
@@ -217,28 +216,28 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                 )
                 new_flights.remove(flight)
 
-        # Prevent archiving old flights that are too similar to new flights
-        # which indicates that the new flight is really just an update to the old flight listing.
-        # This is a workaround for the fact that the PDFs are not always updated before
-        # the old flights are listed to depart.
-        pruned_old_flights, removed_flights = prune_recent_old_flights(
-            old_flights=old_flights, new_flights=new_flights
-        )
+        # # Prevent archiving old flights that are too similar to new flights
+        # # which indicates that the new flight is really just an update to the old flight listing.
+        # # This is a workaround for the fact that the PDFs are not always updated before
+        # # the old flights are listed to depart.
+        # pruned_old_flights, removed_flights = prune_recent_old_flights(
+        #     old_flights=old_flights, new_flights=new_flights
+        # )
 
-        logging.info(
-            "Removed %d similar old flights: %s",
-            len(removed_flights),
-            ", ".join(str(flight.flight_id) for flight in removed_flights),
-        )
+        # logging.info(
+        #     "Removed %d similar old flights: %s",
+        #     len(removed_flights),
+        #     ", ".join(str(flight.flight_id) for flight in removed_flights),
+        # )
 
-        # Delete flights that are too similar and recent
-        for removed_flight in removed_flights:
-            old_flights.remove(removed_flight)
-            firestore_client.delete_current_flight(removed_flight)
+        # # Delete flights that are too similar and recent
+        # for removed_flight in removed_flights:
+        #     old_flights.remove(removed_flight)
+        #     firestore_client.delete_current_flight(removed_flight)
 
         # Archive old flights
         archived_flights: List[str] = []
-        for old_flight in pruned_old_flights:
+        for old_flight in old_flights:
             if old_flight.rollcall_note and old_flight.get_rollcall_note() == "TBD":
                 logging.info(
                     "Flight %s has a rollcall note of TBD. Not archiving.",
