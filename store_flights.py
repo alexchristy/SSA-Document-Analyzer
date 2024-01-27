@@ -207,14 +207,14 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
 
             new_flights.append(new_flight)
 
-        # Delete all new flights that have already departed
-        for flight in new_flights[:]:
+        # Mark new flights that have already departed as do not archive
+        for flight in new_flights:
             if flight.get_departure_datetime() < current_time:
                 logging.info(
-                    "Removing new flight that has already departed: %s.",
+                    "New flight has already departed. Flagging as do not archive: %s.",
                     flight.flight_id,
                 )
-                new_flights.remove(flight)
+                flight.should_archive = False
 
         # # Prevent archiving old flights that are too similar to new flights
         # # which indicates that the new flight is really just an update to the old flight listing.
@@ -246,6 +246,14 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
                 firestore_client.delete_current_flight(old_flight)
                 continue
 
+            if not old_flight.should_archive:
+                logging.info(
+                    "Flight %s should not be archived. Not archiving.",
+                    old_flight.flight_id,
+                )
+                firestore_client.delete_current_flight(old_flight)
+                continue
+
             firestore_client.archive_flight(old_flight)
             archived_flights.append(old_flight.flight_id)
 
@@ -257,14 +265,8 @@ def lambda_handler(event: dict, context: lambda_context.Context) -> Dict[str, An
         problem_flights: List[Flight] = []
         for flight in new_flights:
             try:
-                if flight.get_departure_datetime() >= current_time:
-                    firestore_client.store_flight_as_current(flight)
-                    stored_flights.append(flight.flight_id)
-                else:
-                    logging.info(
-                        "Flight %s has already departed. Not storing.",
-                        flight.flight_id,
-                    )
+                firestore_client.store_flight_as_current(flight)
+                stored_flights.append(flight.flight_id)
             except InvalidRollcallTimeError as e:
                 logging.error(
                     "Invalid rollcall time when storing the new flight (%s): %s",

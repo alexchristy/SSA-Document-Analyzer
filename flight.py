@@ -34,6 +34,7 @@ class Flight:
         destination_note: bool = False,
         patriot_express: bool = False,
         creation_time: Optional[int] = None,
+        should_archive: bool = True,
     ) -> None:
         """Initialize a Flight object with the given parameters.
 
@@ -50,6 +51,7 @@ class Flight:
             destination_note (bool, optional): Whether there is a note for the destinations. Defaults to False.
             patriot_express (bool, optional): Whether the flight is a Patriot Express flight. Defaults to False.
             creation_time (int, optional): The time the flight was created. Defaults to None.
+            should_archive (bool, optional): Whether the flight should be archived. Defaults to True.
         """
         self.origin_terminal = origin_terminal
         self.destinations = destinations
@@ -61,6 +63,7 @@ class Flight:
         self.seat_note = seat_note
         self.destination_note = destination_note
         self.patriot_express = patriot_express
+        self.should_archive = should_archive
 
         # Generate creation time if not provided
         self.creation_time = creation_time or int(
@@ -273,6 +276,7 @@ class Flight:
                 "destination_note",
                 "patriot_express",
                 "creation_time",
+                "should_archive",
             }
             filtered_data = {k: v for k, v in data.items() if k in valid_keys}
 
