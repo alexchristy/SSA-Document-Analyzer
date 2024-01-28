@@ -1489,13 +1489,13 @@ class TestProcess72HrFlights(unittest.TestCase):
         converted_flights.sort(key=lambda x: x.flight_id)
         loaded_flights.sort(key=lambda x: x.flight_id)
 
-        # Fix the destination for the first flight
-        # Since it flips between INTL and INT'L due to ChatGPT
-        converted_flights[1].destinations[0] = (
-            converted_flights[1].destinations[0].replace("INTL", "INT'L")
-        )
-        converted_flights[1].as_string = converted_flights[1].generate_as_string()
-        converted_flights[1].flight_id = converted_flights[1].generate_flight_id()
+        # # Fix the destination for the first flight
+        # # Since it flips between INTL and INT'L due to ChatGPT
+        # converted_flights[1].destinations[0] = (
+        #     converted_flights[1].destinations[0].replace("INTL", "INT'L")
+        # )
+        # converted_flights[1].as_string = converted_flights[1].generate_as_string()
+        # converted_flights[1].flight_id = converted_flights[1].generate_flight_id()
 
         self.assertCountEqual(converted_flights, loaded_flights)
 
@@ -1537,13 +1537,13 @@ class TestProcess72HrFlights(unittest.TestCase):
 
         self.assertEqual(len(flight_ids), 4)
 
-        # Remove problematic flight id stemming from the INTL and INT'L issue
-        flight_ids.remove(
-            "3dbb83bba0253e017f1f3ffdd65c6779a6b7c24d22e4585582b9981b4fe43a2f"
-        )
-        flight_ids.append(
-            "85dcdeb00978c0e86d660a5a4dc126ec22866970bed4a3c4a404dd011a48ebfd"
-        )
+        # # Remove problematic flight id stemming from the INTL and INT'L issue
+        # flight_ids.remove(
+        #     "3dbb83bba0253e017f1f3ffdd65c6779a6b7c24d22e4585582b9981b4fe43a2f"
+        # )
+        # flight_ids.append(
+        #     "85dcdeb00978c0e86d660a5a4dc126ec22866970bed4a3c4a404dd011a48ebfd"
+        # )
 
         converted_flight_ids = [flight.flight_id for flight in converted_flights]
 
@@ -1777,13 +1777,13 @@ class TestProcess72HrFlights(unittest.TestCase):
         converted_flights.sort(key=lambda x: x.flight_id)
         loaded_flights.sort(key=lambda x: x.flight_id)
 
-        # Fix the destination for the first flight
-        # Since it flips between INTL and INT'L due to ChatGPT
-        converted_flights[1].destinations[0] = (
-            converted_flights[1].destinations[0].replace("INTL", "INT'L")
-        )
-        converted_flights[1].as_string = converted_flights[1].generate_as_string()
-        converted_flights[1].flight_id = converted_flights[1].generate_flight_id()
+        # # Fix the destination for the first flight
+        # # Since it flips between INTL and INT'L due to ChatGPT
+        # converted_flights[1].destinations[0] = (
+        #     converted_flights[1].destinations[0].replace("INTL", "INT'L")
+        # )
+        # converted_flights[1].as_string = converted_flights[1].generate_as_string()
+        # converted_flights[1].flight_id = converted_flights[1].generate_flight_id()
 
         self.assertCountEqual(converted_flights, loaded_flights)
 
@@ -1825,13 +1825,13 @@ class TestProcess72HrFlights(unittest.TestCase):
 
         self.assertEqual(len(flight_ids), 4)
 
-        # Remove problematic flight id stemming from the INTL and INT'L issue
-        flight_ids.remove(
-            "3dbb83bba0253e017f1f3ffdd65c6779a6b7c24d22e4585582b9981b4fe43a2f"
-        )
-        flight_ids.append(
-            "85dcdeb00978c0e86d660a5a4dc126ec22866970bed4a3c4a404dd011a48ebfd"
-        )
+        # # Remove problematic flight id stemming from the INTL and INT'L issue
+        # flight_ids.remove(
+        #     "3dbb83bba0253e017f1f3ffdd65c6779a6b7c24d22e4585582b9981b4fe43a2f"
+        # )
+        # flight_ids.append(
+        #     "85dcdeb00978c0e86d660a5a4dc126ec22866970bed4a3c4a404dd011a48ebfd"
+        # )
 
         converted_flight_ids = [flight.flight_id for flight in converted_flights]
 
@@ -2204,13 +2204,13 @@ class TestProcess72HrFlights(unittest.TestCase):
         converted_flights.sort(key=lambda x: x.flight_id)
         loaded_flights.sort(key=lambda x: x.flight_id)
 
-        # Fix the destination for the first flight
-        # Since it flips between INTL and INT'L due to ChatGPT
-        converted_flights[2].destinations[0] = (
-            converted_flights[2].destinations[0].replace("INTL", "INT'L")
-        )
-        converted_flights[2].as_string = converted_flights[2].generate_as_string()
-        converted_flights[2].flight_id = converted_flights[2].generate_flight_id()
+        # # Fix the destination for the first flight
+        # # Since it flips between INTL and INT'L due to ChatGPT
+        # converted_flights[2].destinations[0] = (
+        #     converted_flights[2].destinations[0].replace("INTL", "INT'L")
+        # )
+        # converted_flights[2].as_string = converted_flights[2].generate_as_string()
+        # converted_flights[2].flight_id = converted_flights[2].generate_flight_id()
 
         # Check that the flights are equal
         self.assertCountEqual(converted_flights, loaded_flights)
@@ -2253,13 +2253,13 @@ class TestProcess72HrFlights(unittest.TestCase):
 
         self.assertEqual(len(flight_ids), 4)
 
-        # Remove problematic flight id stemming from the INTL and INT'L issue
-        flight_ids.remove(
-            "9ba710129f0ea0aa7c63fb154761818f6bc4d2b972a963789ac35a9ab444a5a2"
-        )
-        flight_ids.append(
-            "673efa45a9d885599846280d7582cb0afa282f4f58b5c30ba6a98f52b5d3c221"
-        )
+        # # Remove problematic flight id stemming from the INTL and INT'L issue
+        # flight_ids.remove(
+        #     "9ba710129f0ea0aa7c63fb154761818f6bc4d2b972a963789ac35a9ab444a5a2"
+        # )
+        # flight_ids.append(
+        #     "673efa45a9d885599846280d7582cb0afa282f4f58b5c30ba6a98f52b5d3c221"
+        # )
 
         converted_flight_ids = [flight.flight_id for flight in converted_flights]
 
