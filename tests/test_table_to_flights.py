@@ -3041,3 +3041,29 @@ class TestTableToFlights(unittest.TestCase):
         # Check that the converted flights are the same as the known good flights:
         for i, flight in enumerate(flights):
             self.assertEqual(flight, table1_flights[i])
+
+    def test_mcguire_2_72hr(self):
+        """Test that even if the header row in a table has the exact same confidence as other rows it is not merged with the other rows."""
+        origin_terminal = "Joint Base McGuire Dix Lakehurst Passenger Terminal"
+
+        # Load tables
+        table2 = Table.load_state("tests/table-objects/mcguire_2_72hr_table-2.pkl")
+
+        flights = convert_72hr_table_to_flights(
+            table2,
+            origin_terminal,
+            True,
+            "20240131",  # Date is original date it was misprocessed in production
+        )
+
+        # Load known good flights
+        table2_flights = []
+
+        # Table 2
+        table2_flights.append(
+            Flight.load_state(
+                "tests/flight-objects/mcguire_2_72hr_table-2_flight-1.pkl"
+            )
+        )
+
+        self.assertCountEqual(flights, table2_flights)
