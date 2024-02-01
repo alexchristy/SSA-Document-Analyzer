@@ -173,6 +173,32 @@ class TestMergeTableRows(unittest.TestCase):
 
         self.assertEqual(merged_table, calculated_merged_table)
 
+    def test_mcguire_2_72hr_table_2(self):
+        """Test that header row of the table is not merged with the first data row even though they have the exact same confidence values.
+
+        Uses the same table for merged and unmerged table since the merge function should not change the table.
+        """
+        # Load merged table
+        merged_table = Table.load_state(
+            "tests/table-objects/mcguire_2_72hr_table-2.pkl"
+        )
+
+        if not merged_table:
+            self.fail("Failed to load merged table")
+
+        # Load unmerged table
+        unmerged_table = Table.load_state(
+            "tests/table-objects/mcguire_2_72hr_table-2.pkl"
+        )
+
+        if not unmerged_table:
+            self.fail("Failed to load unmerged table")
+
+        # Merge table rows
+        calculated_merged_table = merge_table_rows(unmerged_table)
+
+        self.assertEqual(merged_table, calculated_merged_table)
+
 
 class TestColumnInference(unittest.TestCase):
     def test_infer_roll_call_column_index(self):

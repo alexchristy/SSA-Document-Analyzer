@@ -593,7 +593,9 @@ def _get_merge_row_groups(
         for col in range(num_columns):
             merge_group = []
             prev_conf = None
-            for idx, row in enumerate(table.rows):
+            for idx, row in enumerate(
+                table.rows[1:], start=1
+            ):  # The header row should not be merged with any other row
                 cur_conf = row[col][1]
                 if cur_conf == prev_conf:
                     merge_group.append((idx, row))
