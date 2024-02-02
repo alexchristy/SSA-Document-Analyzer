@@ -1557,7 +1557,7 @@ class TestEndToEnd(unittest.TestCase):
         archive_flights_coll = "**TESTING-E2E**_Archive_Flights-BWI"
         textract_jobs_coll = "Textract_Jobs"
 
-        test_date = "202308190857"  # 2023-08-19 23:57:00
+        test_date = "202308190857"  # 2023-08-19 08:57:00
 
         pdf_path = "tests/bwi_1_72hr_test.pdf"
 
