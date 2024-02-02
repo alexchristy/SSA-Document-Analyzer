@@ -154,7 +154,7 @@ def ocr_combo_correction(input_str: str, correction_map: Dict[str, str]) -> List
     return ["".join(p) for p in itertools.product(*possibilities)]
 
 
-def parse_seat_data(seat_data: str) -> List[List[Union[int, str]]]:
+def parse_seat_data_helper(seat_data: str) -> List[List[Union[int, str]]]:
     """Parse a string of seat data and returns a list of lists containing the seat number and status.
 
     Args:
@@ -245,6 +245,39 @@ def parse_seat_data(seat_data: str) -> List[List[Union[int, str]]]:
 
         # Assign the new list back to final_results
     return converted_results
+
+
+def parse_seat_data(seat_data: str) -> List[List[Union[int, str]]]:
+    """Parse a string of seat data and returns a list of lists containing the seat number and status.
+
+    Args:
+    ----
+        seat_data (str): A string containing seat data in the format '1t / 2f / 3t'.
+
+    Returns:
+    -------
+        List[List[int or str]]: A list of lists containing the seat number and status, e.g. [[1, 'T'], [2, 'F'], [3, 'T']].
+
+    """
+    split_seat_data = seat_data.split("/")
+
+    # Remove any empty strings from the list
+    split_seat_data = [x.strip() for x in split_seat_data if x.strip()]
+
+    # Strip any leading or trailing whitespace from each element
+    split_seat_data = [x.strip() for x in split_seat_data]
+
+    seat_data_list: List[List[Union[int, str]]] = []
+    for seat_data in split_seat_data:
+        parsed_seat_data = parse_seat_data_helper(seat_data)
+
+        if not parsed_seat_data:
+            logging.error("Failed to parse seat data: %s", seat_data)
+            continue
+
+        seat_data_list.extend(parsed_seat_data)
+
+    return seat_data_list
 
 
 def ocr_correction(input_str: str) -> str:

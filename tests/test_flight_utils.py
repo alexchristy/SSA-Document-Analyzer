@@ -245,6 +245,11 @@ class TestCellParsingUtils(unittest.TestCase):
             },
             {"input": "TBD TBD", "expected": [[0, "TBD"], [0, "TBD"]]},
             {"input": "TDB TBD F0", "expected": [[0, "TBD"], [0, "TBD"], [0, "F"]]},
+            {"input": "9T / 5T / 5T", "expected": [[9, "T"], [5, "T"], [5, "T"]]},
+            {
+                "input": "9T / 5T / 5T / 5T",
+                "expected": [[9, "T"], [5, "T"], [5, "T"], [5, "T"]],
+            },
         ]
 
         for i, test_case in enumerate(test_data):
