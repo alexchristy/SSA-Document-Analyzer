@@ -669,15 +669,34 @@ def _merge_grouped_rows(
             merged_row = [("", 0.0)] * num_columns
             first_row_index = group[0][0] - row_offset
 
+            merge_row_index = 0
+            trailing_seperator = False
             for _, row in group:
+
+                # No trailing seperator if the group has only one row
+                # or if the current row is the last row in the group
+                # which avoids "Data / Data / Data /" and instead gives "Data / Data / Data
+                if not (len(group) == 1 or merge_row_index == (len(group) - 1)):
+                    trailing_seperator = True
+                else:
+                    trailing_seperator = False
+
                 for col in range(num_columns):
+
                     merged_text = f"{merged_row[col][0]} {row[col][0]}".strip()
+
+                    # Do not add trailing seperator if the merged text is empty
+                    if merged_text and trailing_seperator:
+                        merged_text = f"{merged_text} /"
+
                     merged_conf = merged_row[col][1] + (
                         row[col][1] / len(group)
                     )  # Average confidence calculation
                     # Round to 8 decimal places
                     merged_conf = round(merged_conf, 8)
                     merged_row[col] = (merged_text, merged_conf)
+
+                merge_row_index += 1
 
             # Do not merge rows that have multiple roll call times
             roll_call_col_index = get_roll_call_column_index(table)
