@@ -329,6 +329,11 @@ class TestCellParsingUtils(unittest.TestCase):
             "Baltimore Washington INT'L, MD Early Check-in available starting 26 December 2023, @0930L for Pre-Booked passengers on mission 1LT2 destined Baltimore Washington INT'L, MD": [
                 "BALTIMORE WASHINGTON INT'L, MD"
             ],
+            "*PATRIOT EXPRESS* / Iwakuni MCAS, Japan / Yokota AB, Japan / Seattle Tacoma INTL., WA / Early Bird: 18 Aug 0900-1400 Check In Starts: 19 Aug @ 0350 Doors Close: 19 Aug @ 0650": [
+                "IWAKUNI MCAS, JAPAN",
+                "YOKOTA AB, JAPAN",
+                "SEATTLE TACOMA INTL., WA",
+            ],
         }
 
         for input_data, expected_output in test_cases.items():
