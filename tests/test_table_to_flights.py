@@ -3074,7 +3074,7 @@ class TestTableToFlights(unittest.TestCase):
         origin_terminal = "Naval Station Norfolk Passenger Terminal"
 
         # Load tables
-        table2 = Table.load_state("norfolk_2_72hr_table-2.pkl")
+        table2 = Table.load_state("tests/table-objects/norfolk_2_72hr_table-2.pkl")
 
         flights = convert_72hr_table_to_flights(
             table2, origin_terminal, True, "20240202"
@@ -3084,12 +3084,28 @@ class TestTableToFlights(unittest.TestCase):
         table2_flights = []
 
         # Table 2
-        table2_flights.append(Flight.load_state("tests/flight-objects/norfolk_2_72hr_table-2_flight-1.pkl"))
+        table2_flights.append(
+            Flight.load_state(
+                "tests/flight-objects/norfolk_2_72hr_table-2_flight-1.pkl"
+            )
+        )
 
-        table2_flights.append(Flight.load_state("tests/flight-objects/norfolk_2_72hr_table-2_flight-2.pkl"))
+        table2_flights.append(
+            Flight.load_state(
+                "tests/flight-objects/norfolk_2_72hr_table-2_flight-2.pkl"
+            )
+        )
 
-        table2_flights.append(Flight.load_state("tests/flight-objects/norfolk_2_72hr_table-2_flight-3.pkl"))
+        table2_flights.append(
+            Flight.load_state(
+                "tests/flight-objects/norfolk_2_72hr_table-2_flight-3.pkl"
+            )
+        )
 
-        table2_flights.append(Flight.load_state("tests/flight-objects/norfolk_2_72hr_table-2_flight-4.pkl"))
+        table2_flights.append(
+            Flight.load_state(
+                "tests/flight-objects/norfolk_2_72hr_table-2_flight-4.pkl"
+            )
+        )
 
         self.assertCountEqual(flights, table2_flights)
