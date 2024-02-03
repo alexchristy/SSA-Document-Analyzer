@@ -2526,6 +2526,256 @@ class TestProcess72HrFlights(unittest.TestCase):
         fs.delete_collection(fake_current_flights_coll)
         fs.delete_collection(fake_archive_flights_coll)
 
+    def test_no_remove_seats_multi_hop_flight(self: unittest.TestCase) -> None:
+        """Test that mutliple seat data points are not removed from a multi-hop flight when they happen to be the same.
+
+        For example a flight to ["Osan AB", "Kadena AB", "Osan AB"] with seats ["10T", "10T", "11T"] should leave both "10T" in the flight.
+        """
+        fake_pdf_archive_coll = "FAKE_72HR-Proc-Test_PDF_Archive-6"
+        fake_terminal_coll = "FAKE_72HR-Proc-Test_Terminals-6"
+        fake_current_flights_coll = "FAKE_Current_72HR-Proc-Test_Flights-6"
+        fake_archive_flights_coll = "FAKE_Archive_72HR-Proc-Test_Flights-6"
+        textract_job_coll = "Textract_Jobs"
+
+        lambda_client = initialize_client("lambda")
+        fs = FirestoreClient(
+            pdf_archive_coll=fake_pdf_archive_coll,
+            terminal_coll=fake_terminal_coll,
+            textract_jobs_coll=textract_job_coll,
+            flight_current_coll=fake_current_flights_coll,
+            flight_archive_coll=fake_archive_flights_coll,
+        )
+
+        pdf_doc = {
+            "cloud_path": "tests/norfolk_2_72hr_test.pdf",
+            "hash": "8970cb1948bc3f51d3dfde081c0cc179cae96e3f0665a7088e00594fec2c2617",
+            "terminal": "Naval Station Norfolk Passenger Terminal",
+            "type": "72_HR",
+        }
+
+        fs.insert_document_with_id(
+            collection_name=fake_pdf_archive_coll,
+            document_data=pdf_doc,
+            doc_id=pdf_doc["hash"],
+        )
+
+        # Create a fake Textract job document for the lambda function to append values to
+        job_id = "TEST_Textract_Job_Doc-Proc-72HR-Flights-6"
+        textract_doc = {
+            "desc": "Test Textract Job document for test number 6 for Process-72HR-Flights function",
+            "test": True,
+            "testParameters": {
+                "sendPdf": True,
+                "testPdfArchiveColl": fake_pdf_archive_coll,
+                "testTerminalColl": fake_terminal_coll,
+                "testDateTime": "202402020921",  # February 2, 2024 at 09:21
+                "testCurrentFlightsColl": fake_current_flights_coll,
+                "testArchiveFlightsColl": fake_archive_flights_coll,
+            },
+        }
+
+        fs.insert_document_with_id(textract_job_coll, job_id, textract_doc)
+
+        tables: List[Table] = []
+
+        # Load in pickled tables
+        norfolk_2_72hr_table_1 = Table.load_state(
+            "tests/table-objects/norfolk_2_72hr_table-1.pkl",
+        )
+
+        if norfolk_2_72hr_table_1 is None:
+            self.fail("Failed to load table 1 from pickle file")
+
+        norfolk_2_72hr_table_2 = Table.load_state(
+            "tests/table-objects/norfolk_2_72hr_table-2.pkl",
+        )
+
+        if norfolk_2_72hr_table_2 is None:
+            self.fail("Failed to load table 2 from pickle file")
+
+        norfolk_2_72hr_table_3 = Table.load_state(
+            "tests/table-objects/norfolk_2_72hr_table-3.pkl",
+        )
+
+        if norfolk_2_72hr_table_3 is None:
+            self.fail("Failed to load table 3 from pickle file")
+
+        tables.append(norfolk_2_72hr_table_1)
+        tables.append(norfolk_2_72hr_table_2)
+        tables.append(norfolk_2_72hr_table_3)
+
+        serialized_tables = [table.to_dict() for table in tables]
+
+        payload = json.dumps(
+            {
+                "tables": serialized_tables,
+                "pdf_hash": pdf_doc["hash"],
+                "job_id": job_id,
+            }
+        )
+
+        process_72hr_flights_response = lambda_client.invoke(
+            FunctionName="Process-72HR-Flights",
+            InvocationType="RequestResponse",
+            Payload=payload,
+        )
+
+        self.assertEqual(process_72hr_flights_response["StatusCode"], 200)
+
+        # Reading the payload
+        process_72hr_flights_stream = process_72hr_flights_response["Payload"]
+        process_72hr_flights_data = process_72hr_flights_stream.read()
+
+        # The payload is in bytes, so we decode it to a string and then load it as JSON
+        process_72hr_flights_payload = json.loads(process_72hr_flights_data.decode())
+
+        if not process_72hr_flights_payload:
+            self.fail("Payload is empty")
+
+        self.assertEqual(
+            process_72hr_flights_payload["body"],
+            "Finished processing 72-hour flights.",
+        )
+
+        flights_payload = json.loads(process_72hr_flights_payload["payload"])
+
+        # Check that the pdf hash is correct
+        self.assertEqual(flights_payload["pdf_hash"], pdf_doc["hash"])
+
+        # Check that the job id is correct
+        self.assertEqual(flights_payload["job_id"], job_id)
+
+        # Check that the terminal name is correct
+        self.assertEqual(flights_payload["terminal"], pdf_doc["terminal"])
+
+        # Check that the flights are correct
+        flight_dicts = flights_payload.get("flights", [])
+
+        if not flight_dicts:
+            self.fail("No flights found in Process-72HR-Flights payload")
+
+        self.assertEqual(len(flight_dicts), 5)
+
+        # Create a list of flights from the dictionaries
+        converted_flights: List[Flight] = []
+
+        for flight_dict in flight_dicts:
+            flight = Flight.from_dict(flight_dict)
+
+            if not flight:
+                self.fail("Failed to convert flight from dictionary")
+
+            converted_flights.append(flight)
+
+        # Load in pickled flights
+        norfolk_2_72hr_flight_1 = Flight.load_state(
+            "tests/lambda-func-tests/TestProcess72HrFlights/test_no_remove_seats_multi_hop_flight/norfolk_2_72hr_flight-1_fs.pkl",
+        )
+
+        if not norfolk_2_72hr_flight_1:
+            self.fail("Failed to load flight 1 from pickle file")
+
+        norfolk_2_72hr_flight_2 = Flight.load_state(
+            "tests/lambda-func-tests/TestProcess72HrFlights/test_no_remove_seats_multi_hop_flight/norfolk_2_72hr_flight-2_fs.pkl",
+        )
+
+        if not norfolk_2_72hr_flight_2:
+            self.fail("Failed to load flight 2 from pickle file")
+
+        norfolk_2_72hr_flight_3 = Flight.load_state(
+            "tests/lambda-func-tests/TestProcess72HrFlights/test_no_remove_seats_multi_hop_flight/norfolk_2_72hr_flight-3_fs.pkl",
+        )
+
+        if not norfolk_2_72hr_flight_3:
+            self.fail("Failed to load flight 3 from pickle file")
+
+        norfolk_2_72hr_flight_4 = Flight.load_state(
+            "tests/lambda-func-tests/TestProcess72HrFlights/test_no_remove_seats_multi_hop_flight/norfolk_2_72hr_flight-4_fs.pkl",
+        )
+
+        if not norfolk_2_72hr_flight_4:
+            self.fail("Failed to load flight 4 from pickle file")
+
+        norfolk_2_72hr_flight_5 = Flight.load_state(
+            "tests/lambda-func-tests/TestProcess72HrFlights/test_no_remove_seats_multi_hop_flight/norfolk_2_72hr_flight-5_fs.pkl",
+        )
+
+        if not norfolk_2_72hr_flight_5:
+            self.fail("Failed to load flight 5 from pickle file")
+
+        loaded_flights = [
+            norfolk_2_72hr_flight_1,
+            norfolk_2_72hr_flight_2,
+            norfolk_2_72hr_flight_3,
+            norfolk_2_72hr_flight_4,
+            norfolk_2_72hr_flight_5,
+        ]
+
+        self.assertCountEqual(converted_flights, loaded_flights)
+
+        # Check that the proper information is written to Textract job document
+        testing_textract_doc = fs.get_textract_job(job_id)
+
+        if not testing_textract_doc:
+            self.fail("Textract job not found in Firestore")
+
+        # Verify that the timestamps for the Process-72HR-Flights exist
+        # and are set properly in the textract job document
+        start_time = testing_textract_doc.get("started_72hr_processing")
+
+        if not start_time or not isinstance(start_time, datetime):
+            self.fail("Start time not found in Textract job")
+
+        end_time = testing_textract_doc.get("finished_72hr_processing")
+
+        if not end_time or not isinstance(end_time, datetime):
+            self.fail("End time not found in Textract job")
+
+        # Verify that the debug info for the Process-72HR-Flights function exists
+        # in the textract job document
+        request_id = testing_textract_doc.get("func_72hr_request_id")
+
+        if not request_id:
+            self.fail("Request ID not found in Textract job")
+
+        function_name = testing_textract_doc.get("func_72hr_name")
+
+        if not function_name:
+            self.fail("Function name not found in Textract job")
+
+        # Verify that the correct flight ids are written to the Textract job document
+        flight_ids = testing_textract_doc.get("flight_ids")
+
+        if not flight_ids:
+            self.fail("Flight IDs not found in Textract job")
+
+        self.assertEqual(len(flight_ids), 5)
+
+        converted_flight_ids = [flight.flight_id for flight in converted_flights]
+
+        self.assertCountEqual(flight_ids, converted_flight_ids)
+
+        # Verify the number of flights is correctly written to the Textract job document
+        num_flights = testing_textract_doc.get("num_flights")
+
+        if not num_flights:
+            self.fail("Number of flights not found in Textract job")
+
+        self.assertEqual(num_flights, 5)
+
+        # Clean up
+        # Delete the PDF document from the archive
+        fs.delete_document_by_id(
+            collection_name=fake_pdf_archive_coll, doc_id=pdf_doc["hash"]
+        )
+
+        # Delete the Textract job document
+        fs.delete_document_by_id(collection_name=textract_job_coll, doc_id=job_id)
+
+        # Delete any possible created flights
+        fs.delete_collection(fake_current_flights_coll)
+        fs.delete_collection(fake_archive_flights_coll)
+
 
 class TestStoreFlights(unittest.TestCase):
     """Tests the Store-Flights lambda function."""
