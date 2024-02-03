@@ -666,7 +666,7 @@ def _merge_grouped_rows(
 
         # Perform row merging for identified merge groups
         for group in merge_groups:
-            merged_row = [("", 0.0)] * num_columns
+            merged_row: List[Tuple[str, float]] = [("", 0.0)] * num_columns
             first_row_index = group[0][0] - row_offset
 
             merge_row_index = 0
@@ -683,11 +683,16 @@ def _merge_grouped_rows(
 
                 for col in range(num_columns):
 
-                    merged_text = f"{merged_row[col][0]} {row[col][0]}".strip()
+                    merged_text = merged_row[col][0]
 
-                    # Do not add trailing seperator if the merged text is empty
-                    if merged_text and trailing_seperator:
-                        merged_text = f"{merged_text} /"
+                    # Only tack content on if it is not empty
+                    if row[col][0].strip():
+                        merged_text = f"{merged_text} {row[col][0]}".strip()
+
+                        # Do not add trailing seperator if the merged text is empty
+                        if trailing_seperator:
+                            merged_text = merged_text.rstrip(" /")
+                            merged_text = f"{merged_text} /"
 
                     merged_conf = merged_row[col][1] + (
                         row[col][1] / len(group)
@@ -697,6 +702,16 @@ def _merge_grouped_rows(
                     merged_row[col] = (merged_text, merged_conf)
 
                 merge_row_index += 1
+
+            # Clean up trailing seperators
+            for i, col_data in enumerate(merged_row):
+                col_text = col_data[0]
+
+                # Remove trailing seperator if it exists
+                col_text = col_text.rstrip(" /")
+
+                # Update the merged row with the new text
+                merged_row[i] = (col_text, col_data[1])
 
             # Do not merge rows that have multiple roll call times
             roll_call_col_index = get_roll_call_column_index(table)
